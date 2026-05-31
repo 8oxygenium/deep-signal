@@ -1,6 +1,6 @@
 // ============================================================
 // DEEP SIGNAL
-// レトロPC風 2Dシューティングの探索型プロトタイプです。
+// ソナーで敵を探し、爆雷で倒す探索型レトロPC風シューティングです。
 // 画像素材は使わず、canvas の図形描画だけで作っています。
 // ============================================================
 
@@ -8,39 +8,54 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-// canvas の表示範囲です。画面サイズは仕様どおり 800 x 600 のままです。
+// canvas の表示サイズです。ゲーム画面は 800 x 600 のまま固定します。
 const SCREEN_WIDTH = 800;
 const SCREEN_HEIGHT = 600;
 
-// ゲーム内の広い海域です。画面はこの一部だけをカメラで表示します。
+// ゲーム内の広い海域です。画面にはこの一部だけを表示します。
 const WORLD_WIDTH = 2400;
 const WORLD_HEIGHT = 1200;
 
-// requestAnimationFrame は環境によって少し速度が変わるため、
-// 60fps を基準にした倍率に直してから移動量へ使います。
+// 60fps を基準にした移動倍率です。環境差で速度が大きく変わるのを防ぎます。
 const BASE_FRAME_MS = 1000 / 60;
 
+// 自機やゲーム進行の基本値です。
+const MAX_LIVES = 3;
+const MAX_AMMO = 12;
+const SUPPLY_RADIUS = 70;
+const CLEAR_DELAY = 210;
+
+// ソナーの設定です。単位はだいたい 60fps のフレーム数です。
+const SONAR_RANGE = 470;
+const SONAR_COOLDOWN = 360;
+const SONAR_REVEAL_TIME = 330;
+const SONAR_PING_TIME = 70;
+
 // 押されているキーを記録します。
-// 例: keys.ArrowLeft が true なら左キーが押されています。
 const keys = {};
 
 // カメラ位置です。world座標のどこを画面左上として表示するかを表します。
-// ユーザーが改造しやすいよう、cameraX / cameraY という名前で分けています。
+// 改造しやすいよう、cameraX / cameraY という名前で分けています。
 let cameraX = 0;
 let cameraY = 0;
 
 // ゲーム全体の状態です。
 const game = {
   score: 0,
-  lives: 3,
-  stageName: "ABYSSAL GRID",
-  state: "playing", // "playing", "clear", "gameover"
+  lives: MAX_LIVES,
+  ammo: MAX_AMMO,
+  stageIndex: 0,
+  stageName: "",
+  state: "playing", // "playing", "clear", "complete", "gameover"
   bombCooldown: 0,
+  sonarCooldown: 0,
+  clearTimer: 0,
+  statusText: "",
+  statusTimer: 0,
   lastTime: 0,
 };
 
 // プレイヤーの調査船です。x, y はワールド座標の中心位置です。
-// 水上艦のイメージを保つため、縦方向はワールドの上部〜中段寄りに制限します。
 const player = {
   x: 180,
   y: 120,
@@ -51,7 +66,7 @@ const player = {
 };
 
 // 敵の種類ごとの基本設定です。
-// 数値を変えると、敵の大きさ・速さ・得点を簡単に調整できます。
+// 数値を変えるだけで、体力・速度・得点を調整できます。
 const ENEMY_TYPES = {
   drone: {
     name: "潜水ドローン",
@@ -60,14 +75,14 @@ const ENEMY_TYPES = {
     health: 2,
     speed: 1.25,
     score: 100,
-    fireInterval: 115,
+    fireInterval: 118,
   },
   torpedo: {
     name: "高速魚雷艇",
     width: 46,
     height: 16,
     health: 1,
-    speed: 4.15,
+    speed: 4.25,
     score: 160,
     fireInterval: 0,
   },
@@ -82,42 +97,95 @@ const ENEMY_TYPES = {
   },
 };
 
-// ステージに置く敵です。2400x1200 のワールド内に散らしてあります。
-// patrolLeft / patrolRight は左右移動する敵の移動範囲です。
-const STAGE_ENEMY_LAYOUT = [
-  { type: "drone", x: 430, y: 520, direction: 1, patrolLeft: 280, patrolRight: 690 },
-  { type: "torpedo", x: 760, y: 720, direction: -1, patrolLeft: 430, patrolRight: 1080 },
-  { type: "mine", x: 350, y: 1030, patrolTop: 640 },
-  { type: "drone", x: 1040, y: 430, direction: -1, patrolLeft: 860, patrolRight: 1240 },
-  { type: "mine", x: 1250, y: 980, patrolTop: 590 },
-  { type: "torpedo", x: 1450, y: 850, direction: 1, patrolLeft: 1160, patrolRight: 1740 },
-  { type: "drone", x: 1680, y: 610, direction: 1, patrolLeft: 1460, patrolRight: 1910 },
-  { type: "torpedo", x: 2020, y: 460, direction: -1, patrolLeft: 1780, patrolRight: 2260 },
-  { type: "mine", x: 2130, y: 1040, patrolTop: 690 },
-  { type: "drone", x: 2210, y: 770, direction: -1, patrolLeft: 1950, patrolRight: 2320 },
+// 3ステージ分のデータです。
+// start は自機の開始位置、supply は補給ポイント、enemies は敵配置です。
+const STAGES = [
+  {
+    name: "COASTAL TEST AREA",
+    start: { x: 180, y: 120 },
+    visibilityBonus: 0.28,
+    supplies: [
+      { x: 690, y: 230 },
+    ],
+    markers: [
+      { x: 430, y: 300, label: "TRAIN-1" },
+      { x: 940, y: 420, label: "BUOY-A" },
+      { x: 1480, y: 360, label: "PING" },
+      { x: 2140, y: 520, label: "EXIT" },
+    ],
+    enemies: [
+      { type: "drone", x: 470, y: 360, direction: 1, patrolLeft: 330, patrolRight: 720 },
+      { type: "torpedo", x: 900, y: 500, direction: -1, patrolLeft: 650, patrolRight: 1160 },
+      { type: "mine", x: 1240, y: 760, patrolTop: 470 },
+      { type: "drone", x: 1600, y: 430, direction: -1, patrolLeft: 1390, patrolRight: 1810 },
+      { type: "torpedo", x: 2060, y: 620, direction: 1, patrolLeft: 1840, patrolRight: 2260 },
+    ],
+  },
+  {
+    name: "MIDNIGHT TRENCH",
+    start: { x: 220, y: 180 },
+    visibilityBonus: 0.05,
+    supplies: [
+      { x: 820, y: 340 },
+    ],
+    markers: [
+      { x: 520, y: 620, label: "SIG-01" },
+      { x: 1160, y: 760, label: "NODE-A" },
+      { x: 1720, y: 920, label: "LOW ECHO" },
+      { x: 2180, y: 640, label: "RELAY" },
+    ],
+    enemies: [
+      { type: "drone", x: 520, y: 610, direction: 1, patrolLeft: 340, patrolRight: 760 },
+      { type: "mine", x: 720, y: 1040, patrolTop: 640 },
+      { type: "torpedo", x: 1120, y: 820, direction: -1, patrolLeft: 830, patrolRight: 1430 },
+      { type: "drone", x: 1420, y: 720, direction: -1, patrolLeft: 1190, patrolRight: 1640 },
+      { type: "mine", x: 1660, y: 1080, patrolTop: 720 },
+      { type: "torpedo", x: 2020, y: 930, direction: 1, patrolLeft: 1740, patrolRight: 2290 },
+      { type: "drone", x: 2210, y: 560, direction: -1, patrolLeft: 1960, patrolRight: 2320 },
+    ],
+  },
+  {
+    name: "BLACK SIGNAL ZONE",
+    start: { x: 180, y: 220 },
+    visibilityBonus: -0.05,
+    supplies: [
+      { x: 640, y: 380 },
+      { x: 1850, y: 560 },
+    ],
+    markers: [
+      { x: 380, y: 760, label: "BLACK-1" },
+      { x: 1040, y: 1020, label: "NOISE" },
+      { x: 1480, y: 820, label: "SIGNAL" },
+      { x: 2180, y: 1060, label: "DEEP END" },
+    ],
+    enemies: [
+      { type: "drone", x: 430, y: 760, direction: 1, patrolLeft: 260, patrolRight: 680 },
+      { type: "mine", x: 570, y: 1110, patrolTop: 780 },
+      { type: "torpedo", x: 850, y: 940, direction: -1, patrolLeft: 590, patrolRight: 1140 },
+      { type: "drone", x: 1120, y: 860, direction: -1, patrolLeft: 910, patrolRight: 1360 },
+      { type: "mine", x: 1260, y: 1120, patrolTop: 790 },
+      { type: "torpedo", x: 1480, y: 1030, direction: 1, patrolLeft: 1210, patrolRight: 1780 },
+      { type: "drone", x: 1720, y: 700, direction: 1, patrolLeft: 1510, patrolRight: 1940 },
+      { type: "mine", x: 1910, y: 1120, patrolTop: 810 },
+      { type: "torpedo", x: 2070, y: 890, direction: -1, patrolLeft: 1840, patrolRight: 2310 },
+      { type: "drone", x: 2220, y: 980, direction: -1, patrolLeft: 1980, patrolRight: 2330 },
+    ],
+  },
 ];
 
-// 背景の目印です。広い海域を移動している感じを出すための小さな固定物です。
-const BACKGROUND_MARKERS = [
-  { x: 520, y: 340, label: "SIG-01" },
-  { x: 980, y: 760, label: "NODE-A" },
-  { x: 1520, y: 520, label: "PING" },
-  { x: 1960, y: 930, label: "RELAY" },
-  { x: 2260, y: 300, label: "SIG-02" },
-];
-
-// 爆雷、敵弾、爆発エフェクト、敵本体は配列で管理します。
+// 爆雷、敵弾、爆発、敵、ソナー波、補給ポイントを配列で管理します。
 const bombs = [];
 const enemyBullets = [];
 const explosions = [];
 const enemies = [];
+const sonarPulses = [];
+const supplies = [];
 
 // ------------------------------------------------------------
 // キーボード入力
 // ------------------------------------------------------------
 
 document.addEventListener("keydown", (event) => {
-  // ブラウザのスクロールを防ぎ、ゲーム操作を優先します。
   if (isGameKey(event.code)) {
     event.preventDefault();
   }
@@ -134,7 +202,11 @@ document.addEventListener("keydown", (event) => {
     dropBomb();
   }
 
-  if (event.code === "Enter" && game.state !== "playing") {
+  if (isSonarKey(event.code) && game.state === "playing") {
+    activateSonar();
+  }
+
+  if (event.code === "KeyR" && (game.state === "gameover" || game.state === "complete")) {
     resetGame();
   }
 });
@@ -153,9 +225,16 @@ function isGameKey(code) {
     code === "KeyD" ||
     code === "KeyW" ||
     code === "KeyS" ||
+    code === "KeyE" ||
+    code === "ShiftLeft" ||
+    code === "ShiftRight" ||
     code === "Space" ||
-    code === "Enter"
+    code === "KeyR"
   );
+}
+
+function isSonarKey(code) {
+  return code === "KeyE" || code === "ShiftLeft" || code === "ShiftRight";
 }
 
 // ------------------------------------------------------------
@@ -163,21 +242,18 @@ function isGameKey(code) {
 // ------------------------------------------------------------
 
 function gameLoop(timestamp) {
-  // 初回だけ lastTime を現在時刻に合わせます。
   if (!game.lastTime) {
     game.lastTime = timestamp;
   }
 
-  // frameScale は「60fps の何フレーム分進んだか」です。
-  // タブ復帰直後などに大きく飛ばないよう、最大値を制限します。
   const elapsed = Math.min(timestamp - game.lastTime, 48);
   const frameScale = elapsed / BASE_FRAME_MS;
   game.lastTime = timestamp;
 
   if (game.state === "playing") {
-    update(frameScale);
+    updatePlaying(frameScale);
   } else {
-    updateExplosions(frameScale);
+    updateNonPlaying(frameScale);
   }
 
   draw();
@@ -188,18 +264,46 @@ function gameLoop(timestamp) {
 // 更新処理
 // ------------------------------------------------------------
 
-function update(frameScale) {
+function updatePlaying(frameScale) {
   updatePlayer(frameScale);
   updateCamera(frameScale);
   updateBombs(frameScale);
   updateEnemies(frameScale);
   updateEnemyBullets(frameScale);
+  updateSupplies(frameScale);
+  updateSonar(frameScale);
   updateExplosions(frameScale);
+  updateTimers(frameScale);
   checkCollisions();
+}
 
-  // 爆雷を連打しすぎないようにするための短い待ち時間です。
+function updateNonPlaying(frameScale) {
+  // クリアやゲームオーバー中も、爆発とソナー波は少しだけ動かします。
+  updateCamera(frameScale);
+  updateSonar(frameScale);
+  updateExplosions(frameScale);
+  updateTimers(frameScale);
+
+  if (game.state === "clear") {
+    game.clearTimer -= frameScale;
+
+    if (game.clearTimer <= 0) {
+      advanceStage();
+    }
+  }
+}
+
+function updateTimers(frameScale) {
   if (game.bombCooldown > 0) {
     game.bombCooldown -= frameScale;
+  }
+
+  if (game.sonarCooldown > 0) {
+    game.sonarCooldown -= frameScale;
+  }
+
+  if (game.statusTimer > 0) {
+    game.statusTimer -= frameScale;
   }
 
   if (player.invincibleTimer > 0) {
@@ -208,7 +312,6 @@ function update(frameScale) {
 }
 
 function updatePlayer(frameScale) {
-  // 左右移動。矢印キーと A/D キーの両方に対応しています。
   if (keys.ArrowLeft || keys.KeyA) {
     player.x -= player.speed * frameScale;
   }
@@ -217,7 +320,6 @@ function updatePlayer(frameScale) {
     player.x += player.speed * frameScale;
   }
 
-  // 上下移動。水上艦らしく、ワールドの上部〜中段を主な移動範囲にしています。
   if (keys.ArrowUp || keys.KeyW) {
     player.y -= player.speed * frameScale;
   }
@@ -226,7 +328,8 @@ function updatePlayer(frameScale) {
     player.y += player.speed * frameScale;
   }
 
-  // ワールド外に出ないように中心座標を制限します。
+  // 水上艦のイメージを保つため、上部〜中段を主な行動範囲にします。
+  // ただし探索感を出すため、かなり下の深度まで入れるようにしています。
   const halfWidth = player.width / 2;
   const halfHeight = player.height / 2;
   player.x = clamp(player.x, halfWidth + 20, WORLD_WIDTH - halfWidth - 20);
@@ -234,13 +337,11 @@ function updatePlayer(frameScale) {
 }
 
 function updateCamera(frameScale) {
-  // 画面中央より少し上に自機が見えるように追従させます。
-  // 下方向の海域が多めに見えるため、爆雷を落とすゲームに向いています。
+  // 自機を画面中央より少し上に置くと、下方向の海域と爆雷の落下が見やすくなります。
   const targetX = player.x - SCREEN_WIDTH * 0.44;
   const targetY = player.y - SCREEN_HEIGHT * 0.30;
-
-  // 少しだけ滑らかに追従します。係数を 1 に近づけると硬い追従になります。
   const followRate = Math.min(1, 0.14 * frameScale);
+
   cameraX += (targetX - cameraX) * followRate;
   cameraY += (targetY - cameraY) * followRate;
 
@@ -250,8 +351,12 @@ function updateCamera(frameScale) {
 }
 
 function dropBomb() {
-  // 広いステージでは少し多めに投下できるよう、同時に5個までにしています。
-  if (game.bombCooldown > 0 || bombs.length >= 5) {
+  if (game.ammo <= 0) {
+    setStatus("NO DEPTH CHARGES", 90);
+    return;
+  }
+
+  if (game.bombCooldown > 0 || bombs.length >= 6) {
     return;
   }
 
@@ -260,20 +365,21 @@ function dropBomb() {
     y: player.y + player.height / 2 + 6,
     width: 8,
     height: 14,
-    speed: 2.15,
+    baseSpeed: 2.45,
   });
 
+  game.ammo -= 1;
   game.bombCooldown = 16;
 }
 
 function updateBombs(frameScale) {
   for (const bomb of bombs) {
-    // 爆雷はワールド座標で下方向に落下します。
-    // 画面外でもワールド内にある間はこのまま判定が続きます。
-    bomb.y += bomb.speed * frameScale;
+    // 深いほど水圧・抵抗が強い、というゲーム的な扱いで少し沈降を遅くします。
+    const depthDrag = 1 - getDepthFactor(bomb.y) * 0.42;
+    bomb.y += bomb.baseSpeed * depthDrag * frameScale;
   }
 
-  // ワールド下端を越えた爆雷だけを取り除きます。
+  // 画面外でも、ワールド内にある爆雷は判定を続けます。
   removeWhere(bombs, (bomb) => bomb.y > WORLD_HEIGHT + 30);
 }
 
@@ -281,6 +387,14 @@ function updateEnemies(frameScale) {
   for (const enemy of enemies) {
     if (!enemy.alive) {
       continue;
+    }
+
+    if (enemy.detectedTimer > 0) {
+      enemy.detectedTimer -= frameScale;
+    }
+
+    if (enemy.pingTimer > 0) {
+      enemy.pingTimer -= frameScale;
     }
 
     if (enemy.type === "drone") {
@@ -310,12 +424,11 @@ function updateDrone(enemy, frameScale) {
     enemy.direction = -1;
   }
 
-  // ドローンは自機がある程度近いときだけ上方向に弾を撃ちます。
-  // 遠くの画面外から弾が飛びすぎないようにするためです。
+  // ドローンは自機が近いときだけ弾を撃ちます。
   enemy.fireTimer -= frameScale;
 
   if (enemy.fireTimer <= 0) {
-    if (Math.abs(player.x - enemy.x) < 560 && player.y < enemy.y + 80) {
+    if (Math.abs(player.x - enemy.x) < 560 && player.y < enemy.y + 90) {
       fireEnemyBullet(enemy);
     }
 
@@ -338,12 +451,11 @@ function updateTorpedo(enemy, frameScale) {
 }
 
 function updateMine(enemy, frameScale) {
-  // 浮上機雷はゆっくり上に移動し、少しだけ左右に揺れます。
+  // 浮上機雷はゆっくり上へ移動し、少し左右に揺れます。
   enemy.phase += 0.045 * frameScale;
   enemy.y -= enemy.speed * frameScale;
   enemy.x += Math.sin(enemy.phase) * 0.18 * frameScale;
 
-  // 上がり切ったらその深度で漂わせます。
   if (enemy.y < enemy.patrolTop) {
     enemy.y = enemy.patrolTop;
   }
@@ -364,8 +476,78 @@ function updateEnemyBullets(frameScale) {
     bullet.y -= bullet.speed * frameScale;
   }
 
-  // ワールド上端を越えた敵弾は配列から取り除きます。
   removeWhere(enemyBullets, (bullet) => bullet.y < -30);
+}
+
+function updateSupplies(frameScale) {
+  for (const supply of supplies) {
+    if (supply.cooldown > 0) {
+      supply.cooldown -= frameScale;
+    }
+
+    if (supply.flashTimer > 0) {
+      supply.flashTimer -= frameScale;
+    }
+
+    const nearSupply = distance(player.x, player.y, supply.x, supply.y) <= SUPPLY_RADIUS;
+    const needsSupply = game.ammo < MAX_AMMO || game.lives < MAX_LIVES;
+
+    if (nearSupply && needsSupply && supply.cooldown <= 0) {
+      game.ammo = MAX_AMMO;
+
+      if (game.lives < MAX_LIVES) {
+        game.lives += 1;
+      }
+
+      supply.cooldown = 260;
+      supply.flashTimer = 90;
+      setStatus("SUPPLIED", 100);
+    }
+  }
+}
+
+function activateSonar() {
+  if (game.sonarCooldown > 0) {
+    setStatus("SONAR CHARGING", 55);
+    return;
+  }
+
+  game.sonarCooldown = SONAR_COOLDOWN;
+
+  sonarPulses.push({
+    x: player.x,
+    y: player.y,
+    radius: 16,
+    maxRadius: SONAR_RANGE,
+    life: 62,
+    maxLife: 62,
+  });
+
+  let detectedCount = 0;
+
+  for (const enemy of enemies) {
+    if (!enemy.alive) {
+      continue;
+    }
+
+    if (distance(player.x, player.y, enemy.x, enemy.y) <= SONAR_RANGE) {
+      enemy.detectedTimer = SONAR_REVEAL_TIME;
+      enemy.pingTimer = SONAR_PING_TIME;
+      detectedCount += 1;
+    }
+  }
+
+  setStatus(detectedCount > 0 ? `SONAR CONTACT x${detectedCount}` : "NO CONTACT", 95);
+}
+
+function updateSonar(frameScale) {
+  for (const pulse of sonarPulses) {
+    pulse.life -= frameScale;
+    const progress = 1 - pulse.life / pulse.maxLife;
+    pulse.radius = 16 + (pulse.maxRadius - 16) * clamp(progress, 0, 1);
+  }
+
+  removeWhere(sonarPulses, (pulse) => pulse.life <= 0);
 }
 
 function updateExplosions(frameScale) {
@@ -408,6 +590,8 @@ function checkBombHitsEnemies() {
 
 function hitEnemy(enemy) {
   enemy.health -= 1;
+  enemy.detectedTimer = Math.max(enemy.detectedTimer, 120);
+  enemy.pingTimer = Math.max(enemy.pingTimer, 42);
   addExplosion(enemy.x, enemy.y, 7, 1.4, "#ffec7a");
 
   if (enemy.health <= 0) {
@@ -428,7 +612,6 @@ function destroyEnemy(enemy, addScore) {
 }
 
 function checkEnemyBulletsHitPlayer() {
-  // 被弾後の点滅中は無敵です。
   if (player.invincibleTimer > 0) {
     return;
   }
@@ -447,7 +630,6 @@ function checkEnemyBulletsHitPlayer() {
 }
 
 function checkMinesHitPlayer() {
-  // 被弾後の無敵時間中は、機雷にも当たらないようにします。
   if (player.invincibleTimer > 0) {
     return;
   }
@@ -477,6 +659,7 @@ function damagePlayer() {
 
   if (game.lives <= 0) {
     game.state = "gameover";
+    setStatus("SIGNAL LOST", 120);
   }
 }
 
@@ -489,26 +672,20 @@ function checkStageClear() {
 
   if (!remainingEnemies) {
     game.state = "clear";
+    game.clearTimer = CLEAR_DELAY;
     enemyBullets.length = 0;
+    setStatus("STAGE CLEAR", 140);
   }
 }
 
-function getBox(object) {
-  return {
-    left: object.x - object.width / 2,
-    right: object.x + object.width / 2,
-    top: object.y - object.height / 2,
-    bottom: object.y + object.height / 2,
-  };
-}
+function advanceStage() {
+  if (game.stageIndex >= STAGES.length - 1) {
+    game.state = "complete";
+    setStatus("ALL SIGNALS CLEAR", 180);
+    return;
+  }
 
-function isColliding(a, b) {
-  return (
-    a.left < b.right &&
-    a.right > b.left &&
-    a.top < b.bottom &&
-    a.bottom > b.top
-  );
+  loadStage(game.stageIndex + 1, true);
 }
 
 // ------------------------------------------------------------
@@ -516,47 +693,45 @@ function isColliding(a, b) {
 // ------------------------------------------------------------
 
 function draw() {
-  // ドット風に見せるため、座標はなるべく整数へ丸めて描画します。
   ctx.imageSmoothingEnabled = false;
+
   drawBackground();
+  drawSupplies();
   drawBombs();
   drawEnemies();
   drawEnemyBullets();
   drawPlayer();
+  drawSonarPulses();
   drawExplosions();
+  drawDepthOverlay();
   drawHud();
   drawMinimap();
+  drawControlHelp();
   drawScanlines();
 
   if (game.state === "gameover") {
-    drawGameOver();
+    drawCenteredMessage("GAME OVER", `FINAL SCORE ${padScore(game.score)}`, "PRESS R TO RESTART");
   }
 
   if (game.state === "clear") {
-    drawStageClear();
+    drawCenteredMessage("STAGE CLEAR", `NEXT STAGE IN ${Math.ceil(game.clearTimer / 60)}`, "");
+  }
+
+  if (game.state === "complete") {
+    drawCenteredMessage("ALL SIGNALS CLEAR", `FINAL SCORE ${padScore(game.score)}`, "PRESS R TO RESTART");
   }
 }
 
 function drawBackground() {
-  ctx.fillStyle = "#061725";
+  const deep = getDepthFactor(cameraY + SCREEN_HEIGHT * 0.5);
+  ctx.fillStyle = lerpColor("#082235", "#02070d", deep);
   ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-  // ワールド上部に近いときだけ、海面のゆらぎを横線で表示します。
   drawSurfaceLines();
-
-  // 広い海域に見えるよう、ワールド座標に固定されたグリッドを描きます。
   drawSeaGrid();
-
-  // 深度ラインはワールドY座標に合わせて表示します。
   drawDepthLines();
-
-  // 探索用の小さな背景目印です。ゲーム判定には使いません。
   drawBackgroundMarkers();
-
-  // 海底ラインはワールド下部に固定されています。
   drawSeafloor();
-
-  // ワールド端が見えたときに、探索範囲の境界が分かるようにします。
   drawWorldBorder();
 }
 
@@ -578,7 +753,7 @@ function drawSurfaceLines() {
 }
 
 function drawSeaGrid() {
-  ctx.strokeStyle = "rgba(82, 205, 225, 0.14)";
+  ctx.strokeStyle = "rgba(82, 205, 225, 0.13)";
   ctx.lineWidth = 1;
 
   const gridSize = 80;
@@ -608,8 +783,8 @@ function drawSeaGrid() {
 function drawDepthLines() {
   ctx.font = "14px 'Courier New', monospace";
   ctx.textBaseline = "middle";
-  ctx.fillStyle = "rgba(216, 247, 255, 0.62)";
-  ctx.strokeStyle = "rgba(216, 247, 255, 0.22)";
+  ctx.fillStyle = "rgba(216, 247, 255, 0.55)";
+  ctx.strokeStyle = "rgba(216, 247, 255, 0.18)";
   ctx.lineWidth = 1;
 
   const lineStep = 160;
@@ -621,7 +796,7 @@ function drawDepthLines() {
     ctx.moveTo(0, screenY);
     ctx.lineTo(SCREEN_WIDTH, screenY);
     ctx.stroke();
-    ctx.fillText(`DEPTH ${String(worldY).padStart(4, "0")}m`, 14, screenY - 10);
+    ctx.fillText(`DEPTH ${String(Math.round(worldY)).padStart(4, "0")}m`, 14, screenY - 10);
   }
 }
 
@@ -629,7 +804,7 @@ function drawBackgroundMarkers() {
   ctx.font = "12px 'Courier New', monospace";
   ctx.textBaseline = "top";
 
-  for (const marker of BACKGROUND_MARKERS) {
+  for (const marker of getCurrentStage().markers) {
     if (!isPointVisible(marker.x, marker.y, 40)) {
       continue;
     }
@@ -637,10 +812,10 @@ function drawBackgroundMarkers() {
     const x = Math.round(marker.x - cameraX);
     const y = Math.round(marker.y - cameraY);
 
-    ctx.fillStyle = "rgba(124, 245, 255, 0.24)";
+    ctx.fillStyle = "rgba(124, 245, 255, 0.22)";
     ctx.fillRect(x - 12, y, 24, 2);
     ctx.fillRect(x, y - 12, 2, 24);
-    ctx.fillStyle = "rgba(124, 245, 255, 0.54)";
+    ctx.fillStyle = "rgba(124, 245, 255, 0.48)";
     ctx.fillText(marker.label, x + 10, y + 8);
   }
 }
@@ -719,70 +894,117 @@ function drawWorldBorder() {
   }
 }
 
-function drawHud() {
-  ctx.fillStyle = "#031018";
-  ctx.fillRect(0, 0, SCREEN_WIDTH, 44);
+function drawSupplies() {
+  for (const supply of supplies) {
+    if (!isPointVisible(supply.x, supply.y, 80)) {
+      continue;
+    }
 
-  ctx.fillStyle = "#7cf5ff";
-  ctx.font = "18px 'Courier New', monospace";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  ctx.fillText(`SCORE ${padScore(game.score)}`, 24, 23);
-  ctx.fillText(`LIVES ${game.lives}`, 270, 23);
-  ctx.fillText(`STAGE ${game.stageName}`, 430, 23);
+    const x = Math.round(supply.x - cameraX);
+    const y = Math.round(supply.y - cameraY);
+    const flash = supply.flashTimer > 0 && Math.floor(supply.flashTimer / 8) % 2 === 0;
+
+    ctx.fillStyle = flash ? "#ffffff" : "#6dff9b";
+    ctx.fillRect(x - 14, y - 10, 28, 20);
+    ctx.fillStyle = "#103829";
+    ctx.fillRect(x - 9, y - 5, 18, 10);
+    ctx.fillStyle = "#6dff9b";
+    ctx.fillRect(x - 2, y - 15, 4, 30);
+    ctx.fillRect(x - 17, y - 2, 34, 4);
+  }
 }
 
-function drawPlayer() {
-  // 被弾後は点滅させます。無敵時間が分かりやすくなります。
-  if (player.invincibleTimer > 0 && Math.floor(player.invincibleTimer / 8) % 2 === 0) {
-    return;
+function drawBombs() {
+  for (const bomb of bombs) {
+    if (!isObjectVisible(bomb, 40)) {
+      continue;
+    }
+
+    const x = Math.round(bomb.x - cameraX);
+    const y = Math.round(bomb.y - cameraY);
+
+    ctx.fillStyle = "#d8f7ff";
+    ctx.fillRect(x - 3, y - 7, 6, 14);
+    ctx.fillStyle = "#7cf5ff";
+    ctx.fillRect(x - 6, y + 5, 12, 3);
+    ctx.fillStyle = "#ffec7a";
+    ctx.fillRect(x - 2, y - 10, 4, 3);
   }
-
-  const x = Math.round(player.x - cameraX);
-  const y = Math.round(player.y - cameraY);
-
-  // 船体。以前より少し小さくして、広い海域に見えるようにしています。
-  ctx.fillStyle = "#7cf5ff";
-  ctx.fillRect(x - 32, y - 5, 64, 10);
-  ctx.fillRect(x - 24, y + 5, 48, 7);
-
-  // 船首と船尾
-  ctx.fillStyle = "#c9fbff";
-  ctx.fillRect(x + 26, y - 2, 12, 7);
-  ctx.fillStyle = "#4bb6c5";
-  ctx.fillRect(x - 39, y - 2, 10, 7);
-
-  // ブリッジ
-  ctx.fillStyle = "#d8f7ff";
-  ctx.fillRect(x - 8, y - 18, 22, 13);
-  ctx.fillStyle = "#12394d";
-  ctx.fillRect(x - 3, y - 15, 6, 5);
-  ctx.fillRect(x + 6, y - 15, 6, 5);
-
-  // アンテナ
-  ctx.fillStyle = "#ffec7a";
-  ctx.fillRect(x + 16, y - 26, 3, 10);
-  ctx.fillRect(x + 12, y - 28, 10, 2);
 }
 
 function drawEnemies() {
   for (const enemy of enemies) {
-    if (!enemy.alive || !isObjectVisible(enemy, 80)) {
+    if (!enemy.alive || !isObjectVisible(enemy, 90)) {
       continue;
     }
 
-    if (enemy.type === "drone") {
-      drawDrone(enemy);
+    const visibility = getEnemyVisibility(enemy);
+
+    if (visibility < 0.36 && enemy.detectedTimer <= 0) {
+      drawEnemyShadow(enemy, visibility);
+    } else {
+      drawEnemySprite(enemy, visibility);
     }
 
-    if (enemy.type === "torpedo") {
-      drawTorpedo(enemy);
-    }
-
-    if (enemy.type === "mine") {
-      drawMine(enemy);
+    if (enemy.pingTimer > 0) {
+      drawEnemyPingOutline(enemy);
     }
   }
+}
+
+function drawEnemySprite(enemy, visibility) {
+  ctx.save();
+  ctx.globalAlpha = clamp(visibility, 0.18, 1);
+
+  if (enemy.type === "drone") {
+    drawDrone(enemy);
+  }
+
+  if (enemy.type === "torpedo") {
+    drawTorpedo(enemy);
+  }
+
+  if (enemy.type === "mine") {
+    drawMine(enemy);
+  }
+
+  ctx.restore();
+}
+
+function drawEnemyShadow(enemy, visibility) {
+  const x = Math.round(enemy.x - cameraX);
+  const y = Math.round(enemy.y - cameraY);
+  const shadowAlpha = clamp(visibility + 0.08, 0.12, 0.28);
+
+  ctx.save();
+  ctx.globalAlpha = shadowAlpha;
+  ctx.shadowColor = "rgba(124, 245, 255, 0.35)";
+  ctx.shadowBlur = 10;
+  ctx.fillStyle = "#0a131a";
+  ctx.fillRect(x - enemy.width / 2 - 4, y - enemy.height / 2 - 2, enemy.width + 8, enemy.height + 4);
+  ctx.fillStyle = "rgba(124, 245, 255, 0.16)";
+  ctx.fillRect(x - enemy.width / 2, y - 2, enemy.width, 4);
+  ctx.restore();
+}
+
+function drawEnemyPingOutline(enemy) {
+  const x = Math.round(enemy.x - cameraX);
+  const y = Math.round(enemy.y - cameraY);
+  const alpha = clamp(enemy.pingTimer / SONAR_PING_TIME, 0, 1);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = "#7cf5ff";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(
+    Math.round(x - enemy.width / 2 - 5),
+    Math.round(y - enemy.height / 2 - 5),
+    enemy.width + 10,
+    enemy.height + 10
+  );
+  ctx.fillStyle = "#7cf5ff";
+  ctx.fillRect(x - 2, y - enemy.height / 2 - 12, 4, 8);
+  ctx.restore();
 }
 
 function drawDrone(enemy) {
@@ -794,10 +1016,8 @@ function drawDrone(enemy) {
   ctx.fillStyle = "#ff9b7a";
   ctx.fillRect(x - 20, y - 16, 34, 7);
   ctx.fillRect(x - 13, y + 9, 26, 7);
-
   ctx.fillStyle = "#ffec7a";
   ctx.fillRect(x + enemy.direction * 21 - 3, y - 3, 6, 6);
-
   ctx.fillStyle = "#b93046";
   ctx.fillRect(x - 40, y - 3, 11, 6);
   ctx.fillRect(x + 29, y - 3, 11, 6);
@@ -831,24 +1051,6 @@ function drawMine(enemy) {
   ctx.fillRect(x + 10, y - 2, 8, 4);
 }
 
-function drawBombs() {
-  for (const bomb of bombs) {
-    if (!isObjectVisible(bomb, 40)) {
-      continue;
-    }
-
-    const x = Math.round(bomb.x - cameraX);
-    const y = Math.round(bomb.y - cameraY);
-
-    ctx.fillStyle = "#d8f7ff";
-    ctx.fillRect(x - 3, y - 7, 6, 14);
-    ctx.fillStyle = "#7cf5ff";
-    ctx.fillRect(x - 6, y + 5, 12, 3);
-    ctx.fillStyle = "#ffec7a";
-    ctx.fillRect(x - 2, y - 10, 4, 3);
-  }
-}
-
 function drawEnemyBullets() {
   for (const bullet of enemyBullets) {
     if (!isObjectVisible(bullet, 40)) {
@@ -862,6 +1064,57 @@ function drawEnemyBullets() {
     ctx.fillRect(x - 3, y - 6, 6, 12);
     ctx.fillStyle = "#ff6b6b";
     ctx.fillRect(x - 2, y - 9, 4, 3);
+  }
+}
+
+function drawPlayer() {
+  if (player.invincibleTimer > 0 && Math.floor(player.invincibleTimer / 8) % 2 === 0) {
+    return;
+  }
+
+  const x = Math.round(player.x - cameraX);
+  const y = Math.round(player.y - cameraY);
+
+  ctx.fillStyle = "#7cf5ff";
+  ctx.fillRect(x - 32, y - 5, 64, 10);
+  ctx.fillRect(x - 24, y + 5, 48, 7);
+  ctx.fillStyle = "#c9fbff";
+  ctx.fillRect(x + 26, y - 2, 12, 7);
+  ctx.fillStyle = "#4bb6c5";
+  ctx.fillRect(x - 39, y - 2, 10, 7);
+  ctx.fillStyle = "#d8f7ff";
+  ctx.fillRect(x - 8, y - 18, 22, 13);
+  ctx.fillStyle = "#12394d";
+  ctx.fillRect(x - 3, y - 15, 6, 5);
+  ctx.fillRect(x + 6, y - 15, 6, 5);
+  ctx.fillStyle = "#ffec7a";
+  ctx.fillRect(x + 16, y - 26, 3, 10);
+  ctx.fillRect(x + 12, y - 28, 10, 2);
+}
+
+function drawSonarPulses() {
+  for (const pulse of sonarPulses) {
+    if (!isPointVisible(pulse.x, pulse.y, pulse.radius + 20)) {
+      continue;
+    }
+
+    const x = Math.round(pulse.x - cameraX);
+    const y = Math.round(pulse.y - cameraY);
+    const alpha = clamp(pulse.life / pulse.maxLife, 0, 1);
+
+    ctx.save();
+    ctx.strokeStyle = `rgba(124, 245, 255, ${0.65 * alpha})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(x, y, pulse.radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = `rgba(255, 236, 122, ${0.35 * alpha})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(x, y, pulse.radius * 0.62, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
   }
 }
 
@@ -883,22 +1136,64 @@ function drawExplosions() {
   }
 }
 
+function drawDepthOverlay() {
+  // 自機の深度が深いほど、画面全体を少し暗くします。
+  const deep = getDepthFactor(player.y);
+  ctx.fillStyle = `rgba(0, 4, 10, ${0.08 + deep * 0.36})`;
+  ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+  ctx.fillStyle = `rgba(0, 32, 46, ${deep * 0.18})`;
+  ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+}
+
+function drawHud() {
+  ctx.fillStyle = "#031018";
+  ctx.fillRect(0, 0, SCREEN_WIDTH, 70);
+
+  ctx.fillStyle = "#7cf5ff";
+  ctx.font = "16px 'Courier New', monospace";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText(`SCORE ${padScore(game.score)}`, 18, 18);
+  ctx.fillText(`LIVES ${game.lives}`, 188, 18);
+  ctx.fillText(`AMMO ${game.ammo}/${MAX_AMMO}`, 292, 18);
+  ctx.fillText(`DEPTH: ${Math.round(player.y)}m`, 420, 18);
+
+  ctx.fillStyle = "#d8f7ff";
+  ctx.fillText(`STAGE ${game.stageIndex + 1}: ${game.stageName}`, 18, 46);
+
+  const sonarText = game.sonarCooldown <= 0
+    ? "SONAR READY"
+    : `SONAR CHARGING ${Math.ceil(game.sonarCooldown / 60)}`;
+
+  ctx.fillStyle = game.sonarCooldown <= 0 ? "#6dff9b" : "#ffec7a";
+  ctx.fillText(sonarText, 420, 46);
+
+  if (game.ammo <= 0) {
+    ctx.fillStyle = "#ff6b6b";
+    ctx.fillText("NO DEPTH CHARGES", 615, 46);
+  } else if (game.statusTimer > 0) {
+    ctx.fillStyle = "#ffec7a";
+    ctx.fillText(game.statusText, 615, 46);
+  }
+}
+
 function drawMinimap() {
-  const mapWidth = 150;
-  const mapHeight = 75;
-  const mapX = SCREEN_WIDTH - mapWidth - 20;
-  const mapY = 58;
+  const mapWidth = 154;
+  const mapHeight = 78;
+  const mapX = SCREEN_WIDTH - mapWidth - 18;
+  const mapY = 84;
   const scaleX = mapWidth / WORLD_WIDTH;
   const scaleY = mapHeight / WORLD_HEIGHT;
 
-  ctx.fillStyle = "rgba(3, 16, 24, 0.88)";
+  ctx.fillStyle = "rgba(3, 16, 24, 0.9)";
   ctx.fillRect(mapX, mapY, mapWidth, mapHeight);
   ctx.strokeStyle = "#7cf5ff";
   ctx.lineWidth = 2;
   ctx.strokeRect(mapX, mapY, mapWidth, mapHeight);
 
-  // カメラが見ている範囲をミニマップ上の枠で表示します。
-  ctx.strokeStyle = "rgba(216, 247, 255, 0.72)";
+  // ステージ端はミニマップの外枠で分かるようにし、カメラ範囲も表示します。
+  ctx.strokeStyle = "rgba(216, 247, 255, 0.7)";
   ctx.lineWidth = 1;
   ctx.strokeRect(
     Math.round(mapX + cameraX * scaleX),
@@ -907,12 +1202,32 @@ function drawMinimap() {
     Math.round(SCREEN_HEIGHT * scaleY)
   );
 
-  // 敵位置。タイプごとに点の色を変えています。
+  // 補給ポイントは常に表示します。
+  for (const supply of supplies) {
+    ctx.fillStyle = "#6dff9b";
+    ctx.fillRect(
+      Math.round(mapX + supply.x * scaleX) - 2,
+      Math.round(mapY + supply.y * scaleY) - 2,
+      5,
+      5
+    );
+  }
+
+  // 敵は「浅い敵」または「ソナー発見済み」を優先表示します。
+  // 深い未発見敵は、ほぼ見えない薄い点にします。
   for (const enemy of enemies) {
     if (!enemy.alive) {
       continue;
     }
 
+    const mapAlpha = getEnemyMapAlpha(enemy);
+
+    if (mapAlpha <= 0) {
+      continue;
+    }
+
+    ctx.save();
+    ctx.globalAlpha = mapAlpha;
     ctx.fillStyle = getEnemyMapColor(enemy.type);
     ctx.fillRect(
       Math.round(mapX + enemy.x * scaleX) - 2,
@@ -920,9 +1235,9 @@ function drawMinimap() {
       4,
       4
     );
+    ctx.restore();
   }
 
-  // 自機位置はシアンの少し大きい点です。
   ctx.fillStyle = "#7cf5ff";
   ctx.fillRect(
     Math.round(mapX + player.x * scaleX) - 3,
@@ -932,8 +1247,17 @@ function drawMinimap() {
   );
 }
 
+function drawControlHelp() {
+  ctx.fillStyle = "rgba(3, 16, 24, 0.88)";
+  ctx.fillRect(0, SCREEN_HEIGHT - 34, SCREEN_WIDTH, 34);
+  ctx.fillStyle = "#d8f7ff";
+  ctx.font = "14px 'Courier New', monospace";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText("MOVE: Arrow/WASD   DEPTH CHARGE: Space   SONAR: E/Shift   RESTART: R", 18, SCREEN_HEIGHT - 17);
+}
+
 function drawScanlines() {
-  // CRT風の走査線です。薄く重ねるだけなので処理は軽いです。
   ctx.fillStyle = "rgba(0, 0, 0, 0.18)";
 
   for (let y = 0; y < SCREEN_HEIGHT; y += 4) {
@@ -941,33 +1265,29 @@ function drawScanlines() {
   }
 }
 
-function drawGameOver() {
-  drawCenteredMessage("GAME OVER", `FINAL SCORE ${padScore(game.score)}`);
-}
-
-function drawStageClear() {
-  drawCenteredMessage("STAGE CLEAR", `SCORE ${padScore(game.score)}`);
-}
-
-function drawCenteredMessage(title, subtitle) {
-  ctx.fillStyle = "rgba(3, 8, 13, 0.76)";
+function drawCenteredMessage(title, subtitle, prompt) {
+  ctx.fillStyle = "rgba(3, 8, 13, 0.78)";
   ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillStyle = title === "STAGE CLEAR" ? "#7cf5ff" : "#ff6b6b";
+  ctx.fillStyle = title === "GAME OVER" ? "#ff6b6b" : "#7cf5ff";
   ctx.font = "42px 'Courier New', monospace";
-  ctx.fillText(title, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 26);
+  ctx.fillText(title, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 34);
 
   ctx.fillStyle = "#d8f7ff";
   ctx.font = "20px 'Courier New', monospace";
-  ctx.fillText(subtitle, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 28);
-  ctx.fillText("PRESS ENTER", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 66);
+  ctx.fillText(subtitle, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 22);
+
+  if (prompt) {
+    ctx.fillText(prompt, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 62);
+  }
+
   ctx.textAlign = "left";
 }
 
 // ------------------------------------------------------------
-// 便利関数
+// ステージと便利関数
 // ------------------------------------------------------------
 
 function createEnemy(layout, index) {
@@ -983,6 +1303,7 @@ function createEnemy(layout, index) {
     width: base.width,
     height: base.height,
     health: base.health,
+    maxHealth: base.health,
     speed: base.speed,
     score: base.score,
     direction: layout.direction || 1,
@@ -993,7 +1314,68 @@ function createEnemy(layout, index) {
     patrolRight: Math.min(WORLD_WIDTH - base.width / 2, layout.patrolRight || layout.x + patrolPadding),
     patrolTop: layout.patrolTop || 260,
     phase: index * 0.8,
+    detectedTimer: layout.initiallyDetected ? SONAR_REVEAL_TIME : 0,
+    pingTimer: 0,
   };
+}
+
+function loadStage(stageIndex, keepPlayerResources) {
+  const stage = STAGES[stageIndex];
+
+  game.stageIndex = stageIndex;
+  game.stageName = stage.name;
+  game.state = "playing";
+  game.clearTimer = 0;
+  game.bombCooldown = 0;
+  game.sonarCooldown = 0;
+  game.statusText = "";
+  game.statusTimer = 0;
+
+  if (!keepPlayerResources) {
+    game.score = 0;
+    game.lives = MAX_LIVES;
+    game.ammo = MAX_AMMO;
+  } else {
+    game.ammo = MAX_AMMO;
+  }
+
+  player.x = stage.start.x;
+  player.y = stage.start.y;
+  player.invincibleTimer = 0;
+
+  cameraX = clamp(player.x - SCREEN_WIDTH * 0.44, 0, WORLD_WIDTH - SCREEN_WIDTH);
+  cameraY = clamp(player.y - SCREEN_HEIGHT * 0.30, 0, WORLD_HEIGHT - SCREEN_HEIGHT);
+
+  bombs.length = 0;
+  enemyBullets.length = 0;
+  explosions.length = 0;
+  sonarPulses.length = 0;
+
+  enemies.length = 0;
+  for (let i = 0; i < stage.enemies.length; i += 1) {
+    enemies.push(createEnemy(stage.enemies[i], i));
+  }
+
+  supplies.length = 0;
+  for (let i = 0; i < stage.supplies.length; i += 1) {
+    supplies.push({
+      x: stage.supplies[i].x,
+      y: stage.supplies[i].y,
+      cooldown: 0,
+      flashTimer: 0,
+    });
+  }
+
+  setStatus(`ENTER ${stage.name}`, 130);
+}
+
+function resetGame() {
+  game.lastTime = 0;
+  loadStage(0, false);
+}
+
+function getCurrentStage() {
+  return STAGES[game.stageIndex];
 }
 
 function addExplosion(x, y, radius, growth, color) {
@@ -1007,56 +1389,46 @@ function addExplosion(x, y, radius, growth, color) {
   });
 }
 
-function resetGame() {
-  game.score = 0;
-  game.lives = 3;
-  game.state = "playing";
-  game.bombCooldown = 0;
-  game.lastTime = 0;
+function setStatus(text, duration) {
+  game.statusText = text;
+  game.statusTimer = duration;
+}
 
-  player.x = 180;
-  player.y = 120;
-  player.invincibleTimer = 0;
-
-  cameraX = 0;
-  cameraY = 0;
-
-  bombs.length = 0;
-  enemyBullets.length = 0;
-  explosions.length = 0;
-
-  enemies.length = 0;
-  for (let i = 0; i < STAGE_ENEMY_LAYOUT.length; i += 1) {
-    enemies.push(createEnemy(STAGE_ENEMY_LAYOUT[i], i));
+function getEnemyVisibility(enemy) {
+  if (enemy.detectedTimer > 0) {
+    return 1;
   }
-}
 
-function removeWhere(array, shouldRemove) {
-  for (let i = array.length - 1; i >= 0; i -= 1) {
-    if (shouldRemove(array[i])) {
-      array.splice(i, 1);
-    }
+  if (enemy.pingTimer > 0) {
+    return 0.78;
   }
+
+  // Y座標が大きいほど深い海域として扱います。
+  // 深いほど敵は暗くなり、ステージごとの視界補正も加えます。
+  const depth = getDepthFactor(enemy.y);
+  const stageBonus = getCurrentStage().visibilityBonus;
+  const visibility = 1 - depth * 0.92 + stageBonus;
+  return clamp(visibility, 0.12, 1);
 }
 
-function isObjectVisible(object, margin) {
-  const box = getBox(object);
+function getEnemyMapAlpha(enemy) {
+  if (enemy.detectedTimer > 0) {
+    return 1;
+  }
 
-  return (
-    box.right >= cameraX - margin &&
-    box.left <= cameraX + SCREEN_WIDTH + margin &&
-    box.bottom >= cameraY - margin &&
-    box.top <= cameraY + SCREEN_HEIGHT + margin
-  );
+  if (enemy.y < 440) {
+    return 0.78;
+  }
+
+  if (enemy.y < 760) {
+    return 0.22;
+  }
+
+  return 0.06;
 }
 
-function isPointVisible(x, y, margin) {
-  return (
-    x >= cameraX - margin &&
-    x <= cameraX + SCREEN_WIDTH + margin &&
-    y >= cameraY - margin &&
-    y <= cameraY + SCREEN_HEIGHT + margin
-  );
+function getDepthFactor(worldY) {
+  return clamp((worldY - 180) / 860, 0, 1);
 }
 
 function getSeafloorY(worldX) {
@@ -1080,6 +1452,56 @@ function getEnemyMapColor(type) {
   return "#ffec7a";
 }
 
+function getBox(object) {
+  return {
+    left: object.x - object.width / 2,
+    right: object.x + object.width / 2,
+    top: object.y - object.height / 2,
+    bottom: object.y + object.height / 2,
+  };
+}
+
+function isColliding(a, b) {
+  return (
+    a.left < b.right &&
+    a.right > b.left &&
+    a.top < b.bottom &&
+    a.bottom > b.top
+  );
+}
+
+function isObjectVisible(object, margin) {
+  const box = getBox(object);
+
+  return (
+    box.right >= cameraX - margin &&
+    box.left <= cameraX + SCREEN_WIDTH + margin &&
+    box.bottom >= cameraY - margin &&
+    box.top <= cameraY + SCREEN_HEIGHT + margin
+  );
+}
+
+function isPointVisible(x, y, margin) {
+  return (
+    x >= cameraX - margin &&
+    x <= cameraX + SCREEN_WIDTH + margin &&
+    y >= cameraY - margin &&
+    y <= cameraY + SCREEN_HEIGHT + margin
+  );
+}
+
+function distance(ax, ay, bx, by) {
+  return Math.hypot(ax - bx, ay - by);
+}
+
+function removeWhere(array, shouldRemove) {
+  for (let i = array.length - 1; i >= 0; i -= 1) {
+    if (shouldRemove(array[i])) {
+      array.splice(i, 1);
+    }
+  }
+}
+
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
@@ -1088,6 +1510,46 @@ function padScore(score) {
   return String(score).padStart(6, "0");
 }
 
-// 初期状態を作ってからゲームを開始します。
-resetGame();
+function lerpColor(from, to, amount) {
+  const a = parseHexColor(from);
+  const b = parseHexColor(to);
+  const r = Math.round(a.r + (b.r - a.r) * amount);
+  const g = Math.round(a.g + (b.g - a.g) * amount);
+  const blue = Math.round(a.b + (b.b - a.b) * amount);
+  return `rgb(${r}, ${g}, ${blue})`;
+}
+
+function parseHexColor(hex) {
+  return {
+    r: Number.parseInt(hex.slice(1, 3), 16),
+    g: Number.parseInt(hex.slice(3, 5), 16),
+    b: Number.parseInt(hex.slice(5, 7), 16),
+  };
+}
+
+// ブラウザ確認用の読み取り専用に近いデバッグ窓です。
+// 通常のプレイには影響しません。
+window.__deepSignalDebug = {
+  getState() {
+    return {
+      stageIndex: game.stageIndex,
+      stageName: game.stageName,
+      state: game.state,
+      score: game.score,
+      lives: game.lives,
+      ammo: game.ammo,
+      sonarCooldown: game.sonarCooldown,
+      playerX: player.x,
+      playerY: player.y,
+      cameraX,
+      cameraY,
+      bombs: bombs.length,
+      enemiesAlive: enemies.filter((enemy) => enemy.alive).length,
+      supplies: supplies.map((supply) => ({ x: supply.x, y: supply.y, cooldown: supply.cooldown })),
+    };
+  },
+};
+
+// 初期ステージを読み込んでからゲームを開始します。
+loadStage(0, false);
 requestAnimationFrame(gameLoop);
