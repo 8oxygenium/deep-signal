@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-SHZ3P81R05"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-SHZ3P81R05');
+    </script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cup Ramen Kun v0.1 - HAPOMU</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <main class="game-shell" aria-label="Cup Ramen Kun v0.1">
+      <header class="hero">
+        <p class="eyebrow">HAPOMU survival prototype</p>
+        <h1>Cup Ramen Kun <span>v0.1</span></h1>
+        <p>HOLD THE LID! 30 SEC SURVIVAL</p>
+      </header>
+
+      <section class="machine">
+        <div id="stage" class="stage">
+          <div id="steam" class="steam" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div id="cup" class="cup">
+            <div id="lid" class="lid">PRESS!</div>
+            <div class="face">
+              <span class="eye"></span>
+              <span class="mouth"></span>
+              <span class="eye"></span>
+            </div>
+            <div class="label">CUP<br>RAMEN<br>KUN</div>
+          </div>
+        </div>
+
+        <aside class="hud">
+          <div><span>TIME</span><strong id="timeValue">30.0</strong></div>
+          <div><span>LID POWER</span><strong id="powerValue">100</strong></div>
+          <div><span>SCORE</span><strong id="scoreValue">0</strong></div>
+          <div><span>STATUS</span><strong id="statusValue">READY</strong></div>
+        </aside>
+
+        <div class="power-wrap" aria-label="lid power meter">
+          <div id="powerBar" class="power-bar"></div>
+        </div>
+
+        <div class="message-panel">
+          <p id="eventText">PRESS / HOLD でフタを守れ。</p>
+          <p id="titleText">Space = PRESS LID / R = RESET</p>
+        </div>
+
+        <div class="controls">
+          <button id="pressButton" type="button">PRESS / HOLD</button>
+          <button id="resetButton" type="button">RESET / TRY AGAIN</button>
+        </div>
+      </section>
+
+      <nav class="links" aria-label="page links">
+        <a href="../cup-ramen-kun.html">Back to Concept</a>
+        <a href="../index.html">Back to Games</a>
+        <a href="../../index.html">Back to Top</a>
+      </nav>
+    </main>
+
+    <script src="game.js"></script>
+  </body>
+</html>
