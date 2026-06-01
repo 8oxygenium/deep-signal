@@ -105,3 +105,17 @@
 - `LIVES 3/5` のように最大値付きで表示
 - 弾切れ付近では補給再出現時間を少し短縮
 - STAGE 1〜8の敵弾頻度、ボスHP、召喚頻度、対空弾速度を軽く調整
+
+## v0.3.4 - Stage Identity / Tempo Pass
+
+概要:
+
+- sea / seaBoss のワールド高さを縦長にし、深く潜る構成を強化
+- `getWorldHeight()` を追加し、ステージタイプ別のワールド高さへ対応
+- 深層の暗さ、深度ライン、敵影の見えにくさを調整
+- 海中に高速突撃自爆敵 `rammer` を追加
+- rammer は予兆点滅後にプレイヤー方向へ突進し、接触すると自爆ダメージ
+- air / airBoss の自機を浮上潜水艦と対空砲の見た目に変更
+- air / airBoss のMODE表示を `SURFACED SUB` に変更
+- STAGE CLEAR画面に簡易リザルトを追加
+- STAGE CLEAR中に Space / Enter / Z で即次ステージへ進めるように変更
