@@ -39,3 +39,25 @@ v0.3.2 は新ステージ追加ではなく、v0.3.1 のゲーム性を維持し
 - `sea` / `seaBoss` は潜航艇として海面より上へ出られない。
 - `air` / `airBoss` は海面迎撃艇として空を自由に飛べない。
 - 将来の `space` タイプだけが全方向自由移動になる想定を維持する。
+
+@"
+# DEEP SIGNAL v0.3.2 - Visual & Boss Presentation Polish
+
+## Summary
+v0.3.2 は新ステージ追加ではなく、演出・視認性・ボス登場演出を強化したバージョン。
+
+## Main Changes
+- 海中ステージの暗さ、泡、粒子、残骸を追加
+- 空中戦ステージの水平線、雲、空ノイズ、波表現を強化
+- STAGE 6 / STAGE 8 に BOSS WARNING 演出を追加
+- ABYSS CORE / SKY SIGNAL MOTHERSHIP の登場演出を追加
+- 被弾時の画面揺れを追加
+- 敵撃破・ボス撃破の爆発演出を追加
+- STAGE CLEAR 表示を強化
+- air / airBoss のHUDを DEPTH ではなく SURFACE 表示に変更
+
+## Notes
+- sea / seaBoss は潜航艇として海面上へ出られない
+- air / airBoss は海面迎撃艇として空を自由に飛べない
+- space タイプは将来追加予定
+"@ | Out-File -Encoding utf8 builds\v0.3.2-visual-boss-polish\README.md

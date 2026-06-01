@@ -1,5 +1,5 @@
 // ============================================================
-// DEEP SIGNAL v0.3.2
+// DEEP SIGNAL v0.3.3
 // Web版の完成ゲームへ育てるためのベース実装です。
 // 将来の展開先:
 // - Web版: このままHTML/CSS/JavaScriptで拡張
@@ -14,7 +14,7 @@
 // ------------------------------------------------------------
 
 const CONFIG = {
-  version: "v0.3.2",
+  version: "v0.3.3",
 
   // 表示は800x600相当の論理座標で作り、canvas内部は400x300で描画します。
   // CSSで2倍表示することで、ピクセルがくっきり見えるようにしています。
@@ -33,7 +33,8 @@ const CONFIG = {
   },
 
   player: {
-    maxLives: 3,
+    startLives: 3,
+    maxLives: 5,
     maxAmmo: 12,
     speed: 4.4,
     width: 66,
@@ -82,6 +83,16 @@ const CONFIG = {
     bossRespawnMin: 2100,
     bossRespawnMax: 2700,
     edgeMargin: 170,
+    lowAmmoRespawnFactor: 0.58,
+  },
+
+  drops: {
+    oneUpBaseChance: 0.02,
+    oneUpStrongChance: 0.04,
+    oneUpBossChance: 1.0,
+    oneUpLifetime: 560,
+    oneUpScoreBonus: 1000,
+    pickupRadius: 42,
   },
 
   effects: {
@@ -140,7 +151,7 @@ let cameraY = 0;
 const game = {
   state: STATE.TITLE,
   score: 0,
-  lives: CONFIG.player.maxLives,
+  lives: CONFIG.player.startLives,
   ammo: CONFIG.player.maxAmmo,
   stageIndex: 0,
   stageName: "",
@@ -204,10 +215,10 @@ const ENEMY_TYPES = {
     domain: "sea",
     width: 156,
     height: 74,
-    health: 14,
+    health: 12,
     speed: 0.85,
     score: 1600,
-    fireInterval: 78,
+    fireInterval: 86,
     boss: true,
   },
   helicopter: {
@@ -245,10 +256,10 @@ const ENEMY_TYPES = {
     domain: "air",
     width: 178,
     height: 58,
-    health: 18,
+    health: 16,
     speed: 0.95,
     score: 2600,
-    fireInterval: 56,
+    fireInterval: 64,
     boss: true,
   },
 };
@@ -259,7 +270,8 @@ const STAGES = [
     type: STAGE_TYPE.SEA,
     start: { x: 180, y: 120 },
     visibilityBonus: 0.28,
-    fireRate: 1.08,
+    fireRate: 1.36,
+    supplyRespawn: { min: 900, max: 1200 },
     supplies: [{ x: 690, y: 230 }],
     markers: [
       { x: 430, y: 300, label: "TRAIN-1" },
@@ -280,7 +292,7 @@ const STAGES = [
     type: STAGE_TYPE.SEA,
     start: { x: 180, y: 150 },
     visibilityBonus: 0.16,
-    fireRate: 0.96,
+    fireRate: 0.9,
     supplies: [{ x: 780, y: 300 }],
     markers: [
       { x: 420, y: 420, label: "GRID-A" },
@@ -303,7 +315,7 @@ const STAGES = [
     type: STAGE_TYPE.SEA,
     start: { x: 220, y: 180 },
     visibilityBonus: 0.05,
-    fireRate: 0.88,
+    fireRate: 0.82,
     supplies: [{ x: 820, y: 340 }],
     markers: [
       { x: 520, y: 620, label: "SIG-01" },
@@ -325,8 +337,9 @@ const STAGES = [
     name: "GHOST CURRENT",
     type: STAGE_TYPE.SEA,
     start: { x: 210, y: 200 },
-    visibilityBonus: 0,
-    fireRate: 0.76,
+    visibilityBonus: -0.02,
+    fireRate: 0.72,
+    supplyRespawn: { min: 1200, max: 1620 },
     supplies: [{ x: 640, y: 360 }],
     markers: [
       { x: 450, y: 720, label: "CURRENT" },
@@ -350,8 +363,9 @@ const STAGES = [
     name: "BLACK SIGNAL ZONE",
     type: STAGE_TYPE.SEA,
     start: { x: 180, y: 220 },
-    visibilityBonus: -0.05,
-    fireRate: 0.68,
+    visibilityBonus: -0.08,
+    fireRate: 0.66,
+    supplyRespawn: { min: 1320, max: 1680 },
     supplies: [
       { x: 640, y: 380 },
       { x: 1850, y: 560 },
@@ -380,7 +394,7 @@ const STAGES = [
     type: STAGE_TYPE.SEA_BOSS,
     start: { x: 250, y: 210 },
     visibilityBonus: -0.08,
-    fireRate: 0.72,
+    fireRate: 0.82,
     supplies: [
       { x: 620, y: 360 },
       { x: 1690, y: 420 },
@@ -391,7 +405,7 @@ const STAGES = [
       { x: 1820, y: 740, label: "WEAK ECHO" },
     ],
     enemies: [
-      { type: "abyssBoss", x: 1540, y: 760, direction: -1, patrolLeft: 980, patrolRight: 2050, initiallyDetected: true },
+      { type: "abyssBoss", x: 1540, y: 760, direction: -1, patrolLeft: 980, patrolRight: 2050 },
     ],
   },
   {
@@ -399,7 +413,7 @@ const STAGES = [
     type: STAGE_TYPE.AIR,
     start: { x: 180, y: 444 },
     visibilityBonus: 0.34,
-    fireRate: 0.82,
+    fireRate: 0.86,
     supplies: [{ x: 1040, y: 168 }],
     markers: [
       { x: 420, y: 120, label: "SURFACE" },
@@ -422,7 +436,7 @@ const STAGES = [
     type: STAGE_TYPE.AIR_BOSS,
     start: { x: 260, y: 444 },
     visibilityBonus: 0.36,
-    fireRate: 0.7,
+    fireRate: 0.82,
     supplies: [
       { x: 620, y: 172 },
       { x: 1800, y: 172 },
@@ -446,8 +460,10 @@ const explosions = [];
 const enemies = [];
 const sonarPulses = [];
 const supplies = [];
+const oneUps = [];
 const muzzleFlashes = [];
 const particles = [];
+const popups = [];
 
 // ------------------------------------------------------------
 // GB風サウンド
@@ -511,7 +527,11 @@ function playSound(name) {
   }
 
   if (name === "bomb") {
-    playSweep(196, 98, 0.18, "square", 0.05, 0);
+    playSweep(196, 98, 0.14, "square", 0.045, 0);
+  }
+
+  if (name === "empty") {
+    playTone(110, 0.05, "square", 0.035, 0);
   }
 
   if (name === "explosion") {
@@ -530,17 +550,29 @@ function playSound(name) {
     playTone(880, 0.1, "square", 0.04, 0.12);
   }
 
+  if (name === "oneup") {
+    playTone(523, 0.06, "square", 0.05, 0);
+    playTone(659, 0.06, "square", 0.05, 0.06);
+    playTone(784, 0.06, "square", 0.05, 0.12);
+    playTone(1046, 0.12, "square", 0.045, 0.18);
+  }
+
+  if (name === "bonus") {
+    playTone(784, 0.05, "square", 0.04, 0);
+    playTone(988, 0.08, "square", 0.04, 0.06);
+  }
+
   if (name === "clear") {
-    playTone(392, 0.08, "square", 0.05, 0);
-    playTone(523, 0.08, "square", 0.05, 0.08);
-    playTone(784, 0.2, "square", 0.05, 0.16);
+    playTone(392, 0.06, "square", 0.045, 0);
+    playTone(523, 0.06, "square", 0.045, 0.06);
+    playTone(784, 0.14, "square", 0.045, 0.12);
   }
 
   if (name === "warning") {
-    playTone(196, 0.08, "square", 0.06, 0);
-    playTone(196, 0.08, "square", 0.06, 0.14);
-    playTone(98, 0.22, "square", 0.055, 0.28);
-    playNoise(0.12, 0.05, 0.02);
+    playTone(196, 0.07, "square", 0.045, 0);
+    playTone(196, 0.07, "square", 0.045, 0.14);
+    playTone(98, 0.18, "square", 0.04, 0.28);
+    playNoise(0.1, 0.035, 0.02);
   }
 
   if (name === "gameover") {
@@ -749,9 +781,11 @@ function updatePlaying(frameScale) {
   updateEnemies(frameScale);
   updateEnemyBullets(frameScale);
   updateSupplies(frameScale);
+  updateOneUps(frameScale);
   updateSonar(frameScale);
   updateExplosions(frameScale);
   updateParticles(frameScale);
+  updatePopups(frameScale);
   updateMuzzleFlashes(frameScale);
   updateTimers(frameScale);
   checkCollisions();
@@ -762,6 +796,7 @@ function updateStageClear(frameScale) {
   updateSonar(frameScale);
   updateExplosions(frameScale);
   updateParticles(frameScale);
+  updatePopups(frameScale);
   updateMuzzleFlashes(frameScale);
   updateTimers(frameScale);
 
@@ -776,6 +811,7 @@ function updateNonPlaying(frameScale) {
   updateSonar(frameScale);
   updateExplosions(frameScale);
   updateParticles(frameScale);
+  updatePopups(frameScale);
   updateMuzzleFlashes(frameScale);
   updateTimers(frameScale);
 }
@@ -846,6 +882,7 @@ function updateCamera(frameScale) {
 function dropBomb() {
   if (game.ammo <= 0) {
     setStatus(isAirStage() ? "NO AA SHELLS" : "NO DEPTH CHARGES", 90);
+    playSound("empty");
     return;
   }
 
@@ -860,8 +897,8 @@ function dropBomb() {
       x: player.x,
       y: player.y - player.height / 2 - 12,
       width: 6,
-      height: 16,
-      speed: 5.6,
+      height: 18,
+      speed: 6.2,
     });
     addMuzzleFlash(player.x, player.y - player.height / 2 - 18);
   } else {
@@ -1079,7 +1116,7 @@ function updateSkyBoss(enemy, frameScale) {
 
   if (enemy.summonTimer <= 0) {
     summonAirEscort(enemy);
-    enemy.summonTimer = 360;
+    enemy.summonTimer = 460;
   }
 }
 
@@ -1153,7 +1190,7 @@ function collectSupply(supply) {
   game.ammo = CONFIG.player.maxAmmo;
 
   // 残機回復は強すぎるため低確率に留めます。基本は弾薬補給として扱います。
-  if (game.lives < CONFIG.player.maxLives && Math.random() < 0.12) {
+  if (game.lives < CONFIG.player.maxLives && Math.random() < 0.06) {
     game.lives += 1;
   }
 
@@ -1161,7 +1198,84 @@ function collectSupply(supply) {
   supply.respawnTimer = randomSupplyRespawnTime();
   supply.flashTimer = 0;
   setStatus(isAirStage() ? "AA SHELL RESTORED" : "DEPTH CHARGE RESTORED", 115);
+  addPopup("SUPPLIED", supply.x, supply.y - 24);
   playSound("supply");
+}
+
+function updateOneUps(frameScale) {
+  for (let i = oneUps.length - 1; i >= 0; i -= 1) {
+    const oneUp = oneUps[i];
+    oneUp.timer -= frameScale;
+    oneUp.phase += 0.08 * frameScale;
+
+    if (oneUp.kind === "air") {
+      // 空中戦の救援カプセルは、海面へ向かってゆっくり落ちてきます。
+      oneUp.y = Math.min(oneUp.y + oneUp.vy * frameScale, getAirSupplyY() - 12);
+    } else {
+      // 海中の救命カプセルは少しだけ浮遊します。
+      oneUp.y += Math.sin(oneUp.phase) * 0.18 * frameScale;
+    }
+
+    if (oneUp.timer <= 0) {
+      oneUps.splice(i, 1);
+      continue;
+    }
+
+    if (distance(player.x, player.y, oneUp.x, oneUp.y) <= CONFIG.drops.pickupRadius) {
+      collectOneUp(oneUp);
+      oneUps.splice(i, 1);
+    }
+  }
+}
+
+function maybeDropOneUp(enemy) {
+  if (!shouldDropOneUp(enemy)) {
+    return;
+  }
+
+  spawnOneUp(enemy.x, enemy.y, getEnemyDomain(enemy) === "air" ? "air" : "sea");
+}
+
+function shouldDropOneUp(enemy) {
+  const type = ENEMY_TYPES[enemy.type];
+
+  if (type.boss) {
+    return Math.random() < CONFIG.drops.oneUpBossChance;
+  }
+
+  const strongEnemy = enemy.maxHealth >= 2 || enemy.type === "ufo" || enemy.type === "torpedo";
+  const chance = strongEnemy ? CONFIG.drops.oneUpStrongChance : CONFIG.drops.oneUpBaseChance;
+  return Math.random() < chance;
+}
+
+function spawnOneUp(x, y, kind) {
+  oneUps.push({
+    x: clamp(x, 60, WORLD_WIDTH - 60),
+    y: kind === "air" ? Math.max(90, y) : clamp(y, getSeaSurfaceY() + 80, WORLD_HEIGHT - 120),
+    kind,
+    timer: CONFIG.drops.oneUpLifetime,
+    phase: Math.random() * Math.PI * 2,
+    vy: kind === "air" ? 0.55 : 0,
+    width: 32,
+    height: 22,
+  });
+}
+
+function collectOneUp(oneUp) {
+  addBurstParticles(oneUp.x, oneUp.y, 12, "light");
+
+  if (game.lives < CONFIG.player.maxLives) {
+    game.lives += 1;
+    setStatus("1UP! EXTRA LIFE", 120);
+    addPopup("1UP!", oneUp.x, oneUp.y - 24);
+    playSound("oneup");
+    return;
+  }
+
+  game.score += CONFIG.drops.oneUpScoreBonus;
+  setStatus(`SCORE BONUS +${CONFIG.drops.oneUpScoreBonus}`, 120);
+  addPopup("+1000 SCORE", oneUp.x, oneUp.y - 24);
+  playSound("bonus");
 }
 
 function activateSonar() {
@@ -1228,6 +1342,15 @@ function updateParticles(frameScale) {
   }
 
   removeWhere(particles, (particle) => particle.life <= 0);
+}
+
+function updatePopups(frameScale) {
+  for (const popup of popups) {
+    popup.life -= frameScale;
+    popup.y -= 0.32 * frameScale;
+  }
+
+  removeWhere(popups, (popup) => popup.life <= 0);
 }
 
 function updateMuzzleFlashes(frameScale) {
@@ -1321,6 +1444,10 @@ function destroyEnemy(enemy, addScore) {
 
   if (addScore) {
     game.score += enemy.score;
+  }
+
+  if (addScore) {
+    maybeDropOneUp(enemy);
   }
 
   if (ENEMY_TYPES[enemy.type].boss) {
@@ -1460,6 +1587,7 @@ function draw() {
 function drawGameScreen() {
   drawBackground();
   drawSupplies();
+  drawOneUps();
   drawBombs();
   drawEnemies();
   drawEnemyBullets();
@@ -1468,6 +1596,7 @@ function drawGameScreen() {
   drawSonarPulses();
   drawExplosions();
   drawParticles();
+  drawPopups();
   drawDepthOverlay();
   drawHud();
   drawMinimap();
@@ -1901,6 +2030,55 @@ function drawSupplyBuoy(x, y, flash) {
   ctx.restore();
 }
 
+function drawOneUps() {
+  for (const oneUp of oneUps) {
+    if (!isPointVisible(oneUp.x, oneUp.y, 70)) {
+      continue;
+    }
+
+    const blink = Math.floor(oneUp.timer / 12) % 2 === 0;
+    const x = Math.round(oneUp.x - cameraX);
+    const y = Math.round(oneUp.y - cameraY + Math.sin(oneUp.phase) * 3);
+
+    ctx.save();
+    ctx.globalAlpha = oneUp.timer < 120 && !blink ? 0.35 : 1;
+
+    if (oneUp.kind === "air") {
+      drawAirOneUpCapsule(x, y, blink);
+    } else {
+      drawSeaOneUpCapsule(x, y, blink);
+    }
+
+    ctx.restore();
+  }
+}
+
+function drawSeaOneUpCapsule(x, y, blink) {
+  ctx.fillStyle = blink ? gb("light") : gb("black");
+  ctx.fillRect(x - 15, y - 8, 30, 16);
+  ctx.fillStyle = gb("mid");
+  ctx.fillRect(x - 9, y - 5, 18, 10);
+  ctx.fillStyle = gb("light");
+  ctx.font = "12px 'Courier New', monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("1UP", x, y + 1);
+  ctx.textAlign = "left";
+}
+
+function drawAirOneUpCapsule(x, y, blink) {
+  ctx.fillStyle = blink ? gb("light") : gb("black");
+  ctx.fillRect(x - 13, y - 10, 26, 18);
+  ctx.fillStyle = gb("mid");
+  ctx.fillRect(x - 5, y - 18, 10, 8);
+  ctx.fillStyle = gb("light");
+  ctx.font = "12px 'Courier New', monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("1UP", x, y + 1);
+  ctx.textAlign = "left";
+}
+
 function drawBombs() {
   for (const bomb of bombs) {
     if (!isObjectVisible(bomb, 40)) {
@@ -2287,6 +2465,29 @@ function drawParticles() {
   }
 }
 
+function drawPopups() {
+  for (const popup of popups) {
+    if (!isPointVisible(popup.x, popup.y, 60)) {
+      continue;
+    }
+
+    const x = Math.round(popup.x - cameraX);
+    const y = Math.round(popup.y - cameraY);
+
+    ctx.save();
+    ctx.globalAlpha = clamp(popup.life / 36, 0, 1);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "18px 'Courier New', monospace";
+    ctx.fillStyle = gb("light");
+    ctx.fillRect(x - popup.text.length * 5 - 6, y - 13, popup.text.length * 10 + 12, 24);
+    ctx.fillStyle = gb("black");
+    ctx.fillText(popup.text, x, y);
+    ctx.restore();
+    ctx.textAlign = "left";
+  }
+}
+
 function drawMuzzleFlashes() {
   for (const flash of muzzleFlashes) {
     if (!isPointVisible(flash.x, flash.y, 30)) {
@@ -2332,7 +2533,7 @@ function drawHud() {
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
   ctx.fillText(`SCORE ${padScore(game.score)}`, 18, 18);
-  ctx.fillText(`LIVES ${game.lives}`, 178, 18);
+  ctx.fillText(`LIVES ${game.lives}/${CONFIG.player.maxLives}`, 178, 18);
   ctx.fillText(`${ammoLabel} ${game.ammo}/${CONFIG.player.maxAmmo}`, 282, 18);
   ctx.fillText(positionLabel, 520, 18);
 
@@ -2351,14 +2552,14 @@ function drawHud() {
     ctx.fillStyle = gb("light");
     ctx.fillText(isAirStage() ? "NO AA" : "NO CHG", 690, 18);
   } else if (game.statusTimer > 0) {
-    if (game.statusText.includes("RESTORED")) {
+    if (game.statusText.includes("RESTORED") || game.statusText.includes("1UP") || game.statusText.includes("BONUS")) {
       ctx.fillStyle = gb("light");
-      ctx.fillRect(642, 8, 150, 20);
+      ctx.fillRect(622, 8, 170, 20);
       ctx.fillStyle = gb("black");
     } else {
       ctx.fillStyle = gb("light");
     }
-    ctx.fillText(game.statusText, 650, 18);
+    ctx.fillText(game.statusText, 630, 18);
   }
 
   drawBossHudBar();
@@ -2547,7 +2748,7 @@ function drawLcdOverlay() {
 
 function startNewGame() {
   game.score = 0;
-  game.lives = CONFIG.player.maxLives;
+  game.lives = CONFIG.player.startLives;
   game.ammo = CONFIG.player.maxAmmo;
   game.lastTime = 0;
   loadStage(0, false);
@@ -2627,7 +2828,7 @@ function loadStage(stageIndex, keepPlayerResources) {
 
   if (!keepPlayerResources) {
     game.score = 0;
-    game.lives = CONFIG.player.maxLives;
+    game.lives = CONFIG.player.startLives;
     game.ammo = CONFIG.player.maxAmmo;
   } else {
     game.ammo = CONFIG.player.maxAmmo;
@@ -2645,8 +2846,10 @@ function loadStage(stageIndex, keepPlayerResources) {
   enemyBullets.length = 0;
   explosions.length = 0;
   sonarPulses.length = 0;
+  oneUps.length = 0;
   muzzleFlashes.length = 0;
   particles.length = 0;
+  popups.length = 0;
 
   enemies.length = 0;
   for (let i = 0; i < stage.enemies.length; i += 1) {
@@ -2711,6 +2914,14 @@ function getRandomSupplyPosition() {
     return getSeaBossSupplyPosition();
   }
 
+  if (game.stageIndex === 0) {
+    return {
+      x: randomRange(360, 920),
+      y: randomRange(CONFIG.sea.supplyMinDepth, 430),
+      kind: "seaPod",
+    };
+  }
+
   return {
     x: randomWorldX(),
     y: randomRange(CONFIG.sea.supplyMinDepth, CONFIG.sea.supplyMaxDepth),
@@ -2749,17 +2960,28 @@ function getAirBossSupplyPosition() {
 
 function randomSupplyRespawnTime() {
   const stage = getCurrentStage();
+  let minTime;
+  let maxTime;
 
   // stage.supplyRespawn を追加すれば、ステージ単位で再出現時間を上書きできます。
   if (stage.supplyRespawn) {
-    return randomRange(stage.supplyRespawn.min, stage.supplyRespawn.max);
+    minTime = stage.supplyRespawn.min;
+    maxTime = stage.supplyRespawn.max;
+  } else if (isBossStage()) {
+    minTime = CONFIG.supply.bossRespawnMin;
+    maxTime = CONFIG.supply.bossRespawnMax;
+  } else {
+    minTime = CONFIG.supply.normalRespawnMin;
+    maxTime = CONFIG.supply.normalRespawnMax;
   }
 
-  if (isBossStage()) {
-    return randomRange(CONFIG.supply.bossRespawnMin, CONFIG.supply.bossRespawnMax);
+  // 弾切れ付近では詰みを避けるため、次の補給を少し早めます。
+  if (game.ammo <= 2) {
+    minTime *= CONFIG.supply.lowAmmoRespawnFactor;
+    maxTime *= CONFIG.supply.lowAmmoRespawnFactor;
   }
 
-  return randomRange(CONFIG.supply.normalRespawnMin, CONFIG.supply.normalRespawnMax);
+  return randomRange(minTime, maxTime);
 }
 
 function randomWorldX() {
@@ -2821,6 +3043,15 @@ function addBurstParticles(x, y, count, color) {
       life: randomRange(20, 42),
     });
   }
+}
+
+function addPopup(text, x, y) {
+  popups.push({
+    text,
+    x,
+    y,
+    life: 70,
+  });
 }
 
 function startScreenShake(duration, power) {
@@ -3014,6 +3245,7 @@ window.__deepSignalDebug = {
       mode: getStageModeLabel(),
       score: game.score,
       lives: game.lives,
+      maxLives: CONFIG.player.maxLives,
       ammo: game.ammo,
       soundEnabled: game.soundEnabled,
       sonarCooldown: game.sonarCooldown,
@@ -3029,6 +3261,13 @@ window.__deepSignalDebug = {
       projectiles: bombs.map((bomb) => bomb.kind || "depth"),
       particles: particles.length,
       muzzleFlashes: muzzleFlashes.length,
+      popups: popups.length,
+      oneUps: oneUps.map((oneUp) => ({
+        x: oneUp.x,
+        y: oneUp.y,
+        kind: oneUp.kind,
+        timer: oneUp.timer,
+      })),
       enemiesAlive: enemies.filter((enemy) => enemy.alive).length,
       bosses: enemies
         .filter((enemy) => ENEMY_TYPES[enemy.type].boss)
