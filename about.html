@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>About - DEEP SIGNAL</title>
+    <style>
+      :root {
+        --gb-light: #d8f7a7;
+        --gb-mid: #9bbc0f;
+        --gb-dark: #306850;
+        --gb-black: #081820;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        color: var(--gb-light);
+        font-family: "Courier New", "MS Gothic", monospace;
+        line-height: 1.75;
+        background:
+          linear-gradient(rgba(216, 247, 167, 0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(216, 247, 167, 0.025) 1px, transparent 1px),
+          radial-gradient(circle at 50% 0%, rgba(48, 104, 80, 0.4), transparent 42%),
+          var(--gb-black);
+        background-size: 6px 6px, 6px 6px, 100% 100%, auto;
+      }
+
+      main {
+        width: min(980px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 40px 0 56px;
+      }
+
+      header,
+      section {
+        margin-top: 20px;
+        padding: 22px;
+        border: 2px solid var(--gb-dark);
+        background: rgba(8, 24, 32, 0.78);
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        line-height: 1.2;
+      }
+
+      h1 {
+        font-size: clamp(34px, 8vw, 64px);
+        text-shadow: 4px 4px 0 var(--gb-dark);
+      }
+
+      p,
+      li {
+        color: var(--gb-mid);
+      }
+
+      a {
+        color: var(--gb-light);
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>DEEP SIGNAL</h1>
+        <p>現在の最新バージョン: v0.4.2</p>
+        <p><a href="index.html">Prototype Archiveへ戻る</a></p>
+      </header>
+
+      <section>
+        <h2>作品紹介</h2>
+        <p>DEEP SIGNAL は、GB風・レトロPC風の見た目で作っているブラウザ向けシューティングゲームです。</p>
+        <p>海中探索、浮上潜水艦による対空迎撃、宇宙エンドレスへと展開するプロトタイプとして制作しています。</p>
+      </section>
+
+      <section>
+        <h2>Prototype Archive</h2>
+        <p>このサイトでは、完成版だけでなく開発途中のプロトタイプも保存しています。</p>
+        <p>各バージョンを残すことで、仕様、演出、難易度、操作感がどのように変化したかを後から確認できるようにしています。</p>
+      </section>
+
+      <section>
+        <h2>操作方法</h2>
+        <ul>
+          <li>Arrow Keys / WASD: 移動</li>
+          <li>Space: 攻撃</li>
+          <li>E / Shift: SONAR / RADAR / SCANNER</li>
+          <li>P / Esc: ポーズ</li>
+          <li>M: サウンドON/OFF</li>
+          <li>R: リスタート</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>制作者</h2>
+        <p>HANSODE / Takao Sugiyama</p>
+      </section>
+    </main>
+  </body>
+</html>
