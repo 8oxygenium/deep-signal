@@ -129,6 +129,15 @@ p {
   background: rgba(48, 104, 80, 0.3);
 }
 
+.versus > div.flash {
+  animation: handFlash 0.32s steps(2, end) 2;
+}
+
+@keyframes handFlash {
+  0%, 100% { box-shadow: none; }
+  50% { box-shadow: 0 0 22px #d8f7a7; background: rgba(216, 247, 167, 0.22); }
+}
+
 .label {
   margin: 0 0 8px;
   color: #9bbc0f;
@@ -139,6 +148,93 @@ p {
 .versus strong {
   display: block;
   font-size: clamp(30px, 6vw, 54px);
+}
+
+.hand-icon {
+  position: relative;
+  width: 84px;
+  height: 72px;
+  margin: 2px auto 8px;
+}
+
+.hand-icon.hidden {
+  opacity: 0.16;
+}
+
+.hand-icon.hidden::before {
+  position: absolute;
+  inset: 18px 0 auto;
+  color: #9bbc0f;
+  font-size: 34px;
+  font-weight: 700;
+  text-align: center;
+  content: "???";
+}
+
+.hand-icon.guu::before {
+  position: absolute;
+  left: 18px;
+  top: 24px;
+  width: 50px;
+  height: 34px;
+  border: 4px solid #d8f7a7;
+  border-radius: 8px;
+  background: #9bbc0f;
+  content: "";
+}
+
+.hand-icon.guu::after {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  width: 58px;
+  height: 20px;
+  border: 4px solid #d8f7a7;
+  border-radius: 10px 10px 5px 5px;
+  background: repeating-linear-gradient(90deg, #9bbc0f 0 10px, #306850 10px 13px);
+  content: "";
+}
+
+.hand-icon.choki::before,
+.hand-icon.choki::after {
+  position: absolute;
+  top: 5px;
+  width: 16px;
+  height: 58px;
+  border: 4px solid #d8f7a7;
+  border-radius: 999px;
+  background: #9bbc0f;
+  content: "";
+}
+
+.hand-icon.choki::before {
+  left: 27px;
+  transform: rotate(-18deg);
+}
+
+.hand-icon.choki::after {
+  right: 27px;
+  transform: rotate(18deg);
+}
+
+.hand-icon.paa {
+  border: 4px solid #d8f7a7;
+  border-radius: 18px 18px 28px 28px;
+  background:
+    linear-gradient(90deg, transparent 18%, #306850 18% 22%, transparent 22% 38%, #306850 38% 42%, transparent 42% 58%, #306850 58% 62%, transparent 62% 78%, #306850 78% 82%, transparent 82%),
+    #9bbc0f;
+}
+
+.hand-icon.paa::before {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: -15px;
+  height: 22px;
+  border: 4px solid #d8f7a7;
+  border-radius: 8px;
+  background: #9bbc0f;
+  content: "";
 }
 
 .versus small {
@@ -155,6 +251,21 @@ p {
   font-weight: 700;
   text-align: center;
   text-transform: uppercase;
+}
+
+.result.win {
+  color: #d8f7a7;
+  text-shadow: 0 0 14px #d8f7a7;
+}
+
+.result.lose {
+  color: #ffb35c;
+  text-shadow: 0 0 14px #d83b2d;
+}
+
+.result.draw {
+  color: #ffd34d;
+  text-shadow: 0 0 12px #ffd34d;
 }
 
 .comment {
@@ -210,6 +321,48 @@ button {
 
 .hand-button span {
   font-size: 0.5em;
+}
+
+.mini-hand {
+  display: block;
+  position: relative;
+  width: 42px;
+  height: 30px;
+  margin: 0 auto 4px;
+}
+
+.mini-guu {
+  border: 3px solid var(--black);
+  border-radius: 7px;
+  background: var(--cream);
+}
+
+.mini-choki::before,
+.mini-choki::after {
+  position: absolute;
+  top: 0;
+  width: 10px;
+  height: 28px;
+  border: 3px solid var(--black);
+  border-radius: 999px;
+  background: var(--cream);
+  content: "";
+}
+
+.mini-choki::before {
+  left: 10px;
+  transform: rotate(-18deg);
+}
+
+.mini-choki::after {
+  right: 10px;
+  transform: rotate(18deg);
+}
+
+.mini-paa {
+  border: 3px solid var(--black);
+  border-radius: 8px 8px 12px 12px;
+  background: repeating-linear-gradient(90deg, var(--cream) 0 7px, var(--black) 7px 10px);
 }
 
 .guu {

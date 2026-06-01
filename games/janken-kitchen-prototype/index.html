@@ -34,10 +34,12 @@
           <div class="versus">
             <div>
               <p class="label">PLAYER</p>
+              <div id="playerIcon" class="hand-icon hidden" aria-hidden="true"></div>
               <strong id="playerHand">---</strong>
             </div>
             <div>
               <p class="label">CPU / RIVAL</p>
+              <div id="cpuIcon" class="hand-icon hidden" aria-hidden="true"></div>
               <strong id="cpuHand">---</strong>
               <small id="rivalName">INSERT COIN</small>
             </div>
@@ -54,9 +56,9 @@
         </aside>
 
         <div class="controls" aria-label="janken controls">
-          <button class="hand-button guu" data-hand="GUU" type="button">GUU<br><span>1</span></button>
-          <button class="hand-button choki" data-hand="CHOKI" type="button">CHOKI<br><span>2</span></button>
-          <button class="hand-button paa" data-hand="PAA" type="button">PAA<br><span>3</span></button>
+          <button class="hand-button guu" data-hand="GUU" type="button"><span class="mini-hand mini-guu"></span>GUU<br><span>1</span></button>
+          <button class="hand-button choki" data-hand="CHOKI" type="button"><span class="mini-hand mini-choki"></span>CHOKI<br><span>2</span></button>
+          <button class="hand-button paa" data-hand="PAA" type="button"><span class="mini-hand mini-paa"></span>PAA<br><span>3</span></button>
         </div>
 
         <button id="resetButton" class="reset-button" type="button">RESET / INSERT COIN</button>

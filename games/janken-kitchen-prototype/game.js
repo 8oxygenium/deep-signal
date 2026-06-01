@@ -25,6 +25,8 @@ const state = {
 const elements = {
   playerHand: document.getElementById("playerHand"),
   cpuHand: document.getElementById("cpuHand"),
+  playerIcon: document.getElementById("playerIcon"),
+  cpuIcon: document.getElementById("cpuIcon"),
   rivalName: document.getElementById("rivalName"),
   resultText: document.getElementById("resultText"),
   commentText: document.getElementById("commentText"),
@@ -47,8 +49,9 @@ function resetGame() {
   state.mode = "ready";
   state.rival = pickRival();
   clearLamps();
-  elements.playerHand.textContent = "---";
-  elements.cpuHand.textContent = "---";
+  setHandDisplay("player", null, "READY");
+  setHandDisplay("cpu", null, "???");
+  setResultState("");
   elements.resultText.textContent = "INSERT COIN";
   elements.commentText.textContent = "1 / 2 / 3 or big buttons";
   updateUi();
@@ -72,6 +75,37 @@ function lightLamp(name) {
   clearLamps();
   elements.lamps[name].classList.add("active");
   elements.resultText.textContent = name === "PON" ? "PON!" : `${name}...`;
+  if (name !== "PON") {
+    setHandDisplay("player", null, "???");
+    setHandDisplay("cpu", null, "???");
+  }
+}
+
+function setResultState(result) {
+  elements.resultText.classList.remove("win", "lose", "draw");
+  if (result) {
+    elements.resultText.classList.add(result);
+  }
+}
+
+function setHandDisplay(side, hand, label) {
+  const textEl = side === "player" ? elements.playerHand : elements.cpuHand;
+  const iconEl = side === "player" ? elements.playerIcon : elements.cpuIcon;
+  textEl.textContent = label || hand || "???";
+  iconEl.className = "hand-icon";
+  if (!hand) {
+    iconEl.classList.add("hidden");
+    return;
+  }
+  iconEl.classList.add(hand.toLowerCase());
+}
+
+function flashHands() {
+  for (const icon of [elements.playerIcon.parentElement, elements.cpuIcon.parentElement]) {
+    icon.classList.remove("flash");
+    void icon.offsetWidth;
+    icon.classList.add("flash");
+  }
 }
 
 function updateUi() {
@@ -88,8 +122,9 @@ function chooseHand(playerHand) {
   }
   state.mode = "playing";
   state.rival = state.rival === "INSERT COIN" ? pickRival() : state.rival;
-  elements.playerHand.textContent = playerHand;
-  elements.cpuHand.textContent = "---";
+  setResultState("");
+  setHandDisplay("player", null, "READY");
+  setHandDisplay("cpu", null, "???");
   elements.commentText.textContent = "JAN... KEN...";
   updateUi();
 
@@ -106,7 +141,10 @@ function runJankenSequence(playerHand) {
 function resolveRound(playerHand) {
   const cpuHand = HANDS[Math.floor(Math.random() * HANDS.length)];
   const result = judge(playerHand, cpuHand);
-  elements.cpuHand.textContent = cpuHand;
+  setHandDisplay("player", playerHand);
+  setHandDisplay("cpu", cpuHand);
+  setResultState(result);
+  flashHands();
 
   if (result === "win") {
     state.omuCoin += 1;
