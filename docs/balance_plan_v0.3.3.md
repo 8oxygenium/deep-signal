@@ -36,3 +36,28 @@ v0.3.3 は、v0.3.2 の演出・ボス登場・ステージタイプ制限を維
 
 - v0.4.0 では、仮エンディング後の宇宙エンドレス `ORBITAL SIGNAL MODE` を検討する。
 - 宇宙ステージで初めて全方向自由移動を解禁し、sea / air との差別化を明確にする。
+
+@"
+# DEEP SIGNAL v0.3.3 - Balance & Rare 1UP Drop
+
+## Summary
+v0.3.3 はバランス調整と低確率1UPドロップを追加したバージョン。
+
+## Main Changes
+- 敵撃破時に低確率で1UPが出現
+- 強めの敵は1UP確率を少し高めに調整
+- ボス撃破時は1UP確定
+- 最大残機を5に設定
+- 最大残機時の1UP取得は +1000 SCORE
+- LIVES表示を 3/5 形式に変更
+- 1UP! / +1000 SCORE ポップアップを追加
+- 1UP取得SEを追加
+- 1UPは一定時間で消滅
+- ステージ切替時に1UPを消去
+- STAGE 1〜8の敵弾頻度、ボスHP、召喚頻度、補給再出現を軽く調整
+
+## Notes
+- sea / seaBoss は海面より上へ出られない
+- air / airBoss は海面付近から空を迎撃する
+- v0.4.0 では宇宙エンドレスを検討
+"@ | Out-File -Encoding utf8 builds\v0.3.3-balance-rare-1up\README.md
