@@ -3,15 +3,332 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>DEEP SIGNAL</title>
-    <link rel="stylesheet" href="style.css">
+    <title>DEEP SIGNAL Prototype Archive</title>
+    <style>
+      :root {
+        --gb-light: #d8f7a7;
+        --gb-mid: #9bbc0f;
+        --gb-dark: #306850;
+        --gb-black: #081820;
+        --panel: #102c22;
+        --line: #6f9f2f;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        background: var(--gb-black);
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        color: var(--gb-light);
+        font-family: "Courier New", "MS Gothic", monospace;
+        line-height: 1.65;
+        background:
+          linear-gradient(rgba(216, 247, 167, 0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(216, 247, 167, 0.025) 1px, transparent 1px),
+          radial-gradient(circle at 50% 0%, rgba(48, 104, 80, 0.46), transparent 42%),
+          var(--gb-black);
+        background-size: 6px 6px, 6px 6px, 100% 100%, auto;
+      }
+
+      body::before {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        content: "";
+        background: repeating-linear-gradient(
+          to bottom,
+          rgba(216, 247, 167, 0.045) 0,
+          rgba(216, 247, 167, 0.045) 1px,
+          transparent 1px,
+          transparent 4px
+        );
+        mix-blend-mode: screen;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .archive {
+        position: relative;
+        z-index: 1;
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 40px 0 56px;
+      }
+
+      .hero {
+        padding: 28px;
+        border: 3px solid var(--gb-light);
+        background: rgba(8, 24, 32, 0.78);
+        box-shadow:
+          0 0 0 5px rgba(48, 104, 80, 0.9),
+          0 18px 60px rgba(0, 0, 0, 0.38);
+      }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        color: var(--gb-mid);
+        font-size: 13px;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        color: var(--gb-light);
+        font-size: clamp(34px, 8vw, 72px);
+        line-height: 0.98;
+        text-transform: uppercase;
+        text-shadow: 4px 4px 0 var(--gb-dark);
+      }
+
+      .subtitle {
+        max-width: 780px;
+        margin: 18px 0 0;
+        color: var(--gb-mid);
+        font-size: clamp(15px, 2vw, 20px);
+      }
+
+      .current-card {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 20px;
+        align-items: center;
+        margin-top: 24px;
+        padding: 22px;
+        border: 2px solid var(--gb-mid);
+        background:
+          linear-gradient(135deg, rgba(155, 188, 15, 0.18), rgba(48, 104, 80, 0.14)),
+          var(--panel);
+      }
+
+      .current-card h2,
+      .section-title,
+      .version-card h3 {
+        margin: 0;
+        line-height: 1.2;
+      }
+
+      .current-card h2 {
+        color: var(--gb-light);
+        font-size: clamp(22px, 4vw, 36px);
+        text-transform: uppercase;
+      }
+
+      .build-label {
+        display: inline-block;
+        margin-top: 8px;
+        padding: 4px 8px;
+        color: var(--gb-black);
+        font-weight: 700;
+        background: var(--gb-mid);
+      }
+
+      .current-card p,
+      .version-card p,
+      .about p,
+      .notes {
+        margin: 12px 0 0;
+      }
+
+      .play-button {
+        display: block;
+        width: 100%;
+        padding: 18px 20px;
+        border: 3px solid var(--gb-light);
+        color: var(--gb-black);
+        font-size: clamp(18px, 3vw, 26px);
+        font-weight: 700;
+        text-align: center;
+        text-decoration: none;
+        text-transform: uppercase;
+        background: var(--gb-light);
+        box-shadow: 6px 6px 0 var(--gb-dark);
+      }
+
+      .play-button:hover,
+      .play-button:focus-visible {
+        color: var(--gb-light);
+        outline: none;
+        background: var(--gb-dark);
+        transform: translate(2px, 2px);
+        box-shadow: 4px 4px 0 var(--gb-mid);
+      }
+
+      .section-title {
+        margin-top: 34px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--line);
+        color: var(--gb-light);
+        font-size: 22px;
+        text-transform: uppercase;
+      }
+
+      .versions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 18px;
+      }
+
+      .version-card {
+        display: flex;
+        min-height: 240px;
+        flex-direction: column;
+        padding: 18px;
+        border: 2px solid var(--line);
+        background:
+          linear-gradient(rgba(155, 188, 15, 0.075), rgba(8, 24, 32, 0.15)),
+          var(--panel);
+      }
+
+      .version-card h3 {
+        color: var(--gb-light);
+        font-size: 20px;
+      }
+
+      .version-card p {
+        color: var(--gb-mid);
+        font-size: 14px;
+      }
+
+      .version-card a {
+        display: inline-block;
+        width: fit-content;
+        margin-top: auto;
+        padding: 9px 12px;
+        border: 2px solid var(--gb-mid);
+        color: var(--gb-light);
+        font-weight: 700;
+        text-decoration: none;
+        text-transform: uppercase;
+        background: rgba(8, 24, 32, 0.75);
+      }
+
+      .version-card a:hover,
+      .version-card a:focus-visible {
+        color: var(--gb-black);
+        outline: none;
+        background: var(--gb-mid);
+      }
+
+      .about {
+        margin-top: 30px;
+        padding: 20px;
+        border: 2px solid var(--gb-dark);
+        background: rgba(8, 24, 32, 0.72);
+      }
+
+      .about h2 {
+        margin: 0;
+        font-size: 22px;
+      }
+
+      .about p {
+        max-width: 900px;
+        color: var(--gb-mid);
+      }
+
+      .notes {
+        padding-left: 18px;
+        color: rgba(216, 247, 167, 0.78);
+        font-size: 12px;
+      }
+
+      @media (max-width: 760px) {
+        .archive {
+          width: min(100% - 20px, 560px);
+          padding: 18px 0 34px;
+        }
+
+        .hero,
+        .current-card,
+        .version-card,
+        .about {
+          padding: 16px;
+        }
+
+        .current-card,
+        .versions {
+          grid-template-columns: 1fr;
+        }
+
+        .version-card {
+          min-height: 0;
+        }
+      }
+    </style>
   </head>
   <body>
-    <main class="game-shell" aria-label="DEEP SIGNAL">
-      <h1>DEEP SIGNAL <span>v0.2.0</span></h1>
-      <canvas id="gameCanvas" width="400" height="300" aria-label="DEEP SIGNAL game screen"></canvas>
-    </main>
+    <main class="archive">
+      <section class="hero" aria-labelledby="page-title">
+        <p class="eyebrow">Prototype Archive</p>
+        <h1 id="page-title">DEEP SIGNAL</h1>
+        <p class="subtitle">AIと相談しながら作っているレトロ深海シューティング開発記録</p>
 
-    <script src="game.js"></script>
+        <section class="current-card" aria-labelledby="current-title">
+          <div>
+            <h2 id="current-title">PLAY CURRENT VERSION</h2>
+            <span class="build-label">Latest Development Build</span>
+            <p>現在開発中の最新版。バランス調整や接触ダメージまで入ったバージョン。</p>
+          </div>
+          <a class="play-button" href="current/index.html">Launch Current</a>
+        </section>
+      </section>
+
+      <h2 class="section-title">Archived Builds</h2>
+      <section class="versions" aria-label="固定保存版プロトタイプ一覧">
+        <article class="version-card">
+          <h3>v0.2.0 - GB Style Sound Prototype</h3>
+          <p>GB風ビジュアル、低解像度描画、タイトル画面、Web AudioによるレトロSEを追加した初期の作品化バージョン。</p>
+          <a href="builds/v0.2.0-gb-style-sound/index.html">Open v0.2.0</a>
+        </article>
+
+        <article class="version-card">
+          <h3>v0.3.2 - Visual &amp; Boss Presentation Polish</h3>
+          <p>海中・空中ステージの見た目、BOSS WARNING、ボス登場演出、爆発や画面揺れを強化したバージョン。</p>
+          <a href="builds/v0.3.2-visual-boss-polish/index.html">Open v0.3.2</a>
+        </article>
+
+        <article class="version-card">
+          <h3>v0.3.3 - Balance &amp; Rare 1UP Drop</h3>
+          <p>敵撃破時の低確率1UP、最大残機5、スコアボーナス、ステージ1〜8の軽いバランス調整を追加したバージョン。</p>
+          <a href="builds/v0.3.3-balance-rare-1up/index.html">Open v0.3.3</a>
+        </article>
+
+        <article class="version-card">
+          <h3>v0.3.4 - Deep Rammer &amp; Clear Flow Improvements</h3>
+          <p>海中ステージを縦長化し、深層表現と高速突撃自爆敵rammerを追加。ステージクリア後にキーで次へ進めるようにしたバージョン。</p>
+          <a href="builds/v0.3.4-deep-rammer-clear-flow/index.html">Open v0.3.4</a>
+        </article>
+
+        <article class="version-card">
+          <h3>v0.3.5 - Contact Damage &amp; Invincibility Tuning</h3>
+          <p>敵本体との接触ダメージ、無敵時間、点滅、ノックバック、敵タイプ別接触挙動を追加したバージョン。</p>
+          <a href="builds/v0.3.5-contact-damage/index.html">Open v0.3.5</a>
+        </article>
+      </section>
+
+      <section class="about" aria-labelledby="about-title">
+        <h2 id="about-title">About this archive</h2>
+        <p>
+          このページは、DEEP SIGNAL の開発過程を残すためのプロトタイプアーカイブです。
+          ゲームの仕様、ステージ構成、演出、バランス調整を、AIとの相談と実装を繰り返しながら段階的に作っています。
+          各バージョンでは、当時の操作感や見た目をそのまま確認できます。
+        </p>
+        <ul class="notes">
+          <li>This is a prototype archive.</li>
+          <li>Some versions may have bugs or unfinished balance.</li>
+          <li>The latest version is in current/.</li>
+        </ul>
+      </section>
+    </main>
   </body>
 </html>
