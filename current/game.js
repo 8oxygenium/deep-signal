@@ -1,5 +1,5 @@
 // ============================================================
-// DEEP SIGNAL v0.3.4
+// DEEP SIGNAL v0.3.5
 // Web版の完成ゲームへ育てるためのベース実装です。
 // 将来の展開先:
 // - Web版: このままHTML/CSS/JavaScriptで拡張
@@ -14,7 +14,7 @@
 // ------------------------------------------------------------
 
 const CONFIG = {
-  version: "v0.3.4",
+  version: "v0.3.5",
 
   // 表示は800x600相当の論理座標で作り、canvas内部は400x300で描画します。
   // CSSで2倍表示することで、ピクセルがくっきり見えるようにしています。
@@ -41,6 +41,9 @@ const CONFIG = {
     speed: 4.4,
     width: 66,
     height: 22,
+    invincibleTime: 110,
+    contactKnockback: 42,
+    bossKnockback: 76,
   },
 
   sonar: {
@@ -884,7 +887,7 @@ function updatePlayer(frameScale) {
   player.x = clamp(player.x, halfWidth + 20, WORLD_WIDTH - halfWidth - 20);
 
   if (isAirStage()) {
-    // 空中戦では水上艦としての位置を保ち、海面付近だけを少し上下できます。
+    // 空中戦では浮上潜水艦として海面付近に留まり、少しだけ上下できます。
     const surfaceY = getAirSeaSurfaceY();
     player.y = clamp(player.y, surfaceY + CONFIG.air.playerMinOffset, surfaceY + CONFIG.air.playerMaxOffset);
   } else if (isSeaStage()) {
@@ -1467,8 +1470,7 @@ function updateMuzzleFlashes(frameScale) {
 function checkCollisions() {
   checkBombHitsEnemies();
   checkEnemyBulletsHitPlayer();
-  checkMinesHitPlayer();
-  checkRammersHitPlayer();
+  checkEnemyBodiesHitPlayer();
 }
 
 function checkBombHitsEnemies() {
@@ -1570,71 +1572,85 @@ function checkEnemyBulletsHitPlayer() {
     return;
   }
 
-  const playerBox = getBox(player);
+  const playerBox = getContactBox(player, 0.76);
 
   for (let i = enemyBullets.length - 1; i >= 0; i -= 1) {
     const bullet = enemyBullets[i];
 
     if (isColliding(getBox(bullet), playerBox)) {
       enemyBullets.splice(i, 1);
-      damagePlayer();
+      damagePlayer("bullet", bullet);
       return;
     }
   }
 }
 
-function checkMinesHitPlayer() {
+function checkEnemyBodiesHitPlayer() {
   if (player.invincibleTimer > 0) {
     return;
   }
 
-  const playerBox = getBox(player);
+  const playerBox = getContactBox(player, 0.76);
 
   for (const enemy of enemies) {
-    if (!enemy.alive || enemy.type !== "mine") {
+    if (!enemy.alive || enemy.entryTimer > 0) {
       continue;
     }
 
-    if (isColliding(playerBox, getBox(enemy))) {
-      enemy.alive = false;
-      addExplosion(enemy.x, enemy.y, 16, 2.4, "light");
-      damagePlayer();
-      checkStageClear();
-      return;
+    const enemyBox = getEnemyContactBox(enemy);
+
+    if (!isColliding(playerBox, enemyBox)) {
+      continue;
     }
+
+    handleEnemyBodyContact(enemy);
+    return;
   }
 }
 
-function checkRammersHitPlayer() {
-  if (player.invincibleTimer > 0) {
+function handleEnemyBodyContact(enemy) {
+  if (enemy.type === "mine") {
+    enemy.alive = false;
+    addExplosion(enemy.x, enemy.y, 16, 2.4, "light");
+    addBurstParticles(enemy.x, enemy.y, 14, "light");
+    damagePlayer("mine", enemy);
+    checkStageClear();
     return;
   }
 
-  const playerBox = getBox(player);
+  if (enemy.type === "rammer") {
+    enemy.alive = false;
+    addExplosion(enemy.x, enemy.y, 18, 2.8, "light");
+    addBurstParticles(enemy.x, enemy.y, 16, "light");
+    damagePlayer("rammer", enemy);
+    checkStageClear();
+    return;
+  }
 
-  for (const enemy of enemies) {
-    if (!enemy.alive || enemy.type !== "rammer") {
-      continue;
-    }
+  damagePlayer(ENEMY_TYPES[enemy.type].boss ? "boss contact" : "contact", enemy);
 
-    if (isColliding(playerBox, getBox(enemy))) {
-      enemy.alive = false;
-      addExplosion(enemy.x, enemy.y, 18, 2.8, "light");
-      addBurstParticles(enemy.x, enemy.y, 16, "light");
-      damagePlayer();
-      checkStageClear();
-      return;
-    }
+  if (!ENEMY_TYPES[enemy.type].boss) {
+    const push = enemy.x < player.x ? -16 : 16;
+    enemy.x = clamp(enemy.x + push, enemy.width, WORLD_WIDTH - enemy.width);
   }
 }
 
-function damagePlayer() {
+function damagePlayer(reason = "damage", source = null) {
+  if (player.invincibleTimer > 0) {
+    return false;
+  }
+
+  const isBodyContact = reason.includes("contact") || reason === "mine" || reason === "rammer";
+
   game.lives -= 1;
-  player.invincibleTimer = 120;
+  startInvincibility();
+  applyKnockback(source, reason);
   enemyBullets.length = 0;
   addExplosion(player.x, player.y, 10, 2.0, "light");
   addBurstParticles(player.x, player.y, 14, "light");
-  startScreenShake(20, 5);
+  startScreenShake(reason.includes("boss") ? 24 : 16, reason.includes("boss") ? 6 : 4);
+  setStatus(isBodyContact ? "DAMAGE!" : "HIT!", 58);
+  addPopup(isBodyContact ? "DAMAGE!" : "HIT!", player.x, player.y - 30);
   playSound("damage");
 
   if (game.lives <= 0) {
@@ -1642,6 +1658,54 @@ function damagePlayer() {
     setStatus("SIGNAL LOST", 120);
     playSound("gameover");
   }
+
+  return true;
+}
+
+function startInvincibility() {
+  player.invincibleTimer = CONFIG.player.invincibleTime;
+}
+
+function applyKnockback(source, reason) {
+  if (!source) {
+    clampPlayerToStage();
+    return;
+  }
+
+  let dx = player.x - source.x;
+  let dy = player.y - source.y;
+
+  // 完全に同じ座標で重なった場合も、必ずどちらかへ押し戻します。
+  if (Math.abs(dx) + Math.abs(dy) < 0.01) {
+    dx = player.x < WORLD_WIDTH / 2 ? -1 : 1;
+    dy = isAirStage() ? 0 : -0.35;
+  }
+
+  const length = Math.max(1, Math.hypot(dx, dy));
+  const power = reason.includes("boss") ? CONFIG.player.bossKnockback : CONFIG.player.contactKnockback;
+
+  player.x += (dx / length) * power;
+  player.y += (dy / length) * power;
+  clampPlayerToStage();
+}
+
+function clampPlayerToStage() {
+  const halfWidth = player.width / 2;
+  player.x = clamp(player.x, halfWidth + 20, WORLD_WIDTH - halfWidth - 20);
+
+  if (isAirStage()) {
+    const surfaceY = getAirSeaSurfaceY();
+    player.y = clamp(player.y, surfaceY + CONFIG.air.playerMinOffset, surfaceY + CONFIG.air.playerMaxOffset);
+    return;
+  }
+
+  if (isSeaStage()) {
+    const surfaceLimit = getSeaSurfaceY() + CONFIG.sea.playerSafeMargin;
+    player.y = clamp(player.y, surfaceLimit, getWorldHeight() - 220);
+    return;
+  }
+
+  player.y = clamp(player.y, player.height / 2 + 56, getWorldHeight() - 220);
 }
 
 function checkStageClear() {
@@ -2498,19 +2562,23 @@ function drawEnemyBullets() {
 }
 
 function drawPlayer() {
-  if (player.invincibleTimer > 0 && Math.floor(player.invincibleTimer / 8) % 2 === 0) {
-    return;
-  }
-
   const x = Math.round(player.x - cameraX);
   const y = Math.round(player.y - cameraY);
+  const invincibleBlink = player.invincibleTimer > 0 && Math.floor(player.invincibleTimer / 6) % 2 === 0;
+
+  ctx.save();
+  if (invincibleBlink) {
+    ctx.globalAlpha = 0.45;
+  }
 
   if (isSeaStage()) {
     drawSubmersiblePlayer(x, y);
+    ctx.restore();
     return;
   }
 
   drawSurfaceInterceptorPlayer(x, y);
+  ctx.restore();
 }
 
 function drawSubmersiblePlayer(x, y) {
@@ -3001,6 +3069,7 @@ function loadStage(stageIndex, keepPlayerResources) {
   player.y = stage.start.y;
   player.speed = isAirStage() ? CONFIG.player.speed * 0.92 : CONFIG.player.speed;
   player.invincibleTimer = 0;
+  clampPlayerToStage();
 
   cameraX = clamp(player.x - SCREEN_WIDTH * 0.44, 0, WORLD_WIDTH - SCREEN_WIDTH);
   cameraY = isAirStage() ? 0 : clamp(player.y - SCREEN_HEIGHT * 0.30, 0, getWorldHeight() - SCREEN_HEIGHT);
@@ -3336,6 +3405,34 @@ function getBox(object) {
     top: object.y - object.height / 2,
     bottom: object.y + object.height / 2,
   };
+}
+
+function getContactBox(object, scale) {
+  const width = object.width * scale;
+  const height = object.height * scale;
+
+  return {
+    left: object.x - width / 2,
+    right: object.x + width / 2,
+    top: object.y - height / 2,
+    bottom: object.y + height / 2,
+  };
+}
+
+function getEnemyContactBox(enemy) {
+  if (ENEMY_TYPES[enemy.type].boss) {
+    return getContactBox(enemy, 0.52);
+  }
+
+  if (enemy.type === "mine" || enemy.type === "rammer") {
+    return getContactBox(enemy, 0.82);
+  }
+
+  if (getDepthFactor(enemy.y) > 0.72) {
+    return getContactBox(enemy, 0.72);
+  }
+
+  return getContactBox(enemy, 0.82);
 }
 
 function isColliding(a, b) {

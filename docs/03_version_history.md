@@ -119,3 +119,14 @@
 - air / airBoss のMODE表示を `SURFACED SUB` に変更
 - STAGE CLEAR画面に簡易リザルトを追加
 - STAGE CLEAR中に Space / Enter / Z で即次ステージへ進めるように変更
+
+## v0.3.5 - Contact Damage / Full Run Tuning
+
+概要:
+
+- 敵本体との接触でもLIVESが減るように変更
+- ダメージ処理を `damagePlayer()` に集約し、敵弾・接触・rammer自爆・ボス接触で無敵時間を共有
+- ダメージ後に短時間の無敵時間、プレイヤー点滅、画面揺れ、ノックバックを追加
+- 通常敵、rammer、浮上機雷、ボスで接触時の挙動を分離
+- 接触判定を見た目より少し小さくし、深層やボス戦で理不尽な当たりを抑制
+- ノックバック後も sea / seaBoss は海面より上へ出られず、air / airBoss は海面付近に留まる制限を維持
