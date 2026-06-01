@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-SHZ3P81R05"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-SHZ3P81R05');
+    </script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Happy Omurice v0.1 - HAPOMU</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <main class="game-shell">
+      <header class="hero">
+        <p class="eyebrow">HAPOMU playable prototype</p>
+        <h1>Happy Omurice <span>v0.1</span></h1>
+        <p>ケチャップで絵を描いて、しあわせなオムライスを完成させよう。</p>
+      </header>
+
+      <section class="play-area" aria-label="Happy Omurice game">
+        <div class="canvas-frame">
+          <canvas id="omuriceCanvas" width="720" height="480" aria-label="Happy Omurice canvas"></canvas>
+        </div>
+
+        <aside class="panel">
+          <h2>How to Play</h2>
+          <p>DRAG: DRAW KETCHUP<br>ドラッグ: ケチャップを描く</p>
+          <p>FINISH: COMPLETE OMURICE<br>完成ボタン: 評価を見る</p>
+          <p>RESET: TRY AGAIN<br>リセット: もう一度</p>
+          <div class="meter" aria-label="ketchup meter">
+            <span>KETCHUP</span>
+            <strong id="ketchupCount">0</strong>
+          </div>
+          <p id="message" class="message">オムライスの上にケチャップを描いてね。</p>
+          <div class="actions">
+            <button id="finishButton" type="button">FINISH</button>
+            <button id="resetButton" type="button">RESET</button>
+          </div>
+        </aside>
+      </section>
+
+      <nav class="links" aria-label="page links">
+        <a href="../happy-omurice.html">Back to Concept</a>
+        <a href="../index.html">Back to Games</a>
+        <a href="../../index.html">Back to Top</a>
+      </nav>
+    </main>
+
+    <script src="game.js"></script>
+  </body>
+</html>
