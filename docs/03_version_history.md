@@ -142,3 +142,15 @@
 - 接触ダメージの無敵時間とノックバックを微調整し、接触判定を少し控えめに変更
 - STAGE 6 / STAGE 8のボスHP、攻撃頻度、弱点表示タイミング、召喚間隔を調整
 - STAGE CLEARの自動遷移時間を短縮し、キー送りとリザルト表示のテンポを維持
+
+## v0.4.0 - ORBITAL SIGNAL MODE
+
+概要:
+
+- STAGE 8撃破後に `SIGNAL ASCENDING...` 画面を挟み、宇宙エンドレスへ移行する流れを追加
+- 新しい `space` ステージタイプを追加し、全方向自由移動はspace専用として分離
+- 宇宙艇の自機、ビーム攻撃、SCANNER表示、宇宙補給ポッドを追加
+- `asteroid` / `orbitalDrone` / `signalWisp` / `hunterUFO` をspace専用敵として追加
+- `WAVE 1` から始まるエンドレスウェーブ制を追加し、全滅ごとに敵数・速度・弾頻度が少し上がるように調整
+- v0.3.6までの接触ダメージ、無敵時間、ノックバック、1UP、補給、STAGE CLEARキー送りは維持
+- 宇宙でGAME OVERになった場合、FINAL SCOREとREACHED WAVEを表示

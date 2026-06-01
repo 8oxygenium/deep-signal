@@ -1,5 +1,5 @@
 // ============================================================
-// DEEP SIGNAL v0.3.6
+// DEEP SIGNAL v0.4.0
 // Web版の完成ゲームへ育てるためのベース実装です。
 // 将来の展開先:
 // - Web版: このままHTML/CSS/JavaScriptで拡張
@@ -14,7 +14,7 @@
 // ------------------------------------------------------------
 
 const CONFIG = {
-  version: "v0.3.6",
+  version: "v0.4.0",
 
   // 表示は800x600相当の論理座標で作り、canvas内部は400x300で描画します。
   // CSSで2倍表示することで、ピクセルがくっきり見えるようにしています。
@@ -32,6 +32,7 @@ const CONFIG = {
     height: 1200,
     seaHeight: 1700,
     airHeight: 1200,
+    spaceHeight: 1400,
   },
 
   player: {
@@ -58,6 +59,17 @@ const CONFIG = {
     supplyRadius: 70,
     clearDelay: 180,
     bombLimit: 6,
+    orbitalUnlockDelay: 300,
+  },
+
+  // 宇宙エンドレス用の基本値です。
+  // space タイプだけが全方向自由移動になり、海面や深度の制約を受けません。
+  space: {
+    supplyRespawnMin: 1500,
+    supplyRespawnMax: 2160,
+    enemyMinY: 140,
+    enemyMaxY: 1220,
+    playerMargin: 54,
   },
 
   // 空中戦は「海面から迎撃する」モードなので、海面の高さを固定して描きます。
@@ -137,6 +149,7 @@ const STAGE_TYPE = {
   SEA_BOSS: "seaBoss",
   AIR: "air",
   AIR_BOSS: "airBoss",
+  SPACE: "space",
 };
 
 const canvas = document.getElementById("gameCanvas");
@@ -165,6 +178,8 @@ const game = {
   sonarCooldown: 0,
   sonarFlashTimer: 0,
   clearTimer: 0,
+  wave: 0,
+  reachedWave: 0,
   bossWarningTimer: 0,
   screenShakeTimer: 0,
   screenShakePower: 0,
@@ -276,6 +291,46 @@ const ENEMY_TYPES = {
     score: 2600,
     fireInterval: 72,
     boss: true,
+  },
+  asteroid: {
+    name: "軌道隕石",
+    domain: "space",
+    width: 44,
+    height: 38,
+    health: 2,
+    speed: 0.78,
+    score: 130,
+    fireInterval: 0,
+  },
+  orbitalDrone: {
+    name: "軌道ドローン",
+    domain: "space",
+    width: 44,
+    height: 22,
+    health: 2,
+    speed: 1.9,
+    score: 210,
+    fireInterval: 118,
+  },
+  signalWisp: {
+    name: "信号ウィスプ",
+    domain: "space",
+    width: 30,
+    height: 30,
+    health: 1,
+    speed: 1.25,
+    score: 180,
+    fireInterval: 0,
+  },
+  hunterUFO: {
+    name: "追跡UFO",
+    domain: "space",
+    width: 46,
+    height: 24,
+    health: 2,
+    speed: 1.55,
+    score: 260,
+    fireInterval: 130,
   },
 };
 
@@ -478,7 +533,25 @@ const STAGES = [
       { type: "ufo", x: 2080, y: 230, direction: -1, patrolLeft: 1840, patrolRight: 2320 },
     ],
   },
+  {
+    name: "ORBITAL SIGNAL MODE",
+    type: STAGE_TYPE.SPACE,
+    start: { x: 420, y: 700 },
+    visibilityBonus: 0,
+    fireRate: 1,
+    supplyRespawn: { min: 1500, max: 2160 },
+    supplies: [{ x: 1180, y: 620 }],
+    markers: [
+      { x: 420, y: 260, label: "ORBIT" },
+      { x: 980, y: 940, label: "SIGNAL ARC" },
+      { x: 1680, y: 420, label: "LOW STAR" },
+      { x: 2180, y: 1040, label: "DEEP SPACE" },
+    ],
+    enemies: [],
+  },
 ];
+
+const SPACE_STAGE_INDEX = STAGES.length - 1;
 
 const bombs = [];
 const enemyBullets = [];
@@ -554,6 +627,11 @@ function playSound(name) {
 
   if (name === "bomb") {
     playSweep(196, 98, 0.14, "square", 0.045, 0);
+  }
+
+  if (name === "beam") {
+    playTone(988, 0.035, "square", 0.038, 0);
+    playTone(1318, 0.045, "square", 0.03, 0.035);
   }
 
   if (name === "empty") {
@@ -701,6 +779,11 @@ document.addEventListener("keydown", (event) => {
     return;
   }
 
+  if (game.state === STATE.COMPLETE && isContinueKey(event.code)) {
+    startSpaceMode();
+    return;
+  }
+
   if (event.code === "KeyP" || event.code === "Escape") {
     togglePause();
     return;
@@ -712,6 +795,11 @@ document.addEventListener("keydown", (event) => {
     } else {
       startNewGame();
     }
+    return;
+  }
+
+  if (game.state === STATE.GAME_OVER && isContinueKey(event.code)) {
+    returnToTitle();
     return;
   }
 
@@ -812,6 +900,11 @@ function update(frameScale) {
     return;
   }
 
+  if (game.state === STATE.COMPLETE) {
+    updateOrbitalUnlock(frameScale);
+    return;
+  }
+
   updateNonPlaying(frameScale);
 }
 
@@ -845,6 +938,22 @@ function updateStageClear(frameScale) {
 
   if (game.clearTimer <= 0) {
     advanceStage();
+  }
+}
+
+function updateOrbitalUnlock(frameScale) {
+  updateCamera(frameScale);
+  updateSonar(frameScale);
+  updateExplosions(frameScale);
+  updateParticles(frameScale);
+  updatePopups(frameScale);
+  updateMuzzleFlashes(frameScale);
+  updateTimers(frameScale);
+
+  game.clearTimer -= frameScale;
+
+  if (game.clearTimer <= 0) {
+    startSpaceMode();
   }
 }
 
@@ -888,7 +997,10 @@ function updatePlayer(frameScale) {
   const halfHeight = player.height / 2;
   player.x = clamp(player.x, halfWidth + 20, WORLD_WIDTH - halfWidth - 20);
 
-  if (isAirStage()) {
+  if (isSpaceStage()) {
+    // space タイプだけは全方向自由移動です。海面や深度の制限はありません。
+    player.y = clamp(player.y, halfHeight + CONFIG.space.playerMargin, getWorldHeight() - halfHeight - CONFIG.space.playerMargin);
+  } else if (isAirStage()) {
     // 空中戦では浮上潜水艦として海面付近に留まり、少しだけ上下できます。
     const surfaceY = getAirSeaSurfaceY();
     player.y = clamp(player.y, surfaceY + CONFIG.air.playerMinOffset, surfaceY + CONFIG.air.playerMaxOffset);
@@ -922,7 +1034,7 @@ function updateCamera(frameScale) {
 
 function dropBomb() {
   if (game.ammo <= 0) {
-    setStatus(isAirStage() ? "NO AA SHELLS" : "NO DEPTH CHARGES", 90);
+    setStatus(isSpaceStage() ? "NO ENERGY" : isAirStage() ? "NO AA SHELLS" : "NO DEPTH CHARGES", 90);
     playSound("empty");
     return;
   }
@@ -931,7 +1043,17 @@ function dropBomb() {
     return;
   }
 
-  if (isAirStage()) {
+  if (isSpaceStage()) {
+    // 宇宙モードでは上方向へ短いパルスビームを撃ちます。
+    bombs.push({
+      kind: "beam",
+      x: player.x,
+      y: player.y - player.height / 2 - 12,
+      width: 7,
+      height: 22,
+      speed: 8.4,
+    });
+  } else if (isAirStage()) {
     // 空中戦のSpaceは上方向へ飛ぶ対空弾です。
     bombs.push({
       kind: "aa",
@@ -955,13 +1077,13 @@ function dropBomb() {
   }
 
   game.ammo -= 1;
-  game.bombCooldown = isAirStage() ? 11 : 16;
-  playSound("bomb");
+  game.bombCooldown = isSpaceStage() ? 6 : isAirStage() ? 11 : 16;
+  playSound(isSpaceStage() ? "beam" : "bomb");
 }
 
 function updateBombs(frameScale) {
   for (const bomb of bombs) {
-    if (bomb.kind === "aa") {
+    if (bomb.kind === "aa" || bomb.kind === "beam") {
       bomb.y -= bomb.speed * frameScale;
     } else {
       const depthDrag = 1 - getDepthFactor(bomb.y) * 0.42;
@@ -995,6 +1117,10 @@ function updateEnemies(frameScale) {
     if (enemy.type === "abyssBoss") updateAbyssBoss(enemy, actionFrameScale);
     if (enemy.type === "helicopter" || enemy.type === "plane" || enemy.type === "ufo") updateAirEnemy(enemy, actionFrameScale);
     if (enemy.type === "skyBoss") updateSkyBoss(enemy, actionFrameScale);
+    if (enemy.type === "asteroid") updateAsteroid(enemy, actionFrameScale);
+    if (enemy.type === "orbitalDrone") updateOrbitalDrone(enemy, actionFrameScale);
+    if (enemy.type === "signalWisp") updateSignalWisp(enemy, actionFrameScale);
+    if (enemy.type === "hunterUFO") updateHunterUFO(enemy, actionFrameScale);
   }
 }
 
@@ -1225,6 +1351,73 @@ function updateSkyBoss(enemy, frameScale) {
   }
 }
 
+function updateAsteroid(enemy, frameScale) {
+  enemy.phase += 0.018 * frameScale;
+  enemy.x += enemy.speed * enemy.direction * frameScale;
+  enemy.y += Math.sin(enemy.phase) * 0.22 * frameScale;
+  wrapSpaceEnemy(enemy);
+}
+
+function updateOrbitalDrone(enemy, frameScale) {
+  enemy.phase += 0.035 * frameScale;
+  enemy.x += enemy.speed * enemy.direction * frameScale;
+  enemy.y += Math.sin(enemy.phase) * 0.55 * frameScale;
+  wrapSpaceEnemy(enemy);
+  updateSpaceEnemyFire(enemy, frameScale);
+}
+
+function updateSignalWisp(enemy, frameScale) {
+  enemy.phase += 0.055 * frameScale;
+  enemy.x += Math.sin(enemy.phase * 0.75) * enemy.speed * 0.75 * frameScale;
+  enemy.y += Math.cos(enemy.phase) * enemy.speed * 0.62 * frameScale;
+  enemy.x += enemy.direction * 0.38 * frameScale;
+  wrapSpaceEnemy(enemy);
+}
+
+function updateHunterUFO(enemy, frameScale) {
+  enemy.phase += 0.035 * frameScale;
+  const dx = player.x - enemy.x;
+  const dy = player.y - enemy.y;
+  const length = Math.max(1, Math.hypot(dx, dy));
+
+  // ハンターはゆるく追尾します。速すぎると接触事故が増えるため、加速は控えめです。
+  enemy.x += (dx / length) * enemy.speed * 0.72 * frameScale;
+  enemy.y += (dy / length) * enemy.speed * 0.54 * frameScale;
+  enemy.x += Math.sin(enemy.phase) * 0.34 * frameScale;
+  clampSpaceEnemy(enemy);
+  updateSpaceEnemyFire(enemy, frameScale);
+}
+
+function updateSpaceEnemyFire(enemy, frameScale) {
+  enemy.fireTimer -= frameScale;
+
+  if (enemy.fireTimer <= 0) {
+    if (distance(player.x, player.y, enemy.x, enemy.y) < 620) {
+      fireEnemyBullet(enemy);
+    }
+
+    enemy.fireTimer = enemy.fireInterval;
+  }
+}
+
+function wrapSpaceEnemy(enemy) {
+  if (enemy.x < 60) {
+    enemy.x = 60;
+    enemy.direction = 1;
+  }
+
+  if (enemy.x > WORLD_WIDTH - 60) {
+    enemy.x = WORLD_WIDTH - 60;
+    enemy.direction = -1;
+  }
+
+  clampSpaceEnemy(enemy);
+}
+
+function clampSpaceEnemy(enemy) {
+  enemy.y = clamp(enemy.y, CONFIG.space.enemyMinY, CONFIG.space.enemyMaxY);
+}
+
 function summonAirEscort(boss) {
   // ボスが呼ぶ護衛は少数に制限し、処理量と難易度が暴れないようにします。
   const escorts = enemies.filter((enemy) => enemy.alive && enemy.spawnedByBoss).length;
@@ -1247,8 +1440,28 @@ function summonAirEscort(boss) {
 }
 
 function fireEnemyBullet(enemy) {
-  const airAttack = getEnemyDomain(enemy) === "air";
+  const enemyDomain = getEnemyDomain(enemy);
+  const airAttack = enemyDomain === "air";
   const bossShot = enemy.type === "skyBoss";
+
+  if (enemyDomain === "space") {
+    const dx = player.x - enemy.x;
+    const dy = player.y - enemy.y;
+    const length = Math.max(1, Math.hypot(dx, dy));
+    const speed = enemy.type === "hunterUFO" ? 2.85 : 2.55;
+
+    enemyBullets.push({
+      x: enemy.x,
+      y: enemy.y,
+      width: 7,
+      height: 7,
+      speed,
+      vx: (dx / length) * speed,
+      vy: (dy / length) * speed,
+      kind: "space",
+    });
+    return;
+  }
 
   enemyBullets.push({
     x: enemy.x,
@@ -1263,10 +1476,16 @@ function fireEnemyBullet(enemy) {
 
 function updateEnemyBullets(frameScale) {
   for (const bullet of enemyBullets) {
+    bullet.x += (bullet.vx || 0) * frameScale;
     bullet.y += bullet.vy * frameScale;
   }
 
-  removeWhere(enemyBullets, (bullet) => bullet.y < -40 || bullet.y > getWorldHeight() + 40);
+  removeWhere(enemyBullets, (bullet) => (
+    bullet.x < -40 ||
+    bullet.x > WORLD_WIDTH + 40 ||
+    bullet.y < -40 ||
+    bullet.y > getWorldHeight() + 40
+  ));
 }
 
 function updateSupplies(frameScale) {
@@ -1305,7 +1524,7 @@ function collectSupply(supply) {
   supply.active = false;
   supply.respawnTimer = randomSupplyRespawnTime();
   supply.flashTimer = 0;
-  setStatus(isAirStage() ? "AA SHELL RESTORED" : "DEPTH CHARGE RESTORED", 115);
+  setStatus(isSpaceStage() ? "ENERGY RESTORED" : isAirStage() ? "AA SHELL RESTORED" : "DEPTH CHARGE RESTORED", 115);
   addPopup("SUPPLIED", supply.x, supply.y - 24);
   playSound("supply");
 }
@@ -1319,6 +1538,11 @@ function updateOneUps(frameScale) {
     if (oneUp.kind === "air") {
       // 空中戦の救援カプセルは、海面へ向かってゆっくり落ちてきます。
       oneUp.y = Math.min(oneUp.y + oneUp.vy * frameScale, getAirSupplyY() - 12);
+    } else if (oneUp.kind === "space") {
+      // 宇宙の1UPカプセルは微小重力で漂います。
+      oneUp.x += Math.sin(oneUp.phase * 0.7) * 0.12 * frameScale;
+      oneUp.y += Math.cos(oneUp.phase) * 0.16 * frameScale;
+      oneUp.y = clamp(oneUp.y, 80, getWorldHeight() - 80);
     } else {
       // 海中の救命カプセルは少しだけ浮遊します。
       oneUp.y += Math.sin(oneUp.phase) * 0.18 * frameScale;
@@ -1341,7 +1565,8 @@ function maybeDropOneUp(enemy) {
     return;
   }
 
-  spawnOneUp(enemy.x, enemy.y, getEnemyDomain(enemy) === "air" ? "air" : "sea");
+  const domain = getEnemyDomain(enemy);
+  spawnOneUp(enemy.x, enemy.y, domain === "air" ? "air" : domain === "space" ? "space" : "sea");
 }
 
 function shouldDropOneUp(enemy) {
@@ -1359,11 +1584,15 @@ function shouldDropOneUp(enemy) {
 function spawnOneUp(x, y, kind) {
   oneUps.push({
     x: clamp(x, 60, WORLD_WIDTH - 60),
-    y: kind === "air" ? Math.max(90, y) : clamp(y, getSeaSurfaceY() + 80, getWorldHeight() - 120),
+    y: kind === "air"
+      ? Math.max(90, y)
+      : kind === "space"
+        ? clamp(y, 90, getWorldHeight() - 90)
+        : clamp(y, getSeaSurfaceY() + 80, getWorldHeight() - 120),
     kind,
     timer: CONFIG.drops.oneUpLifetime,
     phase: Math.random() * Math.PI * 2,
-    vy: kind === "air" ? 0.55 : 0,
+    vy: kind === "air" ? 0.55 : kind === "space" ? 0.12 : 0,
     width: 32,
     height: 22,
   });
@@ -1512,6 +1741,10 @@ function canProjectileDamageEnemy(projectile, enemy, projectileBox) {
   }
 
   if (projectileKind === "aa" && enemyDomain !== "air") {
+    return false;
+  }
+
+  if (projectileKind === "beam" && enemyDomain !== "space") {
     return false;
   }
 
@@ -1700,6 +1933,11 @@ function clampPlayerToStage() {
   const halfWidth = player.width / 2;
   player.x = clamp(player.x, halfWidth + 20, WORLD_WIDTH - halfWidth - 20);
 
+  if (isSpaceStage()) {
+    player.y = clamp(player.y, player.height / 2 + CONFIG.space.playerMargin, getWorldHeight() - player.height / 2 - CONFIG.space.playerMargin);
+    return;
+  }
+
   if (isAirStage()) {
     const surfaceY = getAirSeaSurfaceY();
     player.y = clamp(player.y, surfaceY + CONFIG.air.playerMinOffset, surfaceY + CONFIG.air.playerMaxOffset);
@@ -1727,10 +1965,16 @@ function checkStageClear() {
   }
 
   if (!remainingEnemies) {
-    if (game.stageIndex >= STAGES.length - 1) {
+    if (isSpaceStage()) {
+      advanceSpaceWave();
+      return;
+    }
+
+    if (game.stageType === STAGE_TYPE.AIR_BOSS) {
       game.state = STATE.COMPLETE;
+      game.clearTimer = CONFIG.gameplay.orbitalUnlockDelay;
       enemyBullets.length = 0;
-      setStatus("SIGNAL ASCENDING", 180);
+      setStatus("ORBITAL SIGNAL MODE UNLOCKED", 180);
       playSound("clear");
       return;
     }
@@ -1744,8 +1988,9 @@ function checkStageClear() {
 }
 
 function advanceStage() {
-  if (game.stageIndex >= STAGES.length - 1) {
+  if (game.stageIndex >= SPACE_STAGE_INDEX - 1) {
     game.state = STATE.COMPLETE;
+    game.clearTimer = CONFIG.gameplay.orbitalUnlockDelay;
     setStatus("SIGNAL ASCENDING", 180);
     return;
   }
@@ -1801,7 +2046,11 @@ function drawGameScreen() {
   }
 
   if (game.state === STATE.GAME_OVER) {
-    drawCenteredMessage("GAME OVER", `FINAL SCORE ${padScore(game.score)}`, "PRESS R TO RESTART");
+    if (isSpaceStage()) {
+      drawSpaceGameOver();
+    } else {
+      drawCenteredMessage("GAME OVER", `FINAL SCORE ${padScore(game.score)}`, "PRESS R TO RESTART");
+    }
   }
 
   if (game.state === STATE.STAGE_CLEAR) {
@@ -1809,7 +2058,7 @@ function drawGameScreen() {
   }
 
   if (game.state === STATE.COMPLETE) {
-    drawCenteredMessage("SIGNAL ASCENDING...", "ORBITAL SIGNAL MODE WILL OPEN IN v0.4.0", "PRESS R TO TITLE");
+    drawOrbitalUnlockOverlay();
   }
 }
 
@@ -1839,8 +2088,8 @@ function drawTitleScreen() {
   }
 
   ctx.font = "16px 'Courier New', monospace";
-  ctx.fillText("MOVE: ARROW / WASD    SONAR/RADAR: E / SHIFT", SCREEN_WIDTH / 2, 382);
-  ctx.fillText("DEPTH CHARGE / AA SHELL: SPACE    PAUSE: P / ESC", SCREEN_WIDTH / 2, 410);
+  ctx.fillText("MOVE: ARROW / WASD    SONAR/RADAR/SCANNER: E / SHIFT", SCREEN_WIDTH / 2, 382);
+  ctx.fillText("CHARGE / AA / BEAM: SPACE    PAUSE: P / ESC", SCREEN_WIDTH / 2, 410);
   ctx.fillText(`SOUND: ${game.soundEnabled ? "ON" : "OFF"}  (M TO TOGGLE)`, SCREEN_WIDTH / 2, 452);
 
   ctx.textAlign = "left";
@@ -1878,6 +2127,11 @@ function drawTitleSubmarineSilhouette() {
 }
 
 function drawBackground() {
+  if (isSpaceStage()) {
+    drawSpaceBackground();
+    return;
+  }
+
   if (isAirStage()) {
     drawAirBackground();
     return;
@@ -1894,6 +2148,46 @@ function drawBackground() {
   drawBackgroundMarkers();
   drawSeafloor();
   drawSurfaceLines();
+  drawWorldBorder();
+}
+
+function drawSpaceBackground() {
+  ctx.fillStyle = gb("black");
+  ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+  // 星は座標ベースで描き、ランダム生成を毎フレーム行わないようにしています。
+  for (let i = 0; i < 90; i += 1) {
+    const worldX = (i * 211 + 97) % WORLD_WIDTH;
+    const worldY = (i * 149 + 53) % getWorldHeight();
+
+    if (!isPointVisible(worldX, worldY, 8)) {
+      continue;
+    }
+
+    const blink = (Math.floor(game.titleTimer / 22) + i) % 4 === 0;
+    ctx.fillStyle = blink ? gb("light") : gb("mid");
+    ctx.fillRect(Math.round(worldX - cameraX), Math.round(worldY - cameraY), i % 7 === 0 ? 3 : 2, i % 5 === 0 ? 3 : 2);
+  }
+
+  const planetX = Math.round(1980 - cameraX * 0.35);
+  const planetY = Math.round(260 - cameraY * 0.18);
+  ctx.fillStyle = gba("dark", 0.52);
+  ctx.fillRect(planetX - 52, planetY - 28, 104, 56);
+  ctx.fillStyle = gba("mid", 0.34);
+  ctx.fillRect(planetX - 42, planetY - 8, 84, 8);
+  ctx.fillRect(planetX - 30, planetY + 12, 60, 6);
+
+  ctx.strokeStyle = gba("dark", 0.44);
+  ctx.lineWidth = 2;
+  for (let y = 120 - (cameraY % 180); y <= SCREEN_HEIGHT; y += 180) {
+    line(0, y, SCREEN_WIDTH, y + 42);
+  }
+
+  ctx.strokeStyle = gba("light", 0.22);
+  const sweepX = Math.round((game.titleTimer * 4 - cameraX * 0.14) % SCREEN_WIDTH);
+  line(sweepX, 80, sweepX + 80, SCREEN_HEIGHT - 80);
+
+  drawBackgroundMarkers();
   drawWorldBorder();
 }
 
@@ -2180,13 +2474,15 @@ function drawSupplies() {
     }
 
     const x = Math.round(supply.x - cameraX);
-    const bob = supply.kind === "airBuoy" ? Math.sin(supply.phase) * 4 : 0;
+    const bob = supply.kind === "airBuoy" ? Math.sin(supply.phase) * 4 : supply.kind === "spacePod" ? Math.sin(supply.phase) * 5 : 0;
     const y = Math.round(supply.y - cameraY + bob);
     const readyBlink = Math.floor((game.titleTimer + supply.phase * 10) / 24) % 2 === 0;
     const flash = supply.flashTimer > 0 ? Math.floor(supply.flashTimer / 8) % 2 === 0 : readyBlink;
 
     if (supply.kind === "airBuoy") {
       drawSupplyBuoy(x, y, flash);
+    } else if (supply.kind === "spacePod") {
+      drawSpaceSupplyPod(x, y, flash);
     } else {
       drawSupplyPod(x, y, flash);
     }
@@ -2223,6 +2519,22 @@ function drawSupplyBuoy(x, y, flash) {
   ctx.restore();
 }
 
+function drawSpaceSupplyPod(x, y, flash) {
+  ctx.save();
+  ctx.globalAlpha = flash ? 1 : 0.82;
+  ctx.fillStyle = flash ? gb("light") : gb("black");
+  ctx.fillRect(x - 15, y - 12, 30, 24);
+  ctx.fillStyle = gb("mid");
+  ctx.fillRect(x - 8, y - 7, 16, 14);
+  ctx.fillStyle = gb("dark");
+  ctx.fillRect(x - 24, y - 3, 9, 6);
+  ctx.fillRect(x + 15, y - 3, 9, 6);
+  ctx.fillStyle = gba("light", 0.5);
+  ctx.fillRect(x - 3, y - 20, 6, 8);
+  ctx.fillRect(x - 3, y + 12, 6, 8);
+  ctx.restore();
+}
+
 function drawOneUps() {
   for (const oneUp of oneUps) {
     if (!isPointVisible(oneUp.x, oneUp.y, 70)) {
@@ -2238,6 +2550,8 @@ function drawOneUps() {
 
     if (oneUp.kind === "air") {
       drawAirOneUpCapsule(x, y, blink);
+    } else if (oneUp.kind === "space") {
+      drawSpaceOneUpCapsule(x, y, blink);
     } else {
       drawSeaOneUpCapsule(x, y, blink);
     }
@@ -2272,6 +2586,20 @@ function drawAirOneUpCapsule(x, y, blink) {
   ctx.textAlign = "left";
 }
 
+function drawSpaceOneUpCapsule(x, y, blink) {
+  ctx.fillStyle = blink ? gb("light") : gb("black");
+  ctx.fillRect(x - 14, y - 10, 28, 20);
+  ctx.fillStyle = gb("mid");
+  ctx.fillRect(x - 6, y - 16, 12, 6);
+  ctx.fillRect(x - 6, y + 10, 12, 6);
+  ctx.fillStyle = gb("light");
+  ctx.font = "12px 'Courier New', monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("1UP", x, y + 1);
+  ctx.textAlign = "left";
+}
+
 function drawBombs() {
   for (const bomb of bombs) {
     if (!isObjectVisible(bomb, 40)) {
@@ -2281,7 +2609,12 @@ function drawBombs() {
     const x = Math.round(bomb.x - cameraX);
     const y = Math.round(bomb.y - cameraY);
 
-    if (bomb.kind === "aa") {
+    if (bomb.kind === "beam") {
+      ctx.fillStyle = gb("light");
+      ctx.fillRect(x - 3, y - 12, 6, 24);
+      ctx.fillStyle = gb("mid");
+      ctx.fillRect(x - 7, y + 5, 14, 5);
+    } else if (bomb.kind === "aa") {
       ctx.fillStyle = gb("light");
       ctx.fillRect(x - 2, y - 10, 4, 20);
       ctx.fillStyle = gb("black");
@@ -2330,6 +2663,10 @@ function drawEnemySprite(enemy, visibility) {
   if (enemy.type === "plane") drawPlane(enemy);
   if (enemy.type === "ufo") drawUfo(enemy);
   if (enemy.type === "skyBoss") drawSkyBoss(enemy);
+  if (enemy.type === "asteroid") drawAsteroid(enemy);
+  if (enemy.type === "orbitalDrone") drawOrbitalDrone(enemy);
+  if (enemy.type === "signalWisp") drawSignalWisp(enemy);
+  if (enemy.type === "hunterUFO") drawHunterUFO(enemy);
 
   ctx.restore();
 }
@@ -2546,6 +2883,63 @@ function drawSkyBoss(enemy) {
   ctx.restore();
 }
 
+function drawAsteroid(enemy) {
+  const x = Math.round(enemy.x - cameraX);
+  const y = Math.round(enemy.y - cameraY);
+
+  ctx.fillStyle = gb("black");
+  ctx.fillRect(x - 18, y - 14, 36, 28);
+  ctx.fillRect(x - 12, y - 20, 24, 6);
+  ctx.fillRect(x - 22, y - 6, 6, 16);
+  ctx.fillStyle = gb("dark");
+  ctx.fillRect(x - 8, y - 8, 8, 6);
+  ctx.fillRect(x + 6, y + 4, 10, 5);
+  ctx.fillStyle = gba("light", 0.45);
+  ctx.fillRect(x - 14, y - 13, 6, 4);
+}
+
+function drawOrbitalDrone(enemy) {
+  const x = Math.round(enemy.x - cameraX);
+  const y = Math.round(enemy.y - cameraY);
+
+  ctx.fillStyle = gb("black");
+  ctx.fillRect(x - 22, y - 8, 44, 16);
+  ctx.fillRect(x - 10, y - 15, 20, 7);
+  ctx.fillStyle = gb("dark");
+  ctx.fillRect(x - 32, y - 3, 10, 6);
+  ctx.fillRect(x + 22, y - 3, 10, 6);
+  ctx.fillStyle = gb("light");
+  ctx.fillRect(x - 4, y - 4, 8, 8);
+}
+
+function drawSignalWisp(enemy) {
+  const x = Math.round(enemy.x - cameraX);
+  const y = Math.round(enemy.y - cameraY);
+  const pulse = Math.floor(game.titleTimer / 10) % 2 === 0;
+
+  ctx.fillStyle = pulse || enemy.pingTimer > 0 ? gb("light") : gb("dark");
+  ctx.fillRect(x - 10, y - 10, 20, 20);
+  ctx.fillStyle = gb("black");
+  ctx.fillRect(x - 5, y - 5, 10, 10);
+  ctx.fillStyle = gba("light", 0.5);
+  ctx.fillRect(x - 17, y - 2, 7, 4);
+  ctx.fillRect(x + 10, y - 2, 7, 4);
+}
+
+function drawHunterUFO(enemy) {
+  const x = Math.round(enemy.x - cameraX);
+  const y = Math.round(enemy.y - cameraY);
+
+  ctx.fillStyle = gb("black");
+  ctx.fillRect(x - 24, y - 7, 48, 14);
+  ctx.fillRect(x - 14, y - 16, 28, 9);
+  ctx.fillStyle = gb("dark");
+  ctx.fillRect(x - 31, y - 2, 7, 7);
+  ctx.fillRect(x + 24, y - 2, 7, 7);
+  ctx.fillStyle = gb("light");
+  ctx.fillRect(x + (player.x > enemy.x ? 7 : -13), y - 11, 10, 4);
+}
+
 function drawBossHealthBar(enemy, x, y, width) {
   const rate = clamp(enemy.health / enemy.maxHealth, 0, 1);
 
@@ -2564,10 +2958,17 @@ function drawEnemyBullets() {
     const x = Math.round(bullet.x - cameraX);
     const y = Math.round(bullet.y - cameraY);
 
-    ctx.fillStyle = bullet.kind === "laser" ? gb("light") : gb("black");
-    ctx.fillRect(x - bullet.width / 2, y - bullet.height / 2, bullet.width, bullet.height);
-    ctx.fillStyle = bullet.vy > 0 ? gb("dark") : gb("light");
-    ctx.fillRect(x - 2, y + (bullet.vy > 0 ? 6 : -9), 4, 3);
+    if (bullet.kind === "space") {
+      ctx.fillStyle = gb("light");
+      ctx.fillRect(x - 4, y - 4, 8, 8);
+      ctx.fillStyle = gb("dark");
+      ctx.fillRect(x - 2, y - 2, 4, 4);
+    } else {
+      ctx.fillStyle = bullet.kind === "laser" ? gb("light") : gb("black");
+      ctx.fillRect(x - bullet.width / 2, y - bullet.height / 2, bullet.width, bullet.height);
+      ctx.fillStyle = bullet.vy > 0 ? gb("dark") : gb("light");
+      ctx.fillRect(x - 2, y + (bullet.vy > 0 ? 6 : -9), 4, 3);
+    }
   }
 }
 
@@ -2579,6 +2980,12 @@ function drawPlayer() {
   ctx.save();
   if (invincibleBlink) {
     ctx.globalAlpha = 0.45;
+  }
+
+  if (isSpaceStage()) {
+    drawSpacePlayer(x, y);
+    ctx.restore();
+    return;
   }
 
   if (isSeaStage()) {
@@ -2634,6 +3041,23 @@ function drawSurfaceInterceptorPlayer(x, y) {
     ctx.fillRect(x - 2, y - 39, 5, 18);
     ctx.fillRect(x - 8, y - 24, 16, 4);
   }
+}
+
+function drawSpacePlayer(x, y) {
+  // 宇宙モードの自機は、深海艇が軌道戦闘艇へ変形したようなGB風シルエットです。
+  ctx.fillStyle = gb("black");
+  ctx.fillRect(x - 24, y - 11, 48, 22);
+  ctx.fillRect(x - 10, y - 24, 20, 13);
+  ctx.fillRect(x - 34, y + 3, 18, 9);
+  ctx.fillRect(x + 16, y + 3, 18, 9);
+  ctx.fillStyle = gb("dark");
+  ctx.fillRect(x - 31, y + 12, 10, 10);
+  ctx.fillRect(x + 21, y + 12, 10, 10);
+  ctx.fillStyle = gb("light");
+  ctx.fillRect(x - 5, y - 18, 10, 6);
+  ctx.fillRect(x - 3, y - 3, 6, 8);
+  ctx.fillRect(x - 18, y + 13, 7, 4);
+  ctx.fillRect(x + 11, y + 13, 7, 4);
 }
 
 function drawSonarPulses() {
@@ -2739,6 +3163,17 @@ function drawMuzzleFlashes() {
 }
 
 function drawDepthOverlay() {
+  if (isSpaceStage()) {
+    ctx.fillStyle = gba("black", 0.08);
+    ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+    if (game.sonarFlashTimer > 0) {
+      ctx.fillStyle = gba("light", game.sonarFlashTimer / 170);
+      ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    }
+    return;
+  }
+
   const deep = isAirStage() ? 0.08 : getDepthFactor(player.y);
   const tunedDepth = clamp(deep + getStageDepthBias(), 0, 1);
 
@@ -2756,12 +3191,17 @@ function drawHud() {
   ctx.fillStyle = gb("black");
   ctx.fillRect(0, 0, SCREEN_WIDTH, 72);
 
-  const ammoLabel = isAirStage() ? "AA SHELL" : "DEPTH CHARGE";
-  const positionLabel = isAirStage() ? "SURFACE" : `DEPTH ${Math.round(player.y)}m`;
+  const ammoLabel = isSpaceStage() ? "ENERGY" : isAirStage() ? "AA SHELL" : "DEPTH CHARGE";
+  const positionLabel = isSpaceStage() ? `WAVE ${game.wave}` : isAirStage() ? "SURFACE" : `DEPTH ${Math.round(player.y)}m`;
+  const stageText = isSpaceStage() ? `WAVE ${game.wave}: ORBITAL SIGNAL MODE` : `STAGE ${game.stageIndex + 1}: ${game.stageName}`;
   const sensorLabel = getSensorLabel();
   const sensorText = game.sonarCooldown <= 0
     ? `${sensorLabel} READY`
     : `${sensorLabel} ${Math.ceil(game.sonarCooldown / 60)}`;
+  const modeX = isSpaceStage() ? 300 : 330;
+  const sensorX = isSpaceStage() ? 530 : 506;
+  const cooldownBarX = isSpaceStage() ? 660 : 632;
+  const soundX = isSpaceStage() ? 744 : 720;
 
   ctx.fillStyle = gb("light");
   ctx.font = "16px 'Courier New', monospace";
@@ -2773,19 +3213,19 @@ function drawHud() {
   ctx.fillText(positionLabel, 520, 18);
 
   ctx.fillStyle = gb("mid");
-  ctx.fillText(`STAGE ${game.stageIndex + 1}: ${game.stageName}`, 18, 48);
-  ctx.fillText(`MODE: ${getStageModeLabel()}`, 330, 48);
+  ctx.fillText(stageText, 18, 48);
+  ctx.fillText(`MODE: ${getStageModeLabel()}`, modeX, 48);
 
   ctx.fillStyle = game.sonarCooldown <= 0 ? gb("light") : gb("mid");
-  ctx.fillText(sensorText, 506, 48);
-  drawSonarCooldownBar(632, 39, 78, 12);
+  ctx.fillText(sensorText, sensorX, 48);
+  drawSonarCooldownBar(cooldownBarX, 39, 78, 12);
 
   ctx.fillStyle = gb("mid");
-  ctx.fillText(`SND ${game.soundEnabled ? "ON" : "OFF"}`, 720, 48);
+  ctx.fillText(`SND ${game.soundEnabled ? "ON" : "OFF"}`, soundX, 48);
 
   if (game.ammo <= 0) {
     ctx.fillStyle = gb("light");
-    ctx.fillText(isAirStage() ? "NO AA" : "NO CHG", 690, 18);
+    ctx.fillText(isSpaceStage() ? "NO EN" : isAirStage() ? "NO AA" : "NO CHG", 690, 18);
   } else if (game.statusTimer > 0) {
     if (game.statusText.includes("RESTORED") || game.statusText.includes("1UP") || game.statusText.includes("BONUS")) {
       ctx.fillStyle = gb("light");
@@ -2890,7 +3330,7 @@ function drawControlHelp() {
   ctx.font = "14px 'Courier New', monospace";
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  ctx.fillText("MOVE ARROW/WASD  SPACE FIRE  E/SHIFT SONAR/RADAR  P/ESC PAUSE  M SOUND  R RESTART", 18, SCREEN_HEIGHT - 18);
+  ctx.fillText("MOVE ARROW/WASD  SPACE FIRE  E/SHIFT SONAR/RADAR/SCANNER  P/ESC PAUSE  M SOUND  R RESTART", 18, SCREEN_HEIGHT - 18);
 }
 
 function drawBossWarning() {
@@ -2962,6 +3402,65 @@ function drawCenteredMessage(title, subtitle, prompt) {
   ctx.textAlign = "left";
 }
 
+function drawOrbitalUnlockOverlay() {
+  // STAGE 8後の接続画面です。完全終了ではなく、宇宙エンドレスへ進めることを明示します。
+  const blink = Math.floor(game.clearTimer / 16) % 2 === 0;
+  const autoCount = Math.max(0, Math.ceil(game.clearTimer / 60));
+
+  ctx.fillStyle = gba("black", 0.72);
+  ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+  for (let i = 0; i < 7; i += 1) {
+    const y = 132 + i * 42 + Math.sin((game.titleTimer + i * 11) * 0.04) * 5;
+    ctx.strokeStyle = gba(i % 2 === 0 ? "mid" : "light", i % 2 === 0 ? 0.2 : 0.13);
+    ctx.lineWidth = 2;
+    line(110, y, SCREEN_WIDTH - 110, y - 22);
+  }
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.strokeStyle = blink ? gb("light") : gb("mid");
+  ctx.lineWidth = 4;
+  ctx.strokeRect(96, 164, SCREEN_WIDTH - 192, 210);
+
+  ctx.fillStyle = gb("light");
+  ctx.font = "32px 'Courier New', monospace";
+  ctx.fillText("SIGNAL ASCENDING...", SCREEN_WIDTH / 2, 210);
+
+  ctx.fillStyle = blink ? gb("light") : gb("mid");
+  ctx.font = "26px 'Courier New', monospace";
+  ctx.fillText("ORBITAL SIGNAL MODE", SCREEN_WIDTH / 2, 262);
+  ctx.fillText("UNLOCKED", SCREEN_WIDTH / 2, 300);
+
+  ctx.fillStyle = gb("mid");
+  ctx.font = "16px 'Courier New', monospace";
+  ctx.fillText(`AUTO ORBIT IN ${autoCount}`, SCREEN_WIDTH / 2, 340);
+  ctx.fillText("PRESS SPACE / ENTER / Z", SCREEN_WIDTH / 2, 366);
+
+  ctx.textAlign = "left";
+}
+
+function drawSpaceGameOver() {
+  ctx.fillStyle = gba("black", 0.82);
+  ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = gb("light");
+  ctx.font = "42px 'Courier New', monospace";
+  ctx.fillText("GAME OVER", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 70);
+
+  ctx.fillStyle = gb("mid");
+  ctx.font = "22px 'Courier New', monospace";
+  ctx.fillText(`FINAL SCORE ${padScore(game.score)}`, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 18);
+  ctx.fillText(`REACHED WAVE ${Math.max(game.reachedWave, game.wave)}`, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 20);
+
+  ctx.font = "16px 'Courier New', monospace";
+  ctx.fillText("PRESS R TO RESTART", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 68);
+  ctx.fillText("PRESS SPACE TO TITLE", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 94);
+  ctx.textAlign = "left";
+}
+
 function drawLcdOverlay() {
   // 疑似LCDの走査線と残像感です。低解像度canvasを拡大する前提で薄く重ねます。
   ctx.fillStyle = gba("black", 0.08);
@@ -2988,6 +3487,8 @@ function startNewGame() {
   game.score = 0;
   game.lives = CONFIG.player.startLives;
   game.ammo = CONFIG.player.maxAmmo;
+  game.wave = 0;
+  game.reachedWave = 0;
   game.lastTime = 0;
   loadStage(0, false);
   game.state = STATE.PLAYING;
@@ -2996,17 +3497,81 @@ function startNewGame() {
 
 function returnToTitle() {
   game.lastTime = 0;
+  game.wave = 0;
   loadStage(0, false);
   game.state = STATE.TITLE;
   setStatus("", 0);
+}
+
+function startSpaceMode() {
+  game.wave = 1;
+  game.reachedWave = 1;
+  loadStage(SPACE_STAGE_INDEX, true);
+  game.wave = 1;
+  game.reachedWave = 1;
+  spawnSpaceWave();
+  game.state = STATE.PLAYING;
+  game.clearTimer = 0;
+  setStatus("WAVE 1", 130);
+  playSound("start");
+}
+
+function advanceSpaceWave() {
+  game.wave += 1;
+  game.reachedWave = Math.max(game.reachedWave, game.wave);
+  bombs.length = 0;
+  enemyBullets.length = 0;
+  explosions.length = 0;
+  particles.length = 0;
+  popups.length = 0;
+  spawnSpaceWave();
+
+  if (game.wave % 5 === 0) {
+    for (const supply of supplies) {
+      placeSupplyRandomly(supply);
+    }
+  }
+
+  setStatus(game.wave % 3 === 0 ? `WAVE ${game.wave} SIGNAL DENSITY UP` : `WAVE ${game.wave}`, 150);
+  playSound("sonar");
+}
+
+function spawnSpaceWave() {
+  enemies.length = 0;
+
+  const wave = Math.max(1, game.wave);
+  const enemyCount = Math.min(16, 4 + Math.floor(wave * 1.15));
+  const enemyPool = wave >= 4
+    ? ["asteroid", "orbitalDrone", "signalWisp", "hunterUFO"]
+    : ["asteroid", "orbitalDrone", "signalWisp"];
+
+  for (let i = 0; i < enemyCount; i += 1) {
+    const type = enemyPool[i % enemyPool.length];
+    const x = randomRange(180, WORLD_WIDTH - 180);
+    const y = randomRange(CONFIG.space.enemyMinY, CONFIG.space.enemyMaxY);
+    const direction = Math.random() > 0.5 ? 1 : -1;
+
+    enemies.push(createEnemy({
+      type,
+      x,
+      y,
+      direction,
+      patrolLeft: Math.max(80, x - randomRange(240, 440)),
+      patrolRight: Math.min(WORLD_WIDTH - 80, x + randomRange(240, 440)),
+      initiallyDetected: wave === 1 && i < 2,
+    }, enemies.length));
+  }
 }
 
 function createEnemy(layout, index) {
   const base = ENEMY_TYPES[layout.type];
   const stage = getCurrentStage();
   const patrolPadding = base.boss ? 520 : layout.type === "torpedo" || layout.type === "plane" ? 320 : 210;
+  const spaceWave = stage.type === STAGE_TYPE.SPACE ? Math.max(1, game.wave || 1) : 0;
+  const speedScale = spaceWave > 0 ? Math.min(1.75, 1 + (spaceWave - 1) * 0.045) : 1;
+  const fireScale = spaceWave > 0 ? Math.max(0.62, 1 - (spaceWave - 1) * 0.025) : 1;
   const baseFireInterval = base.fireInterval > 0
-    ? Math.max(34, base.fireInterval * (stage.fireRate || 1))
+    ? Math.max(34, base.fireInterval * (stage.fireRate || 1) * fireScale)
     : 0;
   const hasBossEntry = base.boss && (stage.type === STAGE_TYPE.SEA_BOSS || stage.type === STAGE_TYPE.AIR_BOSS);
   const startY = hasBossEntry && layout.type === "abyssBoss"
@@ -3027,7 +3592,7 @@ function createEnemy(layout, index) {
     height: base.height,
     health: layout.health || base.health,
     maxHealth: layout.health || base.health,
-    speed: layout.speed || base.speed,
+    speed: (layout.speed || base.speed) * speedScale,
     score: base.score,
     direction: layout.direction || 1,
     alive: true,
@@ -3080,7 +3645,7 @@ function loadStage(stageIndex, keepPlayerResources) {
 
   player.x = stage.start.x;
   player.y = stage.start.y;
-  player.speed = isAirStage() ? CONFIG.player.speed * 0.92 : CONFIG.player.speed;
+  player.speed = isSpaceStage() ? CONFIG.player.speed * 1.05 : isAirStage() ? CONFIG.player.speed * 0.92 : CONFIG.player.speed;
   player.invincibleTimer = 0;
   clampPlayerToStage();
 
@@ -3119,7 +3684,7 @@ function createStageSupplyPoint() {
   const supply = {
     x: 0,
     y: 0,
-    kind: isAirStage() ? "airBuoy" : "seaPod",
+    kind: isSpaceStage() ? "spacePod" : isAirStage() ? "airBuoy" : "seaPod",
     active: true,
     respawnTimer: 0,
     flashTimer: 80,
@@ -3143,6 +3708,14 @@ function placeSupplyRandomly(supply) {
 }
 
 function getRandomSupplyPosition() {
+  if (isSpaceStage()) {
+    return {
+      x: randomWorldX(),
+      y: randomRange(170, getWorldHeight() - 170),
+      kind: "spacePod",
+    };
+  }
+
   if (game.stageType === STAGE_TYPE.AIR) {
     return {
       x: randomWorldX(),
@@ -3212,6 +3785,9 @@ function randomSupplyRespawnTime() {
   if (stage.supplyRespawn) {
     minTime = stage.supplyRespawn.min;
     maxTime = stage.supplyRespawn.max;
+  } else if (isSpaceStage()) {
+    minTime = CONFIG.space.supplyRespawnMin;
+    maxTime = CONFIG.space.supplyRespawnMax;
   } else if (isBossStage()) {
     minTime = CONFIG.supply.bossRespawnMin;
     maxTime = CONFIG.supply.bossRespawnMax;
@@ -3254,6 +3830,10 @@ function getWorldHeight() {
 
   if (isSeaStage()) {
     return CONFIG.world.seaHeight;
+  }
+
+  if (isSpaceStage()) {
+    return CONFIG.world.spaceHeight;
   }
 
   return CONFIG.world.airHeight;
@@ -3331,17 +3911,23 @@ function isSeaStage() {
   return game.stageType === STAGE_TYPE.SEA || game.stageType === STAGE_TYPE.SEA_BOSS;
 }
 
+function isSpaceStage() {
+  return game.stageType === STAGE_TYPE.SPACE;
+}
+
 function isBossStage() {
   return game.stageType === STAGE_TYPE.SEA_BOSS || game.stageType === STAGE_TYPE.AIR_BOSS;
 }
 
 function getStageModeLabel() {
+  if (isSpaceStage()) return "ORBITAL SIGNAL";
   if (isAirStage()) return "SURFACED SUB";
   if (game.stageType === STAGE_TYPE.SEA_BOSS) return "BOSS";
   return "DEEP SEA";
 }
 
 function getSensorLabel() {
+  if (isSpaceStage()) return "SCANNER";
   return isAirStage() ? "RADAR" : "SONAR";
 }
 
@@ -3380,6 +3966,12 @@ function getEnemyVisibility(enemy) {
     return enemy.detectedTimer > 0 ? 1 : 0.9;
   }
 
+  if (getEnemyDomain(enemy) === "space") {
+    if (enemy.detectedTimer > 0) return 1;
+    if (enemy.pingTimer > 0) return 0.86;
+    return enemy.type === "signalWisp" ? 0.34 : 0.9;
+  }
+
   if (enemy.detectedTimer > 0) {
     return 1;
   }
@@ -3401,6 +3993,10 @@ function getStageDepthBias() {
 
 function getEnemyMapAlpha(enemy) {
   if (getEnemyDomain(enemy) === "air") return enemy.detectedTimer > 0 || enemy.y < 260 ? 1 : 0.76;
+  if (getEnemyDomain(enemy) === "space") {
+    if (enemy.detectedTimer > 0 || enemy.pingTimer > 0) return 1;
+    return enemy.type === "signalWisp" ? 0.28 : 0.74;
+  }
   if (ENEMY_TYPES[enemy.type].boss) return enemy.detectedTimer > 0 ? 1 : 0.34;
   if (enemy.detectedTimer > 0) return 1;
   if (enemy.y < 440) return 0.78;
@@ -3441,6 +4037,10 @@ function getContactBox(object, scale) {
 function getEnemyContactBox(enemy) {
   if (ENEMY_TYPES[enemy.type].boss) {
     return getContactBox(enemy, 0.46);
+  }
+
+  if (getEnemyDomain(enemy) === "space") {
+    return getContactBox(enemy, enemy.type === "asteroid" ? 0.72 : 0.76);
   }
 
   if (enemy.type === "mine" || enemy.type === "rammer") {
