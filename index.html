@@ -15,12 +15,17 @@
     <title>HAPOMU - Happy Omurice Games</title>
     <style>
       :root {
-        --gb-light: #d8f7a7;
-        --gb-mid: #9bbc0f;
-        --gb-dark: #306850;
-        --gb-black: #081820;
-        --panel: #102c22;
-        --line: #6f9f2f;
+        --cream: #fff1bf;
+        --egg: #ffd85c;
+        --ketchup: #d83b2d;
+        --ketchup-dark: #8e251d;
+        --brown: #43261c;
+        --toast: #f0b65c;
+        --paper: #fff9df;
+        --green: #4c7a46;
+        --ink: #241814;
+        --shadow: rgba(67, 38, 28, 0.24);
+        --deep: #102c22;
       }
 
       * {
@@ -28,37 +33,22 @@
       }
 
       html {
-        background: var(--gb-black);
+        background: var(--cream);
       }
 
       body {
         min-height: 100vh;
         margin: 0;
-        color: var(--gb-light);
+        color: var(--ink);
         font-family: "Courier New", "MS Gothic", monospace;
         line-height: 1.65;
         background:
-          linear-gradient(rgba(216, 247, 167, 0.035) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(216, 247, 167, 0.025) 1px, transparent 1px),
-          radial-gradient(circle at 50% 0%, rgba(48, 104, 80, 0.46), transparent 42%),
-          var(--gb-black);
-        background-size: 6px 6px, 6px 6px, 100% 100%, auto;
-      }
-
-      body::before {
-        position: fixed;
-        inset: 0;
-        z-index: 0;
-        pointer-events: none;
-        content: "";
-        background: repeating-linear-gradient(
-          to bottom,
-          rgba(216, 247, 167, 0.045) 0,
-          rgba(216, 247, 167, 0.045) 1px,
-          transparent 1px,
-          transparent 4px
-        );
-        mix-blend-mode: screen;
+          radial-gradient(circle at 12% 8%, rgba(216, 59, 45, 0.18), transparent 18%),
+          radial-gradient(circle at 88% 0%, rgba(255, 216, 92, 0.72), transparent 24%),
+          linear-gradient(rgba(67, 38, 28, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(67, 38, 28, 0.035) 1px, transparent 1px),
+          var(--cream);
+        background-size: 100% 100%, 100% 100%, 14px 14px, 14px 14px, auto;
       }
 
       a {
@@ -66,202 +56,229 @@
       }
 
       .archive {
-        position: relative;
-        z-index: 1;
-        width: min(1120px, calc(100% - 32px));
+        width: min(1160px, calc(100% - 32px));
         margin: 0 auto;
-        padding: 40px 0 56px;
+        padding: 34px 0 56px;
       }
 
       .hero {
-        padding: 28px;
-        border: 3px solid var(--gb-light);
-        background: rgba(8, 24, 32, 0.78);
-        box-shadow:
-          0 0 0 5px rgba(48, 104, 80, 0.9),
-          0 18px 60px rgba(0, 0, 0, 0.38);
+        position: relative;
+        overflow: hidden;
+        padding: 34px;
+        border: 4px solid var(--brown);
+        border-radius: 18px;
+        background:
+          linear-gradient(135deg, rgba(255, 216, 92, 0.88), rgba(255, 249, 223, 0.94)),
+          var(--egg);
+        box-shadow: 10px 10px 0 var(--shadow);
+      }
+
+      .hero::after {
+        position: absolute;
+        right: -34px;
+        bottom: -46px;
+        width: 210px;
+        height: 150px;
+        border: 5px solid var(--brown);
+        border-radius: 50%;
+        background: var(--paper);
+        content: "";
+        transform: rotate(-8deg);
       }
 
       .eyebrow {
         margin: 0 0 8px;
-        color: var(--gb-mid);
+        color: var(--ketchup-dark);
         font-size: 13px;
+        font-weight: 700;
         text-transform: uppercase;
       }
 
       h1 {
+        position: relative;
+        z-index: 1;
         margin: 0;
-        color: var(--gb-light);
-        font-size: clamp(34px, 8vw, 72px);
-        line-height: 0.98;
+        color: var(--brown);
+        font-size: clamp(48px, 10vw, 104px);
+        line-height: 0.9;
         text-transform: uppercase;
-        text-shadow: 4px 4px 0 var(--gb-dark);
+        text-shadow: 5px 5px 0 rgba(216, 59, 45, 0.28);
+      }
+
+      .brand-sub {
+        margin: 8px 0 0;
+        color: var(--ketchup);
+        font-size: clamp(20px, 4vw, 36px);
+        font-weight: 700;
+        text-transform: uppercase;
       }
 
       .subtitle {
-        max-width: 780px;
-        margin: 18px 0 0;
-        color: var(--gb-mid);
+        position: relative;
+        z-index: 1;
+        max-width: 760px;
+        margin: 16px 0 0;
+        color: var(--brown);
         font-size: clamp(15px, 2vw, 20px);
       }
 
-      .site-links {
+      .site-links,
+      .hero-actions,
+      .game-actions {
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
         margin-top: 18px;
       }
 
-      .site-links a {
+      .site-links a,
+      .play-button,
+      .secondary-button,
+      .version-card a {
         display: inline-block;
-        padding: 7px 10px;
-        border: 2px solid var(--gb-dark);
-        color: var(--gb-light);
-        font-size: 14px;
+        padding: 10px 13px;
+        border: 3px solid var(--brown);
+        border-radius: 10px;
+        color: var(--paper);
         font-weight: 700;
         text-decoration: none;
         text-transform: uppercase;
-        background: rgba(8, 24, 32, 0.7);
+        background: var(--ketchup);
+        box-shadow: 4px 4px 0 var(--shadow);
       }
 
       .site-links a:hover,
-      .site-links a:focus-visible {
-        color: var(--gb-black);
+      .site-links a:focus-visible,
+      .play-button:hover,
+      .play-button:focus-visible,
+      .secondary-button:hover,
+      .secondary-button:focus-visible,
+      .version-card a:hover,
+      .version-card a:focus-visible {
         outline: none;
-        background: var(--gb-mid);
+        background: var(--green);
+        transform: translate(2px, 2px);
+        box-shadow: 2px 2px 0 var(--shadow);
+      }
+
+      .section-title {
+        margin: 36px 0 0;
+        color: var(--brown);
+        font-size: clamp(24px, 4vw, 42px);
+        line-height: 1.1;
+        text-transform: uppercase;
+      }
+
+      .section-lead {
+        max-width: 820px;
+        margin: 10px 0 0;
+        color: var(--brown);
+      }
+
+      .games-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 18px;
+      }
+
+      .game-card,
+      .devlog-card,
+      .current-card,
+      .version-card,
+      .about {
+        padding: 18px;
+        border: 3px solid var(--brown);
+        border-radius: 16px;
+        background: rgba(255, 249, 223, 0.92);
+        box-shadow: 7px 7px 0 var(--shadow);
       }
 
       .current-card {
         display: grid;
-        grid-template-columns: 1.2fr 0.8fr;
-        gap: 20px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 16px;
         align-items: center;
-        margin-top: 24px;
-        padding: 22px;
-        border: 2px solid var(--gb-mid);
-        background:
-          linear-gradient(135deg, rgba(155, 188, 15, 0.18), rgba(48, 104, 80, 0.14)),
-          var(--panel);
       }
 
-      .top-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
-        gap: 18px;
-        margin-top: 24px;
-      }
-
-      .feature-card,
-      .coming-card,
-      .devlog-card {
-        padding: 20px;
-        border: 2px solid var(--line);
-        background:
-          linear-gradient(rgba(155, 188, 15, 0.075), rgba(8, 24, 32, 0.18)),
-          var(--panel);
-      }
-
-      .feature-card {
-        border-color: var(--gb-mid);
-      }
-
-      .feature-card h2,
-      .coming-card h3,
-      .devlog-card h3 {
-        margin: 0;
-        line-height: 1.2;
-        text-transform: uppercase;
-      }
-
-      .hero-actions {
+      .game-card {
         display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        margin-top: 18px;
+        min-height: 280px;
+        flex-direction: column;
       }
 
-      .hero-actions .play-button {
-        width: auto;
+      .game-card.deep {
+        color: #d8f7a7;
+        background:
+          linear-gradient(rgba(16, 44, 34, 0.94), rgba(8, 24, 32, 0.94)),
+          var(--deep);
       }
 
+      .game-card h3,
+      .devlog-card h3,
       .current-card h2,
-      .section-title,
-      .version-card h3 {
+      .version-card h3,
+      .about h2 {
         margin: 0;
         line-height: 1.2;
-      }
-
-      .current-card h2 {
-        color: var(--gb-light);
-        font-size: clamp(22px, 4vw, 36px);
         text-transform: uppercase;
       }
 
-      .build-label {
-        display: inline-block;
-        margin-top: 8px;
-        padding: 4px 8px;
-        color: var(--gb-black);
-        font-weight: 700;
-        background: var(--gb-mid);
-      }
-
-      .current-card p,
+      .game-card p,
       .version-card p,
       .about p,
       .notes {
         margin: 12px 0 0;
       }
 
-      .play-button {
-        display: block;
-        width: 100%;
-        padding: 18px 20px;
-        border: 3px solid var(--gb-light);
-        color: var(--gb-black);
-        font-size: clamp(18px, 3vw, 26px);
-        font-weight: 700;
-        text-align: center;
-        text-decoration: none;
-        text-transform: uppercase;
-        background: var(--gb-light);
-        box-shadow: 6px 6px 0 var(--gb-dark);
-      }
-
-      .play-button:hover,
-      .play-button:focus-visible {
-        color: var(--gb-light);
-        outline: none;
-        background: var(--gb-dark);
-        transform: translate(2px, 2px);
-        box-shadow: 4px 4px 0 var(--gb-mid);
-      }
-
-      .secondary-button {
+      .tag {
         display: inline-block;
-        padding: 11px 14px;
-        border: 2px solid var(--gb-mid);
-        color: var(--gb-light);
+        width: fit-content;
+        margin: 0 0 10px;
+        padding: 4px 8px;
+        border: 2px solid var(--brown);
+        border-radius: 999px;
+        color: var(--paper);
+        font-size: 12px;
         font-weight: 700;
-        text-decoration: none;
         text-transform: uppercase;
-        background: rgba(8, 24, 32, 0.75);
+        background: var(--green);
       }
 
-      .secondary-button:hover,
-      .secondary-button:focus-visible {
-        color: var(--gb-black);
-        outline: none;
-        background: var(--gb-mid);
+      .build-label {
+        display: inline-block;
+        width: fit-content;
+        margin-top: 8px;
+        padding: 4px 8px;
+        border: 2px solid var(--brown);
+        border-radius: 999px;
+        color: var(--paper);
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        background: var(--ketchup);
       }
 
-      .section-title {
-        margin-top: 34px;
-        padding-bottom: 10px;
-        border-bottom: 2px solid var(--line);
-        color: var(--gb-light);
-        font-size: 22px;
-        text-transform: uppercase;
+      .game-card.deep .tag {
+        border-color: #d8f7a7;
+        color: #081820;
+        background: #9bbc0f;
+      }
+
+      .game-card.deep .secondary-button {
+        border-color: #d8f7a7;
+        color: #081820;
+        background: #d8f7a7;
+      }
+
+      .game-actions {
+        margin-top: auto;
+      }
+
+      .devlog-card ul,
+      .notes {
+        margin: 12px 0 0;
+        padding-left: 18px;
       }
 
       .versions {
@@ -271,114 +288,52 @@
         margin-top: 18px;
       }
 
-      .coming-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 16px;
-        margin-top: 18px;
-      }
-
-      .devlog-card ul {
-        margin: 12px 0 0;
-        padding-left: 18px;
-        color: var(--gb-mid);
-      }
-
-      .section-lead {
-        max-width: 760px;
-        margin: 10px 0 0;
-        color: var(--gb-mid);
+      .archive-intro {
+        margin-top: 28px;
+        color: var(--brown);
       }
 
       .version-card {
         display: flex;
-        min-height: 240px;
+        min-height: 230px;
         flex-direction: column;
-        padding: 18px;
-        border: 2px solid var(--line);
-        background:
-          linear-gradient(rgba(155, 188, 15, 0.075), rgba(8, 24, 32, 0.15)),
-          var(--panel);
-      }
-
-      .version-card h3 {
-        color: var(--gb-light);
-        font-size: 20px;
-      }
-
-      .version-card p {
-        color: var(--gb-mid);
-        font-size: 14px;
       }
 
       .version-card a {
-        display: inline-block;
         width: fit-content;
         margin-top: auto;
-        padding: 9px 12px;
-        border: 2px solid var(--gb-mid);
-        color: var(--gb-light);
-        font-weight: 700;
-        text-decoration: none;
-        text-transform: uppercase;
-        background: rgba(8, 24, 32, 0.75);
-      }
-
-      .version-card a:hover,
-      .version-card a:focus-visible {
-        color: var(--gb-black);
-        outline: none;
-        background: var(--gb-mid);
       }
 
       .about {
         margin-top: 30px;
-        padding: 20px;
-        border: 2px solid var(--gb-dark);
-        background: rgba(8, 24, 32, 0.72);
       }
 
-      .about h2 {
-        margin: 0;
-        font-size: 22px;
+      @media (max-width: 980px) {
+        .games-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
       }
 
-      .about p {
-        max-width: 900px;
-        color: var(--gb-mid);
-      }
-
-      .notes {
-        padding-left: 18px;
-        color: rgba(216, 247, 167, 0.78);
-        font-size: 12px;
-      }
-
-      @media (max-width: 760px) {
+      @media (max-width: 680px) {
         .archive {
           width: min(100% - 20px, 560px);
           padding: 18px 0 34px;
         }
 
         .hero,
-        .current-card,
-        .feature-card,
-        .coming-card,
+        .game-card,
         .devlog-card,
+        .current-card,
         .version-card,
         .about {
           padding: 16px;
+          border-radius: 12px;
         }
 
+        .games-grid,
         .current-card,
-        .top-grid,
-        .coming-grid,
         .versions {
           grid-template-columns: 1fr;
-        }
-
-        .version-card {
-          min-height: 0;
         }
       }
     </style>
@@ -388,73 +343,86 @@
       <section class="hero" aria-labelledby="page-title">
         <p class="eyebrow">Happy Omurice Games</p>
         <h1 id="page-title">HAPOMU</h1>
+        <p class="brand-sub">Happy Omurice Games</p>
         <p class="subtitle">家族のアイディアとAI相談から生まれる、ちいさなブラウザゲーム置き場。</p>
         <p class="subtitle">Small browser games from a tiny omurice universe.</p>
         <nav class="site-links" aria-label="サイト情報">
           <a href="about.html">About</a>
           <a href="privacy.html">Privacy</a>
+          <a href="games/index.html">Games</a>
         </nav>
       </section>
 
-      <section class="top-grid" aria-label="HAPOMU games">
-        <article class="feature-card" aria-labelledby="featured-title">
-          <p class="eyebrow">Featured Game / First Prototype</p>
-          <h2 id="featured-title">DEEP SIGNAL</h2>
-          <span class="build-label">Latest Development Build v0.4.3</span>
-          <p>AIと相談しながら作っているレトロ深海シューティング。</p>
-          <p>STAGE 1〜8、ORBITAL SIGNAL MODE、SIGNAL CORE、STAGE SELECTを搭載。</p>
-          <div class="hero-actions">
-            <a class="play-button" href="current/index.html">PLAY DEEP SIGNAL</a>
-            <a class="secondary-button" href="#archive">VIEW PROTOTYPE ARCHIVE</a>
+      <h2 class="section-title">PLAYABLE GAMES</h2>
+      <p class="section-lead">HAPOMUでいま遊べるブラウザゲームとプロトタイプです。</p>
+      <section class="games-grid" aria-label="Playable games">
+        <article class="game-card deep">
+          <span class="tag">v0.4.3 stable</span>
+          <h3>DEEP SIGNAL</h3>
+          <p>Retro deep-sea shooter</p>
+          <p>深海探索、空中迎撃、宇宙エンドレスへ進むHAPOMU第1作。</p>
+          <div class="game-actions">
+            <a class="play-button" href="current/index.html">PLAY</a>
+            <a class="secondary-button" href="#archive">DETAIL / ARCHIVE</a>
           </div>
         </article>
 
-        <article class="devlog-card" aria-labelledby="devlog-title">
-          <p class="eyebrow">Devlog Preview</p>
-          <h3 id="devlog-title">Recent Updates</h3>
-          <ul>
-            <li>2026-06-01: DEEP SIGNAL v0.4.3 released: Space damage freeze hotfix.</li>
-            <li>2026-06-01: hapomu.com launched: HAPOMU game portal is now online.</li>
-          </ul>
+        <article class="game-card">
+          <span class="tag">v0.1 prototype</span>
+          <h3>Happy Omurice</h3>
+          <p>Draw ketchup on omurice</p>
+          <p>オムライスにケチャップを描いて完成させる、明るいミニゲーム。</p>
+          <div class="game-actions">
+            <a class="play-button" href="games/happy-omurice-prototype/index.html">PLAY</a>
+            <a class="secondary-button" href="games/happy-omurice.html">DETAIL</a>
+          </div>
+        </article>
+
+        <article class="game-card">
+          <span class="tag">v0.1 prototype</span>
+          <h3>JANKEN KITCHEN</h3>
+          <p>Arcade janken machine</p>
+          <p>駄菓子屋筐体風の3ボタンジャンケンでOMU COINを集めるゲーム。</p>
+          <div class="game-actions">
+            <a class="play-button" href="games/janken-kitchen-prototype/index.html">PLAY</a>
+            <a class="secondary-button" href="games/janken-kitchen.html">DETAIL</a>
+          </div>
+        </article>
+
+        <article class="game-card">
+          <span class="tag">v0.1 prototype</span>
+          <h3>Cup Ramen Kun</h3>
+          <p>30 sec lid survival</p>
+          <p>30秒間フタを押さえて、カップラーメンくんの完成を守るゲーム。</p>
+          <div class="game-actions">
+            <a class="play-button" href="games/cup-ramen-kun-prototype/index.html">PLAY</a>
+            <a class="secondary-button" href="games/cup-ramen-kun.html">DETAIL</a>
+          </div>
         </article>
       </section>
 
-      <h2 class="section-title">Coming Soon</h2>
-      <p class="section-lead"><a href="games/index.html">VIEW ALL GAMES</a></p>
-      <section class="coming-grid" aria-label="今後のゲーム企画">
-        <article class="coming-card">
-          <h3>Happy Omurice</h3>
-          <p>娘のアイディアから生まれた、しあわせなオムライスゲーム構想。v0.1 prototype playable.</p>
-          <p><a href="games/happy-omurice-prototype/index.html">Play Prototype</a></p>
-          <p><a href="games/happy-omurice.html">View Concept</a></p>
-        </article>
-
-        <article class="coming-card">
-          <h3>Cup Ramen Kun</h3>
-          <p>息子のアイディアから生まれた、3分間をテーマにしたカップラーメンくんゲーム構想。v0.1 prototype playable.</p>
-          <p><a href="games/cup-ramen-kun-prototype/index.html">Play Prototype</a></p>
-          <p><a href="games/cup-ramen-kun.html">View Concept</a></p>
-        </article>
-
-        <article class="coming-card">
-          <h3>JANKEN KITCHEN</h3>
-          <p>Coming Soon / Prototype Available</p>
-          <p>HAPOMUの小さなジャンケン筐体。グー・チョキ・パーの3ボタンでOMU COINを集めるレトロミニゲーム構想。v0.1 prototype playable.</p>
-          <p><a href="games/janken-kitchen-prototype/index.html">Play Prototype</a></p>
-          <p><a href="games/janken-kitchen.html">View Concept</a></p>
-        </article>
+      <section class="devlog-card" aria-labelledby="devlog-title">
+        <p class="eyebrow">DEVLOG</p>
+        <h3 id="devlog-title">Recent Updates</h3>
+        <ul>
+          <li>Cup Ramen Kun v0.1 prototype added</li>
+          <li>JANKEN KITCHEN hand display polished</li>
+          <li>Happy Omurice v0.1 prototype added</li>
+          <li>DEEP SIGNAL v0.4.3 stable</li>
+        </ul>
       </section>
 
       <section class="current-card" aria-labelledby="current-title">
         <div>
           <h2 id="current-title">DEEP SIGNAL PROTOTYPE ARCHIVE</h2>
           <span class="build-label">Development History</span>
-          <p>現在の最新版と、過去の固定保存版をまとめた開発アーカイブです。各バージョンの操作感や見た目をそのまま確認できます。</p>
+          <p>DEEP SIGNALの過去バージョンを保存している開発アーカイブ。</p>
         </div>
         <a class="secondary-button" href="current/index.html">Latest Build</a>
       </section>
 
       <h2 id="archive" class="section-title">DEEP SIGNAL Prototype Archive</h2>
+      <p class="archive-intro">DEEP SIGNALの過去バージョンを保存している開発アーカイブ。</p>
       <section class="versions" aria-label="固定保存版プロトタイプ一覧">
         <article class="version-card">
           <h3>v0.2.0 - GB Style Sound Prototype</h3>
