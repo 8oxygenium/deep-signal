@@ -1,7 +1,7 @@
-# DEEP SIGNAL
+# HAPOMU / Happy Omurice Games
 
-DEEP SIGNAL は、ブラウザで動く個人制作のレトロPC / Game Boy風シューティングゲームです。
-画像素材や音声素材を使わず、HTML / CSS / JavaScript / canvas / Web Audio API だけで制作しています。
+HAPOMU / Happy Omurice Games は、家族のアイディアとAI相談から生まれる、ちいさなブラウザゲーム置き場です。
+Cloudflare Pagesで公開している個人制作ゲーム集サイトです。
 
 Site URL:
 
@@ -12,14 +12,21 @@ Brand:
 - HAPOMU / Happy Omurice Games
 
 DEEP SIGNAL is the first browser game prototype in this archive.
-このサイトは Cloudflare Pages で公開しています。
 
 ## 概要
+
+DEEP SIGNAL は、HAPOMUの第1作として公開しているブラウザゲームプロトタイプです。
+レトロPC / Game Boy風の見た目で、画像素材や音声素材を使わず、HTML / CSS / JavaScript / canvas / Web Audio API だけで制作しています。
 
 プレイヤーは潜航艇を操作し、広い海域を探索しながらソナーで敵を発見し、爆雷で撃破します。
 後半では浮上した潜水艦による対空迎撃、さらに ORBITAL SIGNAL MODE として宇宙エンドレスへ展開します。
 
-現在の最新開発版は v0.4.3 です。
+現在の安定版: DEEP SIGNAL v0.4.3
+
+## 今後の企画
+
+- Happy Omurice: 娘のアイディアから生まれた、しあわせなオムライスゲーム構想
+- Cup Ramen Kun: 息子のアイディアから生まれた、3分間をテーマにしたカップラーメンくんゲーム構想
 
 ## 現在の主な内容
 

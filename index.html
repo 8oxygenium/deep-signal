@@ -12,7 +12,7 @@
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>DEEP SIGNAL Prototype Archive</title>
+    <title>HAPOMU - Happy Omurice Games</title>
     <style>
       :root {
         --gb-light: #d8f7a7;
@@ -144,6 +144,46 @@
           var(--panel);
       }
 
+      .top-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+        gap: 18px;
+        margin-top: 24px;
+      }
+
+      .feature-card,
+      .coming-card,
+      .devlog-card {
+        padding: 20px;
+        border: 2px solid var(--line);
+        background:
+          linear-gradient(rgba(155, 188, 15, 0.075), rgba(8, 24, 32, 0.18)),
+          var(--panel);
+      }
+
+      .feature-card {
+        border-color: var(--gb-mid);
+      }
+
+      .feature-card h2,
+      .coming-card h3,
+      .devlog-card h3 {
+        margin: 0;
+        line-height: 1.2;
+        text-transform: uppercase;
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .hero-actions .play-button {
+        width: auto;
+      }
+
       .current-card h2,
       .section-title,
       .version-card h3 {
@@ -197,6 +237,24 @@
         box-shadow: 4px 4px 0 var(--gb-mid);
       }
 
+      .secondary-button {
+        display: inline-block;
+        padding: 11px 14px;
+        border: 2px solid var(--gb-mid);
+        color: var(--gb-light);
+        font-weight: 700;
+        text-decoration: none;
+        text-transform: uppercase;
+        background: rgba(8, 24, 32, 0.75);
+      }
+
+      .secondary-button:hover,
+      .secondary-button:focus-visible {
+        color: var(--gb-black);
+        outline: none;
+        background: var(--gb-mid);
+      }
+
       .section-title {
         margin-top: 34px;
         padding-bottom: 10px;
@@ -211,6 +269,19 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 16px;
         margin-top: 18px;
+      }
+
+      .coming-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 18px;
+      }
+
+      .devlog-card ul {
+        margin: 12px 0 0;
+        padding-left: 18px;
+        color: var(--gb-mid);
       }
 
       .version-card {
@@ -285,12 +356,17 @@
 
         .hero,
         .current-card,
+        .feature-card,
+        .coming-card,
+        .devlog-card,
         .version-card,
         .about {
           padding: 16px;
         }
 
         .current-card,
+        .top-grid,
+        .coming-grid,
         .versions {
           grid-template-columns: 1fr;
         }
@@ -304,25 +380,62 @@
   <body>
     <main class="archive">
       <section class="hero" aria-labelledby="page-title">
-        <p class="eyebrow">HAPOMU / Happy Omurice Games</p>
-        <h1 id="page-title">DEEP SIGNAL</h1>
-        <p class="subtitle">AIと相談しながら作っているレトロ深海シューティング開発記録。HAPOMUの第1作プロトタイプです。</p>
+        <p class="eyebrow">Happy Omurice Games</p>
+        <h1 id="page-title">HAPOMU</h1>
+        <p class="subtitle">家族のアイディアとAI相談から生まれる、ちいさなブラウザゲーム置き場。</p>
+        <p class="subtitle">Small browser games from a tiny omurice universe.</p>
         <nav class="site-links" aria-label="サイト情報">
           <a href="about.html">About</a>
           <a href="privacy.html">Privacy</a>
         </nav>
-
-        <section class="current-card" aria-labelledby="current-title">
-          <div>
-            <h2 id="current-title">PLAY CURRENT VERSION</h2>
-            <span class="build-label">Latest Development Build</span>
-            <p>現在開発中の最新版。ORBITAL SIGNAL MODEのダメージ時フリーズ対策として、敵弾・敵接触・SIGNAL CORE関連の被弾処理を安全化したv0.4.3 hotfix。</p>
-          </div>
-          <a class="play-button" href="current/index.html">Launch Current</a>
-        </section>
       </section>
 
-      <h2 class="section-title">Archived Builds</h2>
+      <section class="top-grid" aria-label="HAPOMU games">
+        <article class="feature-card" aria-labelledby="featured-title">
+          <p class="eyebrow">Featured Game / First Prototype</p>
+          <h2 id="featured-title">DEEP SIGNAL</h2>
+          <span class="build-label">Latest Development Build v0.4.3</span>
+          <p>AIと相談しながら作っているレトロ深海シューティング。</p>
+          <p>STAGE 1〜8、ORBITAL SIGNAL MODE、SIGNAL CORE、STAGE SELECTを搭載。</p>
+          <div class="hero-actions">
+            <a class="play-button" href="current/index.html">PLAY CURRENT VERSION</a>
+            <a class="secondary-button" href="#prototype-archive">VIEW PROTOTYPE ARCHIVE</a>
+          </div>
+        </article>
+
+        <article class="devlog-card" aria-labelledby="devlog-title">
+          <p class="eyebrow">Devlog Preview</p>
+          <h3 id="devlog-title">Recent Updates</h3>
+          <ul>
+            <li>2026-06-01: DEEP SIGNAL v0.4.3 released</li>
+            <li>2026-06-01: hapomu.com launched</li>
+          </ul>
+        </article>
+      </section>
+
+      <h2 class="section-title">Coming Soon</h2>
+      <section class="coming-grid" aria-label="今後のゲーム企画">
+        <article class="coming-card">
+          <h3>Happy Omurice</h3>
+          <p>娘のアイディアから生まれた、しあわせなオムライスゲーム構想。</p>
+        </article>
+
+        <article class="coming-card">
+          <h3>Cup Ramen Kun</h3>
+          <p>息子のアイディアから生まれた、3分間をテーマにしたカップラーメンくんゲーム構想。</p>
+        </article>
+      </section>
+
+      <section class="current-card" aria-labelledby="current-title">
+        <div>
+          <h2 id="current-title">PLAY CURRENT VERSION</h2>
+          <span class="build-label">Latest Development Build</span>
+          <p>現在開発中の最新版。ORBITAL SIGNAL MODEのダメージ時フリーズ対策として、敵弾・敵接触・SIGNAL CORE関連の被弾処理を安全化したv0.4.3 hotfix。</p>
+        </div>
+        <a class="play-button" href="current/index.html">Launch Current</a>
+      </section>
+
+      <h2 id="prototype-archive" class="section-title">DEEP SIGNAL Prototype Archive</h2>
       <section class="versions" aria-label="固定保存版プロトタイプ一覧">
         <article class="version-card">
           <h3>v0.2.0 - GB Style Sound Prototype</h3>
