@@ -78,3 +78,17 @@
 - sea / seaBoss / air / airBoss ごとに補給出現ルールを分離
 - 空中戦の補給を海面に浮く補給ブイとして表示
 - 補給時メッセージを `DEPTH CHARGE RESTORED` / `AA SHELL RESTORED` に変更
+
+## v0.3.2 - Presentation / Boss Warning Pass
+
+概要:
+
+- 新ステージ追加ではなく、既存v0.3.1の演出と視認性を強化
+- 海中ステージに深度暗転、海中ノイズ、泡、沈んだ残骸を追加
+- 海中自機の潜航艇シルエットを強化
+- 空中戦の空、水平線、雲、波、レーダー線を強化
+- 補給ポッドと補給ブイの点滅・浮遊表現を調整
+- STAGE 6 / STAGE 8 に `BOSS WARNING` とボス登場演出を追加
+- 被弾時の画面揺れ、敵撃破時の小爆発パーティクル、ボス撃破時の大爆発を追加
+- STAGE CLEAR 表示をステージ名付きに強化
+- air / airBoss ではHUDの `DEPTH` を `SURFACE` 表示に変更
