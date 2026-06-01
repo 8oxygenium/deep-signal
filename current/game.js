@@ -1,5 +1,5 @@
 // ============================================================
-// DEEP SIGNAL v0.3.5
+// DEEP SIGNAL v0.3.6
 // Web版の完成ゲームへ育てるためのベース実装です。
 // 将来の展開先:
 // - Web版: このままHTML/CSS/JavaScriptで拡張
@@ -14,7 +14,7 @@
 // ------------------------------------------------------------
 
 const CONFIG = {
-  version: "v0.3.5",
+  version: "v0.3.6",
 
   // 表示は800x600相当の論理座標で作り、canvas内部は400x300で描画します。
   // CSSで2倍表示することで、ピクセルがくっきり見えるようにしています。
@@ -41,22 +41,22 @@ const CONFIG = {
     speed: 4.4,
     width: 66,
     height: 22,
-    invincibleTime: 110,
-    contactKnockback: 42,
-    bossKnockback: 76,
+    invincibleTime: 118,
+    contactKnockback: 46,
+    bossKnockback: 82,
   },
 
   sonar: {
-    range: 470,
-    cooldown: 360,
-    revealTime: 330,
-    pingTime: 86,
-    pulseTime: 72,
+    range: 500,
+    cooldown: 340,
+    revealTime: 360,
+    pingTime: 104,
+    pulseTime: 76,
   },
 
   gameplay: {
     supplyRadius: 70,
-    clearDelay: 210,
+    clearDelay: 180,
     bombLimit: 6,
   },
 
@@ -83,17 +83,17 @@ const CONFIG = {
   // 補給は固定配置ではなく、ステージ開始時と再出現時にランダム配置します。
   // 各ステージ側に supplyRespawn を置けば個別調整できます。
   supply: {
-    normalRespawnMin: 1200,
-    normalRespawnMax: 1800,
-    bossRespawnMin: 2100,
-    bossRespawnMax: 2700,
+    normalRespawnMin: 1080,
+    normalRespawnMax: 1500,
+    bossRespawnMin: 1800,
+    bossRespawnMax: 2400,
     edgeMargin: 170,
-    lowAmmoRespawnFactor: 0.58,
+    lowAmmoRespawnFactor: 0.46,
   },
 
   drops: {
-    oneUpBaseChance: 0.02,
-    oneUpStrongChance: 0.04,
+    oneUpBaseChance: 0.018,
+    oneUpStrongChance: 0.045,
     oneUpBossChance: 1.0,
     oneUpLifetime: 560,
     oneUpScoreBonus: 1000,
@@ -103,7 +103,7 @@ const CONFIG = {
   effects: {
     bossWarningTime: 150,
     bossEntryTime: 170,
-    maxParticles: 90,
+    maxParticles: 78,
   },
 
   // Game Boy風の4階調パレットです。
@@ -201,7 +201,7 @@ const ENEMY_TYPES = {
     width: 40,
     height: 14,
     health: 1,
-    speed: 4.25,
+    speed: 3.95,
     score: 160,
     fireInterval: 0,
   },
@@ -221,7 +221,7 @@ const ENEMY_TYPES = {
     width: 34,
     height: 18,
     health: 1,
-    speed: 2.85,
+    speed: 2.55,
     score: 230,
     fireInterval: 0,
   },
@@ -230,10 +230,10 @@ const ENEMY_TYPES = {
     domain: "sea",
     width: 156,
     height: 74,
-    health: 12,
+    health: 10,
     speed: 0.85,
     score: 1600,
-    fireInterval: 86,
+    fireInterval: 96,
     boss: true,
   },
   helicopter: {
@@ -244,7 +244,7 @@ const ENEMY_TYPES = {
     health: 1,
     speed: 2.2,
     score: 150,
-    fireInterval: 118,
+    fireInterval: 130,
   },
   plane: {
     name: "飛行機",
@@ -252,9 +252,9 @@ const ENEMY_TYPES = {
     width: 54,
     height: 16,
     health: 1,
-    speed: 3.65,
+    speed: 3.45,
     score: 180,
-    fireInterval: 95,
+    fireInterval: 108,
   },
   ufo: {
     name: "小型UFO",
@@ -264,17 +264,17 @@ const ENEMY_TYPES = {
     health: 2,
     speed: 1.8,
     score: 220,
-    fireInterval: 82,
+    fireInterval: 92,
   },
   skyBoss: {
     name: "SKY SIGNAL MOTHERSHIP",
     domain: "air",
     width: 178,
     height: 58,
-    health: 16,
-    speed: 0.95,
+    health: 15,
+    speed: 0.85,
     score: 2600,
-    fireInterval: 64,
+    fireInterval: 72,
     boss: true,
   },
 };
@@ -284,9 +284,9 @@ const STAGES = [
     name: "COASTAL TEST AREA",
     type: STAGE_TYPE.SEA,
     start: { x: 180, y: 120 },
-    visibilityBonus: 0.28,
-    fireRate: 1.36,
-    supplyRespawn: { min: 900, max: 1200 },
+    visibilityBonus: 0.38,
+    fireRate: 1.7,
+    supplyRespawn: { min: 720, max: 960 },
     supplies: [{ x: 690, y: 230 }],
     markers: [
       { x: 430, y: 300, label: "TRAIN-1" },
@@ -296,18 +296,18 @@ const STAGES = [
     ],
     enemies: [
       { type: "drone", x: 470, y: 360, direction: 1, patrolLeft: 330, patrolRight: 720 },
-      { type: "torpedo", x: 900, y: 500, direction: -1, patrolLeft: 650, patrolRight: 1160 },
+      { type: "torpedo", x: 900, y: 500, direction: -1, patrolLeft: 650, patrolRight: 1160, speed: 3.35 },
       { type: "mine", x: 1240, y: 760, patrolTop: 470 },
       { type: "drone", x: 1600, y: 430, direction: -1, patrolLeft: 1390, patrolRight: 1810 },
-      { type: "torpedo", x: 2060, y: 620, direction: 1, patrolLeft: 1840, patrolRight: 2260 },
     ],
   },
   {
     name: "SUNKEN GRID",
     type: STAGE_TYPE.SEA,
     start: { x: 180, y: 150 },
-    visibilityBonus: 0.16,
-    fireRate: 0.9,
+    visibilityBonus: 0.22,
+    fireRate: 1.08,
+    supplyRespawn: { min: 840, max: 1140 },
     supplies: [{ x: 780, y: 300 }],
     markers: [
       { x: 420, y: 420, label: "GRID-A" },
@@ -317,12 +317,12 @@ const STAGES = [
     ],
     enemies: [
       { type: "drone", x: 410, y: 420, direction: 1, patrolLeft: 260, patrolRight: 650 },
-      { type: "torpedo", x: 710, y: 600, direction: -1, patrolLeft: 520, patrolRight: 980 },
+      { type: "torpedo", x: 710, y: 600, direction: -1, patrolLeft: 520, patrolRight: 980, speed: 3.55 },
       { type: "mine", x: 980, y: 850, patrolTop: 540 },
       { type: "drone", x: 1180, y: 560, direction: -1, patrolLeft: 960, patrolRight: 1430 },
       { type: "torpedo", x: 1510, y: 710, direction: 1, patrolLeft: 1250, patrolRight: 1810 },
       { type: "mine", x: 1810, y: 930, patrolTop: 610 },
-      { type: "rammer", x: 1880, y: 720, direction: -1, patrolLeft: 1650, patrolRight: 2110 },
+      { type: "rammer", x: 1880, y: 720, direction: -1, patrolLeft: 1650, patrolRight: 2110, speed: 2.35 },
       { type: "drone", x: 2130, y: 650, direction: -1, patrolLeft: 1900, patrolRight: 2320 },
     ],
   },
@@ -330,8 +330,9 @@ const STAGES = [
     name: "MIDNIGHT TRENCH",
     type: STAGE_TYPE.SEA,
     start: { x: 220, y: 180 },
-    visibilityBonus: 0.05,
-    fireRate: 0.82,
+    visibilityBonus: 0.1,
+    fireRate: 0.94,
+    supplyRespawn: { min: 960, max: 1320 },
     supplies: [{ x: 820, y: 340 }],
     markers: [
       { x: 520, y: 620, label: "SIG-01" },
@@ -345,9 +346,8 @@ const STAGES = [
       { type: "torpedo", x: 1120, y: 820, direction: -1, patrolLeft: 830, patrolRight: 1430 },
       { type: "drone", x: 1420, y: 720, direction: -1, patrolLeft: 1190, patrolRight: 1640 },
       { type: "mine", x: 1660, y: 1080, patrolTop: 720 },
-      { type: "rammer", x: 1730, y: 1240, direction: 1, patrolLeft: 1480, patrolRight: 2020 },
+      { type: "rammer", x: 1730, y: 1240, direction: 1, patrolLeft: 1480, patrolRight: 2020, speed: 2.45 },
       { type: "torpedo", x: 2020, y: 930, direction: 1, patrolLeft: 1740, patrolRight: 2290 },
-      { type: "rammer", x: 2110, y: 760, direction: -1, patrolLeft: 1860, patrolRight: 2320 },
       { type: "drone", x: 2210, y: 560, direction: -1, patrolLeft: 1960, patrolRight: 2320 },
     ],
   },
@@ -355,9 +355,9 @@ const STAGES = [
     name: "GHOST CURRENT",
     type: STAGE_TYPE.SEA,
     start: { x: 210, y: 200 },
-    visibilityBonus: -0.02,
-    fireRate: 0.72,
-    supplyRespawn: { min: 1200, max: 1620 },
+    visibilityBonus: 0.0,
+    fireRate: 0.82,
+    supplyRespawn: { min: 1080, max: 1440 },
     supplies: [{ x: 640, y: 360 }],
     markers: [
       { x: 450, y: 720, label: "CURRENT" },
@@ -383,9 +383,9 @@ const STAGES = [
     name: "BLACK SIGNAL ZONE",
     type: STAGE_TYPE.SEA,
     start: { x: 180, y: 220 },
-    visibilityBonus: -0.08,
-    fireRate: 0.66,
-    supplyRespawn: { min: 1320, max: 1680 },
+    visibilityBonus: -0.05,
+    fireRate: 0.76,
+    supplyRespawn: { min: 1140, max: 1500 },
     supplies: [
       { x: 640, y: 380 },
       { x: 1850, y: 560 },
@@ -415,8 +415,9 @@ const STAGES = [
     name: "ABYSS CORE",
     type: STAGE_TYPE.SEA_BOSS,
     start: { x: 250, y: 210 },
-    visibilityBonus: -0.08,
-    fireRate: 0.82,
+    visibilityBonus: -0.04,
+    fireRate: 0.94,
+    supplyRespawn: { min: 1500, max: 2040 },
     supplies: [
       { x: 620, y: 360 },
       { x: 1690, y: 420 },
@@ -427,9 +428,8 @@ const STAGES = [
       { x: 1820, y: 740, label: "WEAK ECHO" },
     ],
     enemies: [
-      { type: "rammer", x: 900, y: 880, direction: 1, patrolLeft: 720, patrolRight: 1140 },
+      { type: "rammer", x: 900, y: 880, direction: 1, patrolLeft: 720, patrolRight: 1140, speed: 2.35 },
       { type: "abyssBoss", x: 1540, y: 760, direction: -1, patrolLeft: 980, patrolRight: 2050 },
-      { type: "rammer", x: 2130, y: 980, direction: -1, patrolLeft: 1860, patrolRight: 2320 },
     ],
   },
   {
@@ -437,7 +437,8 @@ const STAGES = [
     type: STAGE_TYPE.AIR,
     start: { x: 180, y: 444 },
     visibilityBonus: 0.34,
-    fireRate: 0.86,
+    fireRate: 1.0,
+    supplyRespawn: { min: 840, max: 1200 },
     supplies: [{ x: 1040, y: 168 }],
     markers: [
       { x: 420, y: 120, label: "SURFACE" },
@@ -460,7 +461,8 @@ const STAGES = [
     type: STAGE_TYPE.AIR_BOSS,
     start: { x: 260, y: 444 },
     visibilityBonus: 0.36,
-    fireRate: 0.82,
+    fireRate: 0.9,
+    supplyRespawn: { min: 1620, max: 2220 },
     supplies: [
       { x: 620, y: 172 },
       { x: 1800, y: 172 },
@@ -935,9 +937,9 @@ function dropBomb() {
       kind: "aa",
       x: player.x,
       y: player.y - player.height / 2 - 12,
-      width: 6,
-      height: 18,
-      speed: 6.2,
+      width: 7,
+      height: 20,
+      speed: 6.65,
     });
     addMuzzleFlash(player.x, player.y - player.height / 2 - 18);
   } else {
@@ -1071,15 +1073,16 @@ function updateRammer(enemy, frameScale) {
 
   if (enemy.rammerState === "warning") {
     enemy.warnTimer -= frameScale;
-    enemy.pingTimer = Math.max(enemy.pingTimer, 18);
+    enemy.pingTimer = Math.max(enemy.pingTimer, 32);
+    enemy.detectedTimer = Math.max(enemy.detectedTimer, 72);
 
     if (enemy.warnTimer <= 0) {
       const dx = player.x - enemy.x;
       const dy = player.y - enemy.y;
       const length = Math.max(1, Math.hypot(dx, dy));
-      enemy.chargeVx = (dx / length) * 6.8;
-      enemy.chargeVy = (dy / length) * 6.8;
-      enemy.chargeTimer = 58;
+      enemy.chargeVx = (dx / length) * 6.1;
+      enemy.chargeVy = (dy / length) * 6.1;
+      enemy.chargeTimer = 54;
       enemy.rammerState = "charge";
     }
 
@@ -1118,9 +1121,10 @@ function updateRammer(enemy, frameScale) {
 
   if (enemy.rammerCooldown <= 0 && distance(player.x, player.y, enemy.x, enemy.y) <= 160) {
     enemy.rammerState = "warning";
-    enemy.warnTimer = 42;
+    enemy.warnTimer = 58;
     enemy.pingTimer = CONFIG.sonar.pingTime;
-    setStatus("RAMMER ALERT", 45);
+    enemy.detectedTimer = Math.max(enemy.detectedTimer, 90);
+    setStatus("RAMMER ALERT", 60);
     playSound("alert");
   }
 }
@@ -1182,7 +1186,7 @@ function updateAirEnemy(enemy, frameScale) {
 
 function updateSkyBoss(enemy, frameScale) {
   enemy.phase += 0.02 * frameScale;
-  enemy.hatchTimer = (enemy.hatchTimer + frameScale) % 260;
+  enemy.hatchTimer = (enemy.hatchTimer + frameScale) % 280;
   enemy.summonTimer -= frameScale;
   enemy.x += enemy.speed * enemy.direction * frameScale;
   enemy.y += Math.sin(enemy.phase) * 0.18 * frameScale;
@@ -1212,12 +1216,12 @@ function updateSkyBoss(enemy, frameScale) {
       });
     }
 
-    enemy.fireTimer = enemy.fireInterval * (enemy.health <= enemy.maxHealth / 2 ? 0.72 : 1);
+    enemy.fireTimer = enemy.fireInterval * (enemy.health <= enemy.maxHealth / 2 ? 0.78 : 1);
   }
 
   if (enemy.summonTimer <= 0) {
     summonAirEscort(enemy);
-    enemy.summonTimer = 460;
+    enemy.summonTimer = 540;
   }
 }
 
@@ -1244,15 +1248,16 @@ function summonAirEscort(boss) {
 
 function fireEnemyBullet(enemy) {
   const airAttack = getEnemyDomain(enemy) === "air";
+  const bossShot = enemy.type === "skyBoss";
 
   enemyBullets.push({
     x: enemy.x,
     y: airAttack ? enemy.y + enemy.height / 2 + 8 : enemy.y - enemy.height / 2 - 8,
-    width: enemy.type === "skyBoss" ? 8 : 6,
-    height: enemy.type === "skyBoss" ? 18 : 12,
-    speed: enemy.type === "skyBoss" ? 3.25 : 2.85,
-    vy: airAttack ? (enemy.type === "skyBoss" ? 3.25 : 2.85) : -2.85,
-    kind: enemy.type === "skyBoss" ? "laser" : "bullet",
+    width: bossShot ? 8 : 6,
+    height: bossShot ? 18 : 12,
+    speed: bossShot ? 3.05 : 2.7,
+    vy: airAttack ? (bossShot ? 3.05 : 2.7) : -2.7,
+    kind: bossShot ? "laser" : "bullet",
   });
 }
 
@@ -1270,7 +1275,9 @@ function updateSupplies(frameScale) {
     supply.flashTimer = Math.max(0, supply.flashTimer - frameScale);
 
     if (!supply.active) {
-      supply.respawnTimer -= frameScale;
+      // 弾がほぼ空の時は、既に待機中の補給も少し早く戻します。
+      const respawnBoost = game.ammo <= 2 ? 1.35 : 1;
+      supply.respawnTimer -= frameScale * respawnBoost;
 
       if (supply.respawnTimer <= 0) {
         placeSupplyRandomly(supply);
@@ -1344,7 +1351,7 @@ function shouldDropOneUp(enemy) {
     return Math.random() < CONFIG.drops.oneUpBossChance;
   }
 
-  const strongEnemy = enemy.maxHealth >= 2 || enemy.type === "ufo" || enemy.type === "torpedo";
+  const strongEnemy = enemy.maxHealth >= 2 || enemy.type === "ufo" || enemy.type === "torpedo" || enemy.type === "rammer";
   const chance = strongEnemy ? CONFIG.drops.oneUpStrongChance : CONFIG.drops.oneUpBaseChance;
   return Math.random() < chance;
 }
@@ -1572,7 +1579,7 @@ function checkEnemyBulletsHitPlayer() {
     return;
   }
 
-  const playerBox = getContactBox(player, 0.76);
+  const playerBox = getContactBox(player, 0.74);
 
   for (let i = enemyBullets.length - 1; i >= 0; i -= 1) {
     const bullet = enemyBullets[i];
@@ -1590,7 +1597,7 @@ function checkEnemyBodiesHitPlayer() {
     return;
   }
 
-  const playerBox = getContactBox(player, 0.76);
+  const playerBox = getContactBox(player, 0.74);
 
   for (const enemy of enemies) {
     if (!enemy.alive || enemy.entryTimer > 0) {
@@ -2347,16 +2354,17 @@ function drawEnemyPingOutline(enemy) {
   const x = Math.round(enemy.x - cameraX);
   const y = Math.round(enemy.y - cameraY);
   const alpha = clamp(enemy.pingTimer / CONFIG.sonar.pingTime, 0, 1);
+  const padding = enemy.type === "rammer" ? 10 : 6;
 
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.strokeStyle = gb("light");
-  ctx.lineWidth = 3;
+  ctx.lineWidth = enemy.type === "rammer" ? 4 : 3;
   ctx.strokeRect(
-    Math.round(x - enemy.width / 2 - 6),
-    Math.round(y - enemy.height / 2 - 6),
-    enemy.width + 12,
-    enemy.height + 12
+    Math.round(x - enemy.width / 2 - padding),
+    Math.round(y - enemy.height / 2 - padding),
+    enemy.width + padding * 2,
+    enemy.height + padding * 2
   );
   ctx.restore();
 }
@@ -2407,7 +2415,7 @@ function drawMine(enemy) {
 function drawRammer(enemy) {
   const x = Math.round(enemy.x - cameraX);
   const y = Math.round(enemy.y - cameraY);
-  const alertBlink = enemy.rammerState === "warning" && Math.floor(enemy.warnTimer / 6) % 2 === 0;
+  const alertBlink = enemy.rammerState === "warning" && Math.floor(enemy.warnTimer / 7) % 2 === 0;
   const charge = enemy.rammerState === "charge";
 
   ctx.fillStyle = alertBlink || charge ? gb("light") : gb("black");
@@ -2424,8 +2432,10 @@ function drawRammer(enemy) {
 
   if (enemy.rammerState === "warning") {
     ctx.strokeStyle = gb("light");
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x - 23, y - 14, 46, 28);
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x - 25, y - 16, 50, 32);
+    ctx.fillRect(x - 30, y - 2, 8, 4);
+    ctx.fillRect(x + 22, y - 2, 8, 4);
   }
 }
 
@@ -2730,11 +2740,14 @@ function drawMuzzleFlashes() {
 
 function drawDepthOverlay() {
   const deep = isAirStage() ? 0.08 : getDepthFactor(player.y);
-  ctx.fillStyle = gba("black", isAirStage() ? 0.08 : 0.12 + deep * 0.48);
+  const tunedDepth = clamp(deep + getStageDepthBias(), 0, 1);
+
+  // v0.3.6では暗さの上限を少し抑え、深層感と視認性の両方を残します。
+  ctx.fillStyle = gba("black", isAirStage() ? 0.08 : 0.1 + tunedDepth * 0.38);
   ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
   if (game.sonarFlashTimer > 0) {
-    ctx.fillStyle = gba("light", game.sonarFlashTimer / 180);
+    ctx.fillStyle = gba("light", game.sonarFlashTimer / 150);
     ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
   }
 }
@@ -3033,7 +3046,7 @@ function createEnemy(layout, index) {
     chargeVx: 0,
     chargeVy: 0,
     hatchTimer: layout.hatchTimer || 0,
-    summonTimer: layout.summonTimer || 220,
+    summonTimer: layout.summonTimer || (layout.type === "skyBoss" ? 360 : 220),
     spawnedByBoss: Boolean(layout.spawnedByBoss),
     detectedTimer: layout.initiallyDetected ? CONFIG.sonar.revealTime : 0,
     pingTimer: 0,
@@ -3341,7 +3354,7 @@ function isAbyssWeakPointVisible(enemy) {
 }
 
 function isSkyBossWeakPointOpen(enemy) {
-  return enemy.hatchTimer < 82;
+  return enemy.hatchTimer < 96;
 }
 
 function getAbyssWeakPointBox(enemy) {
@@ -3377,7 +3390,13 @@ function getEnemyVisibility(enemy) {
 
   const depth = getDepthFactor(enemy.y);
   const visibility = 1 - depth * 1.08 + getCurrentStage().visibilityBonus;
-  return clamp(visibility, 0.08, 1);
+  return clamp(visibility, enemy.type === "rammer" ? 0.12 : 0.1, 1);
+}
+
+function getStageDepthBias() {
+  // 序盤は暗さを抑え、後半で段階的に深海感を強めます。
+  const biases = [-0.18, -0.12, -0.04, 0.02, 0.08, 0.02, 0, 0];
+  return biases[game.stageIndex] || 0;
 }
 
 function getEnemyMapAlpha(enemy) {
@@ -3421,18 +3440,18 @@ function getContactBox(object, scale) {
 
 function getEnemyContactBox(enemy) {
   if (ENEMY_TYPES[enemy.type].boss) {
-    return getContactBox(enemy, 0.52);
+    return getContactBox(enemy, 0.46);
   }
 
   if (enemy.type === "mine" || enemy.type === "rammer") {
-    return getContactBox(enemy, 0.82);
+    return getContactBox(enemy, 0.78);
   }
 
   if (getDepthFactor(enemy.y) > 0.72) {
-    return getContactBox(enemy, 0.72);
+    return getContactBox(enemy, 0.68);
   }
 
-  return getContactBox(enemy, 0.82);
+  return getContactBox(enemy, 0.78);
 }
 
 function isColliding(a, b) {
