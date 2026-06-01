@@ -1,0 +1,187 @@
+const HANDS = ["GUU", "CHOKI", "PAA"];
+const RIVALS = [
+  "OMURICE-SAN",
+  "CUP RAMEN KUN",
+  "KETCHUP BOTTLE",
+  "TAMAGO-CHAN",
+  "EBI FRY MASTER",
+  "SIGNAL CORE"
+];
+const COMMENTS = {
+  win: ["OMU COIN GET!", "KITCHEN WIN!", "HOT PLATE VICTORY!"],
+  lose: ["THE LID IS STRONG!", "TRY AGAIN!", "COIN SLOT IS HUNGRY!"],
+  draw: ["DRAW! ONE MORE PON!", "AIKO DE PON!", "SAME HAND DETECTED!"],
+  signal: ["SIGNAL JANKEN DETECTED!"]
+};
+
+const state = {
+  life: 3,
+  omuCoin: 0,
+  streak: 0,
+  mode: "ready",
+  rival: "INSERT COIN"
+};
+
+const elements = {
+  playerHand: document.getElementById("playerHand"),
+  cpuHand: document.getElementById("cpuHand"),
+  rivalName: document.getElementById("rivalName"),
+  resultText: document.getElementById("resultText"),
+  commentText: document.getElementById("commentText"),
+  coinValue: document.getElementById("coinValue"),
+  lifeValue: document.getElementById("lifeValue"),
+  streakValue: document.getElementById("streakValue"),
+  resetButton: document.getElementById("resetButton"),
+  handButtons: Array.from(document.querySelectorAll(".hand-button")),
+  lamps: {
+    JAN: document.getElementById("lampJan"),
+    KEN: document.getElementById("lampKen"),
+    PON: document.getElementById("lampPon")
+  }
+};
+
+function resetGame() {
+  state.life = 3;
+  state.omuCoin = 0;
+  state.streak = 0;
+  state.mode = "ready";
+  state.rival = pickRival();
+  clearLamps();
+  elements.playerHand.textContent = "---";
+  elements.cpuHand.textContent = "---";
+  elements.resultText.textContent = "INSERT COIN";
+  elements.commentText.textContent = "1 / 2 / 3 or big buttons";
+  updateUi();
+}
+
+function pickRival() {
+  return RIVALS[Math.floor(Math.random() * RIVALS.length)];
+}
+
+function setButtonsEnabled(enabled) {
+  for (const button of elements.handButtons) {
+    button.disabled = !enabled;
+  }
+}
+
+function clearLamps() {
+  Object.values(elements.lamps).forEach((lamp) => lamp.classList.remove("active"));
+}
+
+function lightLamp(name) {
+  clearLamps();
+  elements.lamps[name].classList.add("active");
+  elements.resultText.textContent = name === "PON" ? "PON!" : `${name}...`;
+}
+
+function updateUi() {
+  elements.coinValue.textContent = String(state.omuCoin);
+  elements.lifeValue.textContent = String(state.life);
+  elements.streakValue.textContent = String(state.streak);
+  elements.rivalName.textContent = state.rival;
+  setButtonsEnabled(state.mode !== "playing" && state.mode !== "gameOver");
+}
+
+function chooseHand(playerHand) {
+  if (state.mode === "playing" || state.mode === "gameOver") {
+    return;
+  }
+  state.mode = "playing";
+  state.rival = state.rival === "INSERT COIN" ? pickRival() : state.rival;
+  elements.playerHand.textContent = playerHand;
+  elements.cpuHand.textContent = "---";
+  elements.commentText.textContent = "JAN... KEN...";
+  updateUi();
+
+  runJankenSequence(playerHand);
+}
+
+function runJankenSequence(playerHand) {
+  setTimeout(() => lightLamp("JAN"), 120);
+  setTimeout(() => lightLamp("KEN"), 420);
+  setTimeout(() => lightLamp("PON"), 720);
+  setTimeout(() => resolveRound(playerHand), 980);
+}
+
+function resolveRound(playerHand) {
+  const cpuHand = HANDS[Math.floor(Math.random() * HANDS.length)];
+  const result = judge(playerHand, cpuHand);
+  elements.cpuHand.textContent = cpuHand;
+
+  if (result === "win") {
+    state.omuCoin += 1;
+    state.streak += 1;
+    elements.resultText.textContent = "YOU WIN!";
+    elements.commentText.textContent = pickComment("win");
+    if (state.streak > 0 && state.streak % 3 === 0) {
+      state.omuCoin += 2;
+      elements.commentText.textContent = "STREAK BONUS! OMU COIN +2";
+    }
+  } else if (result === "lose") {
+    state.life -= 1;
+    state.streak = 0;
+    elements.resultText.textContent = state.life <= 0 ? "GAME OVER" : "YOU LOSE!";
+    elements.commentText.textContent = pickLoseComment();
+  } else {
+    elements.resultText.textContent = "DRAW!";
+    elements.commentText.textContent = pickComment("draw");
+  }
+
+  state.mode = state.life <= 0 ? "gameOver" : "ready";
+  updateUi();
+}
+
+function judge(player, cpu) {
+  if (player === cpu) {
+    return "draw";
+  }
+  if (
+    (player === "GUU" && cpu === "CHOKI") ||
+    (player === "CHOKI" && cpu === "PAA") ||
+    (player === "PAA" && cpu === "GUU")
+  ) {
+    return "win";
+  }
+  return "lose";
+}
+
+function pickComment(kind) {
+  const list = COMMENTS[kind];
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+function pickLoseComment() {
+  if (state.rival === "SIGNAL CORE") {
+    return COMMENTS.signal[0];
+  }
+  return pickComment("lose");
+}
+
+function handleKeydown(event) {
+  if (event.key === "1") {
+    chooseHand("GUU");
+  } else if (event.key === "2") {
+    chooseHand("CHOKI");
+  } else if (event.key === "3") {
+    chooseHand("PAA");
+  } else if (event.key.toLowerCase() === "r") {
+    resetGame();
+  }
+}
+
+for (const button of elements.handButtons) {
+  button.addEventListener("click", () => chooseHand(button.dataset.hand));
+  button.addEventListener("touchstart", (event) => {
+    event.preventDefault();
+    chooseHand(button.dataset.hand);
+  }, { passive: false });
+}
+
+elements.resetButton.addEventListener("click", resetGame);
+elements.resetButton.addEventListener("touchstart", (event) => {
+  event.preventDefault();
+  resetGame();
+}, { passive: false });
+window.addEventListener("keydown", handleKeydown);
+
+resetGame();
