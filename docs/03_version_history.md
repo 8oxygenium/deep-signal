@@ -179,3 +179,15 @@
 - タイトル画面に `O: ORBITAL SIGNAL` と `S: STAGE SELECT` の解放表示を追加
 - `stageSelect` 状態を追加し、STAGE 1〜8 と ORBITAL SIGNAL MODE を直接開始可能に変更
 - SECRET STAGE は未実装のまま `SECRET: ??? [LOCKED]` として表示
+
+## v0.4.3 - Space Damage Freeze Hotfix
+
+概要:
+
+- ORBITAL SIGNAL MODEで被弾・接触時に止まることがある不具合の修正版
+- `damagePlayer()` で reason / source が未定義でも落ちないように防御
+- `applyKnockback()` で source.x / source.y がない場合も安全にデフォルト方向へ押し戻すように変更
+- space中の `clampPlayerToStage()` でNaN座標を補正し、海面・空中用の制限を呼ばないことを明確化
+- 宇宙敵弾、SIGNAL CORE放射弾、敵本体接触の当たり判定で未定義座標を除外
+- SIGNAL CORE撃破演出中は残留弾・接触による被弾判定を止めるように変更
+- 宇宙GAME OVER表示で REACHED WAVE / BEST SCORE / BEST WAVE が未定義でも安全に表示されるように調整

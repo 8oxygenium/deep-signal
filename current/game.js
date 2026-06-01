@@ -1,5 +1,5 @@
 // ============================================================
-// DEEP SIGNAL v0.4.2
+// DEEP SIGNAL v0.4.3
 // Web版の完成ゲームへ育てるためのベース実装です。
 // 将来の展開先:
 // - Web版: このままHTML/CSS/JavaScriptで拡張
@@ -14,7 +14,7 @@
 // ------------------------------------------------------------
 
 const CONFIG = {
-  version: "v0.4.2",
+  version: "v0.4.3",
 
   // 表示は800x600相当の論理座標で作り、canvas内部は400x300で描画します。
   // CSSで2倍表示することで、ピクセルがくっきり見えるようにしています。
@@ -1909,6 +1909,11 @@ function updateMuzzleFlashes(frameScale) {
 // ------------------------------------------------------------
 
 function checkCollisions() {
+  // SIGNAL CORE撃破演出中は残った弾や接触判定を止め、演出中の二重被弾や不正参照を避けます。
+  if (game.spaceBossClearPending) {
+    return;
+  }
+
   checkBombHitsEnemies();
   checkEnemyBulletsHitPlayer();
   checkEnemyBodiesHitPlayer();
@@ -1917,10 +1922,15 @@ function checkCollisions() {
 function checkBombHitsEnemies() {
   for (let bombIndex = bombs.length - 1; bombIndex >= 0; bombIndex -= 1) {
     const bomb = bombs[bombIndex];
+    if (!bomb || !hasUsablePosition(bomb)) {
+      bombs.splice(bombIndex, 1);
+      continue;
+    }
+
     const bombBox = getBox(bomb);
 
     for (const enemy of enemies) {
-      if (!enemy.alive) {
+      if (!enemy || !enemy.alive || !ENEMY_TYPES[enemy.type] || !hasUsablePosition(enemy)) {
         continue;
       }
 
@@ -1934,6 +1944,10 @@ function checkBombHitsEnemies() {
 }
 
 function canProjectileDamageEnemy(projectile, enemy, projectileBox) {
+  if (!projectile || !enemy || !projectileBox || !ENEMY_TYPES[enemy.type]) {
+    return false;
+  }
+
   const projectileKind = projectile.kind || "depth";
   const enemyDomain = getEnemyDomain(enemy);
 
@@ -1969,9 +1983,13 @@ function canProjectileDamageEnemy(projectile, enemy, projectileBox) {
 }
 
 function hitEnemy(enemy) {
-  enemy.health -= 1;
-  enemy.detectedTimer = Math.max(enemy.detectedTimer, 120);
-  enemy.pingTimer = Math.max(enemy.pingTimer, 50);
+  if (!enemy || !ENEMY_TYPES[enemy.type]) {
+    return;
+  }
+
+  enemy.health = getFiniteNumber(enemy.health, 1) - 1;
+  enemy.detectedTimer = Math.max(getFiniteNumber(enemy.detectedTimer, 0), 120);
+  enemy.pingTimer = Math.max(getFiniteNumber(enemy.pingTimer, 0), 50);
   addExplosion(enemy.x, enemy.y, 7, 1.4, "light");
   addBurstParticles(enemy.x, enemy.y, ENEMY_TYPES[enemy.type].boss ? 10 : 5, "light");
 
@@ -1981,6 +1999,10 @@ function hitEnemy(enemy) {
 }
 
 function destroyEnemy(enemy, addScore) {
+  if (!enemy || !ENEMY_TYPES[enemy.type]) {
+    return;
+  }
+
   enemy.alive = false;
 
   if (enemy.type === "skyBoss") {
@@ -2028,7 +2050,7 @@ function destroyEnemy(enemy, addScore) {
 }
 
 function checkEnemyBulletsHitPlayer() {
-  if (player.invincibleTimer > 0) {
+  if (player.invincibleTimer > 0 || game.spaceBossClearPending) {
     return;
   }
 
@@ -2036,6 +2058,10 @@ function checkEnemyBulletsHitPlayer() {
 
   for (let i = enemyBullets.length - 1; i >= 0; i -= 1) {
     const bullet = enemyBullets[i];
+    if (!bullet || !hasUsablePosition(bullet)) {
+      enemyBullets.splice(i, 1);
+      continue;
+    }
 
     if (isColliding(getBox(bullet), playerBox)) {
       enemyBullets.splice(i, 1);
@@ -2046,14 +2072,14 @@ function checkEnemyBulletsHitPlayer() {
 }
 
 function checkEnemyBodiesHitPlayer() {
-  if (player.invincibleTimer > 0) {
+  if (player.invincibleTimer > 0 || game.spaceBossClearPending) {
     return;
   }
 
   const playerBox = getContactBox(player, 0.74);
 
   for (const enemy of enemies) {
-    if (!enemy.alive || enemy.entryTimer > 0) {
+    if (!enemy || !enemy.alive || enemy.entryTimer > 0 || !ENEMY_TYPES[enemy.type] || !hasUsablePosition(enemy)) {
       continue;
     }
 
@@ -2069,6 +2095,11 @@ function checkEnemyBodiesHitPlayer() {
 }
 
 function handleEnemyBodyContact(enemy) {
+  if (!enemy || !ENEMY_TYPES[enemy.type]) {
+    damagePlayer("contact", enemy);
+    return;
+  }
+
   if (enemy.type === "mine") {
     enemy.alive = false;
     addExplosion(enemy.x, enemy.y, 16, 2.4, "light");
@@ -2087,28 +2118,32 @@ function handleEnemyBodyContact(enemy) {
     return;
   }
 
-  damagePlayer(ENEMY_TYPES[enemy.type].boss ? "boss contact" : "contact", enemy);
+  const enemyConfig = ENEMY_TYPES[enemy.type];
+  damagePlayer(enemyConfig.boss ? "boss contact" : "contact", enemy);
 
-  if (!ENEMY_TYPES[enemy.type].boss) {
-    const push = enemy.x < player.x ? -16 : 16;
-    enemy.x = clamp(enemy.x + push, enemy.width, WORLD_WIDTH - enemy.width);
+  if (!enemyConfig.boss) {
+    const enemyX = getFiniteNumber(enemy.x, player.x);
+    const enemyWidth = getFiniteNumber(enemy.width, 32);
+    const push = enemyX < player.x ? -16 : 16;
+    enemy.x = clamp(enemyX + push, enemyWidth, WORLD_WIDTH - enemyWidth);
   }
 }
 
 function damagePlayer(reason = "damage", source = null) {
-  if (player.invincibleTimer > 0) {
+  if (player.invincibleTimer > 0 || game.spaceBossClearPending) {
     return false;
   }
 
-  const isBodyContact = reason.includes("contact") || reason === "mine" || reason === "rammer";
+  const damageReason = typeof reason === "string" ? reason : "damage";
+  const isBodyContact = damageReason.includes("contact") || damageReason === "mine" || damageReason === "rammer";
 
-  game.lives -= 1;
+  game.lives = Math.max(0, getFiniteNumber(game.lives, CONFIG.player.startLives) - 1);
   startInvincibility();
-  applyKnockback(source, reason);
+  applyKnockback(source, damageReason);
   enemyBullets.length = 0;
   addExplosion(player.x, player.y, 10, 2.0, "light");
   addBurstParticles(player.x, player.y, 14, "light");
-  startScreenShake(reason.includes("boss") ? 24 : 16, reason.includes("boss") ? 6 : 4);
+  startScreenShake(damageReason.includes("boss") ? 24 : 16, damageReason.includes("boss") ? 6 : 4);
   setStatus(isBodyContact ? "DAMAGE!" : "HIT!", 58);
   addPopup(isBodyContact ? "DAMAGE!" : "HIT!", player.x, player.y - 30);
   playSound("damage");
@@ -2128,22 +2163,20 @@ function startInvincibility() {
 }
 
 function applyKnockback(source, reason) {
-  if (!source) {
-    clampPlayerToStage();
-    return;
-  }
-
-  let dx = player.x - source.x;
-  let dy = player.y - source.y;
+  const sourceHasPosition = source && hasUsablePosition(source);
+  const fallbackDirection = player.x < WORLD_WIDTH / 2 ? -1 : 1;
+  let dx = sourceHasPosition ? player.x - source.x : fallbackDirection;
+  let dy = sourceHasPosition ? player.y - source.y : isSpaceStage() ? -0.25 : 0;
 
   // 完全に同じ座標で重なった場合も、必ずどちらかへ押し戻します。
-  if (Math.abs(dx) + Math.abs(dy) < 0.01) {
+  if (!Number.isFinite(dx) || !Number.isFinite(dy) || Math.abs(dx) + Math.abs(dy) < 0.01) {
     dx = player.x < WORLD_WIDTH / 2 ? -1 : 1;
     dy = isAirStage() ? 0 : -0.35;
   }
 
   const length = Math.max(1, Math.hypot(dx, dy));
-  const power = reason.includes("boss") ? CONFIG.player.bossKnockback : CONFIG.player.contactKnockback;
+  const damageReason = typeof reason === "string" ? reason : "damage";
+  const power = damageReason.includes("boss") ? CONFIG.player.bossKnockback : CONFIG.player.contactKnockback;
 
   player.x += (dx / length) * power;
   player.y += (dy / length) * power;
@@ -2151,11 +2184,15 @@ function applyKnockback(source, reason) {
 }
 
 function clampPlayerToStage() {
-  const halfWidth = player.width / 2;
+  const halfWidth = getFiniteNumber(player.width, CONFIG.player.width) / 2;
+  const halfHeight = getFiniteNumber(player.height, CONFIG.player.height) / 2;
+  player.x = getFiniteNumber(player.x, WORLD_WIDTH / 2);
+  player.y = getFiniteNumber(player.y, Math.min(getWorldHeight() - 120, SCREEN_HEIGHT / 2));
   player.x = clamp(player.x, halfWidth + 20, WORLD_WIDTH - halfWidth - 20);
 
   if (isSpaceStage()) {
-    player.y = clamp(player.y, player.height / 2 + CONFIG.space.playerMargin, getWorldHeight() - player.height / 2 - CONFIG.space.playerMargin);
+    const worldHeight = Math.max(SCREEN_HEIGHT, getWorldHeight());
+    player.y = clamp(player.y, halfHeight + CONFIG.space.playerMargin, worldHeight - halfHeight - CONFIG.space.playerMargin);
     return;
   }
 
@@ -3782,14 +3819,17 @@ function drawSpaceGameOver() {
 
   ctx.fillStyle = gb("mid");
   ctx.font = "22px 'Courier New', monospace";
-  ctx.fillText(`FINAL SCORE ${padScore(game.score)}`, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 18);
+  ctx.fillText(`FINAL SCORE ${padScore(getFiniteNumber(game.score, 0))}`, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 18);
   ctx.fillStyle = gb("light");
-  ctx.fillText(`REACHED WAVE ${Math.max(game.reachedWave, game.wave)}`, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 20);
+  ctx.fillText(`REACHED WAVE ${Math.max(getFiniteNumber(game.reachedWave, 0), getFiniteNumber(game.wave, 0))}`, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 20);
+  ctx.fillStyle = gb("mid");
+  ctx.font = "16px 'Courier New', monospace";
+  ctx.fillText(`BEST SCORE ${padScore(getFiniteNumber(game.bestScore, 0))}   BEST WAVE ${getFiniteNumber(game.bestWave, 0)}`, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 48);
 
   ctx.fillStyle = gb("mid");
   ctx.font = "16px 'Courier New', monospace";
-  ctx.fillText("PRESS R TO RESTART", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 68);
-  ctx.fillText("PRESS SPACE TO TITLE", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 94);
+  ctx.fillText("PRESS R TO RESTART", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 82);
+  ctx.fillText("PRESS SPACE TO TITLE", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 108);
   ctx.textAlign = "left";
 }
 
@@ -4133,7 +4173,7 @@ function loadStage(stageIndex, keepPlayerResources) {
 }
 
 function getCurrentStage() {
-  return STAGES[game.stageIndex];
+  return STAGES[game.stageIndex] || STAGES[0];
 }
 
 function createStageSupplyPoint() {
@@ -4415,14 +4455,16 @@ function unlockOrbitalRewards() {
 
 function updateBestProgress() {
   let changed = false;
+  const score = getFiniteNumber(game.score, 0);
+  const reachedWave = getFiniteNumber(game.reachedWave, 0);
 
-  if (game.score > game.bestScore) {
-    game.bestScore = game.score;
+  if (score > getFiniteNumber(game.bestScore, 0)) {
+    game.bestScore = score;
     changed = true;
   }
 
-  if (game.reachedWave > game.bestWave) {
-    game.bestWave = game.reachedWave;
+  if (reachedWave > getFiniteNumber(game.bestWave, 0)) {
+    game.bestWave = reachedWave;
     changed = true;
   }
 
@@ -4544,27 +4586,38 @@ function getSeafloorY(worldX) {
 }
 
 function getBox(object) {
+  const width = getFiniteNumber(object && object.width, 8);
+  const height = getFiniteNumber(object && object.height, 8);
+  const x = getFiniteNumber(object && object.x, player.x);
+  const y = getFiniteNumber(object && object.y, player.y);
+
   return {
-    left: object.x - object.width / 2,
-    right: object.x + object.width / 2,
-    top: object.y - object.height / 2,
-    bottom: object.y + object.height / 2,
+    left: x - width / 2,
+    right: x + width / 2,
+    top: y - height / 2,
+    bottom: y + height / 2,
   };
 }
 
 function getContactBox(object, scale) {
-  const width = object.width * scale;
-  const height = object.height * scale;
+  const width = getFiniteNumber(object && object.width, 8) * scale;
+  const height = getFiniteNumber(object && object.height, 8) * scale;
+  const x = getFiniteNumber(object && object.x, player.x);
+  const y = getFiniteNumber(object && object.y, player.y);
 
   return {
-    left: object.x - width / 2,
-    right: object.x + width / 2,
-    top: object.y - height / 2,
-    bottom: object.y + height / 2,
+    left: x - width / 2,
+    right: x + width / 2,
+    top: y - height / 2,
+    bottom: y + height / 2,
   };
 }
 
 function getEnemyContactBox(enemy) {
+  if (!enemy || !ENEMY_TYPES[enemy.type]) {
+    return getContactBox(enemy || player, 0.7);
+  }
+
   if (ENEMY_TYPES[enemy.type].boss) {
     return getContactBox(enemy, 0.46);
   }
@@ -4586,7 +4639,19 @@ function getEnemyContactBox(enemy) {
 }
 
 function isColliding(a, b) {
+  if (!a || !b) {
+    return false;
+  }
+
   return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+}
+
+function getFiniteNumber(value, fallback) {
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function hasUsablePosition(object) {
+  return Boolean(object) && Number.isFinite(object.x) && Number.isFinite(object.y);
 }
 
 function isObjectVisible(object, margin) {
