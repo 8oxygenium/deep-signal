@@ -166,3 +166,16 @@
 - 宇宙補給ポッドの再出現時間、低ENERGY時補給、5waveごとの補給を調整
 - ビームの弾速・判定・クールダウン、SCANNERの波紋、signalWispの視認性と接触判定を調整
 - 宇宙GAME OVERで `REACHED WAVE` が読みやすくなるよう表示を微調整
+
+## v0.4.2 - SIGNAL CORE / Stage Select Unlock
+
+概要:
+
+- ORBITAL SIGNAL MODE の wave 10 に宇宙ボス `SIGNAL CORE` を追加
+- SIGNAL CORE はHP、弱点、放射弾、少数の orbitalDrone 召喚、接触ダメージを持つ
+- SCANNER使用中または弱点開放中にSIGNAL COREの輪郭と弱点が見えやすくなるように調整
+- SIGNAL CORE撃破後に `STAGE SELECT UNLOCKED` を表示し、wave 11以降へ継続
+- `localStorage` に ORBITAL SIGNAL MODE / STAGE SELECT 解放状態、bestScore、bestWave を保存
+- タイトル画面に `O: ORBITAL SIGNAL` と `S: STAGE SELECT` の解放表示を追加
+- `stageSelect` 状態を追加し、STAGE 1〜8 と ORBITAL SIGNAL MODE を直接開始可能に変更
+- SECRET STAGE は未実装のまま `SECRET: ??? [LOCKED]` として表示

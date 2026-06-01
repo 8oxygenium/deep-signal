@@ -1,5 +1,5 @@
 // ============================================================
-// DEEP SIGNAL v0.4.1
+// DEEP SIGNAL v0.4.2
 // Web版の完成ゲームへ育てるためのベース実装です。
 // 将来の展開先:
 // - Web版: このままHTML/CSS/JavaScriptで拡張
@@ -14,7 +14,7 @@
 // ------------------------------------------------------------
 
 const CONFIG = {
-  version: "v0.4.1",
+  version: "v0.4.2",
 
   // 表示は800x600相当の論理座標で作り、canvas内部は400x300で描画します。
   // CSSで2倍表示することで、ピクセルがくっきり見えるようにしています。
@@ -62,6 +62,10 @@ const CONFIG = {
     orbitalUnlockDelay: 300,
   },
 
+  storage: {
+    unlockKey: "DEEP_SIGNAL_UNLOCKS",
+  },
+
   // 宇宙エンドレス用の基本値です。
   // space タイプだけが全方向自由移動になり、海面や深度の制約を受けません。
   space: {
@@ -75,6 +79,8 @@ const CONFIG = {
     beamSpeed: 9.1,
     beamWidth: 9,
     beamHeight: 24,
+    signalCoreWave: 10,
+    signalCoreClearDelay: 180,
   },
 
   // 空中戦は「海面から迎撃する」モードなので、海面の高さを固定して描きます。
@@ -144,6 +150,7 @@ const STATE = {
   TITLE: "title",
   PLAYING: "playing",
   PAUSED: "paused",
+  STAGE_SELECT: "stageSelect",
   STAGE_CLEAR: "stageClear",
   GAME_OVER: "gameOver",
   COMPLETE: "complete",
@@ -187,6 +194,15 @@ const game = {
   reachedWave: 0,
   spaceWavePending: false,
   spaceWaveTimer: 0,
+  spaceBossClearPending: false,
+  signalCoreDefeated: false,
+  stageSelectIndex: 0,
+  unlocks: {
+    orbital: false,
+    stageSelect: false,
+  },
+  bestScore: 0,
+  bestWave: 0,
   bossWarningTimer: 0,
   screenShakeTimer: 0,
   screenShakePower: 0,
@@ -338,6 +354,17 @@ const ENEMY_TYPES = {
     speed: 1.24,
     score: 260,
     fireInterval: 158,
+  },
+  signalCore: {
+    name: "SIGNAL CORE",
+    domain: "space",
+    width: 148,
+    height: 82,
+    health: 18,
+    speed: 0.82,
+    score: 3200,
+    fireInterval: 112,
+    boss: true,
   },
 };
 
@@ -779,9 +806,28 @@ document.addEventListener("keydown", (event) => {
     return;
   }
 
+  if (game.state === STATE.STAGE_SELECT) {
+    handleStageSelectInput(event.code);
+    return;
+  }
+
   if (game.state === STATE.TITLE) {
     if (event.code === "Space" || event.code === "Enter") {
       startNewGame();
+    }
+    if (event.code === "KeyO") {
+      if (game.unlocks.orbital) {
+        startDirectSpaceMode();
+      } else {
+        setStatus("ORBITAL SIGNAL LOCKED", 80);
+      }
+    }
+    if (event.code === "KeyS") {
+      if (game.unlocks.stageSelect) {
+        openStageSelect();
+      } else {
+        setStatus("STAGE SELECT LOCKED", 80);
+      }
     }
     return;
   }
@@ -849,10 +895,12 @@ function isGameKey(code) {
     code === "KeyS" ||
     code === "KeyE" ||
     code === "KeyM" ||
+    code === "KeyO" ||
     code === "KeyP" ||
     code === "KeyR" ||
     code === "KeyZ" ||
     code === "Escape" ||
+    code === "Backspace" ||
     code === "ShiftLeft" ||
     code === "ShiftRight" ||
     code === "Space" ||
@@ -879,6 +927,52 @@ function togglePause() {
     game.state = STATE.PLAYING;
     setStatus("RESUME", 50);
   }
+}
+
+function openStageSelect() {
+  game.stageSelectIndex = 0;
+  game.state = STATE.STAGE_SELECT;
+  setStatus("", 0);
+}
+
+function handleStageSelectInput(code) {
+  const maxIndex = SPACE_STAGE_INDEX; // 0〜7が本編、8がORBITAL SIGNAL MODEです。SECRETは未実装なので選択対象外。
+
+  if (code === "Escape" || code === "Backspace") {
+    returnToTitle();
+    return;
+  }
+
+  if (code === "ArrowUp" || code === "KeyW") {
+    game.stageSelectIndex = (game.stageSelectIndex + maxIndex) % (maxIndex + 1);
+    playSound("empty");
+    return;
+  }
+
+  if (code === "ArrowDown" || code === "KeyS") {
+    game.stageSelectIndex = (game.stageSelectIndex + 1) % (maxIndex + 1);
+    playSound("empty");
+    return;
+  }
+
+  if (isContinueKey(code)) {
+    startFromStageSelect(game.stageSelectIndex);
+  }
+}
+
+function startFromStageSelect(index) {
+  resetRunResources();
+
+  if (index >= SPACE_STAGE_INDEX) {
+    startSpaceMode();
+    return;
+  }
+
+  game.wave = 0;
+  game.reachedWave = 0;
+  loadStage(index, true);
+  game.state = STATE.PLAYING;
+  playSound("start");
 }
 
 // ------------------------------------------------------------
@@ -1146,6 +1240,7 @@ function updateEnemies(frameScale) {
     if (enemy.type === "orbitalDrone") updateOrbitalDrone(enemy, actionFrameScale);
     if (enemy.type === "signalWisp") updateSignalWisp(enemy, actionFrameScale);
     if (enemy.type === "hunterUFO") updateHunterUFO(enemy, actionFrameScale);
+    if (enemy.type === "signalCore") updateSignalCore(enemy, actionFrameScale);
   }
 }
 
@@ -1411,6 +1506,89 @@ function updateHunterUFO(enemy, frameScale) {
   enemy.x += Math.sin(enemy.phase) * 0.34 * frameScale;
   clampSpaceEnemy(enemy);
   updateSpaceEnemyFire(enemy, frameScale);
+}
+
+function updateSignalCore(enemy, frameScale) {
+  enemy.phase += 0.024 * frameScale;
+  enemy.x += enemy.speed * enemy.direction * frameScale;
+  enemy.y += Math.sin(enemy.phase) * 0.34 * frameScale;
+
+  if (enemy.x < enemy.patrolLeft) {
+    enemy.x = enemy.patrolLeft;
+    enemy.direction = 1;
+  }
+
+  if (enemy.x > enemy.patrolRight) {
+    enemy.x = enemy.patrolRight;
+    enemy.direction = -1;
+  }
+
+  enemy.hatchTimer = (enemy.hatchTimer + frameScale) % 210;
+  enemy.fireTimer -= frameScale;
+
+  if (enemy.fireTimer <= 0) {
+    fireSignalCorePattern(enemy);
+    enemy.fireTimer = enemy.health <= enemy.maxHealth / 2 ? 82 : enemy.fireInterval;
+  }
+
+  enemy.summonTimer -= frameScale;
+  if (enemy.summonTimer <= 0) {
+    summonSignalCoreDrone(enemy);
+    enemy.summonTimer = 520;
+  }
+
+  clampSpaceEnemy(enemy);
+}
+
+function isSignalCoreWeakPointOpen(enemy) {
+  return enemy.hatchTimer < 90 || enemy.detectedTimer > 0 || enemy.pingTimer > 0;
+}
+
+function getSignalCoreWeakPointBox(enemy) {
+  return {
+    left: enemy.x - 26,
+    right: enemy.x + 26,
+    top: enemy.y - 18,
+    bottom: enemy.y + 18,
+  };
+}
+
+function fireSignalCorePattern(enemy) {
+  const bulletCount = enemy.health <= enemy.maxHealth / 2 ? 10 : 8;
+  const baseAngle = enemy.phase * 0.18;
+
+  for (let i = 0; i < bulletCount; i += 1) {
+    const angle = baseAngle + (Math.PI * 2 * i) / bulletCount;
+    const speed = enemy.health <= enemy.maxHealth / 2 ? 2.35 : 2.05;
+
+    enemyBullets.push({
+      x: enemy.x,
+      y: enemy.y,
+      width: 7,
+      height: 7,
+      speed,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      kind: "space",
+    });
+  }
+}
+
+function summonSignalCoreDrone(boss) {
+  const escorts = enemies.filter((enemy) => enemy.alive && enemy.spawnedByBoss).length;
+  if (escorts >= 2) {
+    return;
+  }
+
+  const offset = escorts % 2 === 0 ? -120 : 120;
+  enemies.push(createEnemy({
+    type: "orbitalDrone",
+    x: clamp(boss.x + offset, 180, WORLD_WIDTH - 180),
+    y: clamp(boss.y + 120, CONFIG.space.enemyMinY, CONFIG.space.enemyMaxY),
+    direction: offset < 0 ? -1 : 1,
+    spawnedByBoss: true,
+    initiallyDetected: boss.detectedTimer > 0,
+  }, enemies.length));
 }
 
 function updateSpaceEnemyFire(enemy, frameScale) {
@@ -1783,6 +1961,10 @@ function canProjectileDamageEnemy(projectile, enemy, projectileBox) {
     return isSkyBossWeakPointOpen(enemy) && isColliding(projectileBox, getSkyBossWeakPointBox(enemy));
   }
 
+  if (enemy.type === "signalCore") {
+    return isSignalCoreWeakPointOpen(enemy) && isColliding(projectileBox, getSignalCoreWeakPointBox(enemy));
+  }
+
   return isColliding(projectileBox, getBox(enemy));
 }
 
@@ -1808,6 +1990,17 @@ function destroyEnemy(enemy, addScore) {
         other.alive = false;
       }
     }
+  }
+
+  if (enemy.type === "signalCore") {
+    // SIGNAL CORE撃破時は、召喚ドローンで解放演出が遅れすぎないよう同時に消します。
+    for (const other of enemies) {
+      if (other.spawnedByBoss) {
+        other.alive = false;
+      }
+    }
+    game.signalCoreDefeated = true;
+    unlockOrbitalRewards();
   }
 
   if (addScore) {
@@ -1921,6 +2114,7 @@ function damagePlayer(reason = "damage", source = null) {
   playSound("damage");
 
   if (game.lives <= 0) {
+    updateBestProgress();
     game.state = STATE.GAME_OVER;
     setStatus("SIGNAL LOST", 120);
     playSound("gameover");
@@ -1993,11 +2187,17 @@ function checkStageClear() {
 
   if (!remainingEnemies) {
     if (isSpaceStage()) {
+      if (game.signalCoreDefeated) {
+        beginSignalCoreClear();
+        return;
+      }
       beginSpaceWaveClear();
       return;
     }
 
     if (game.stageType === STAGE_TYPE.AIR_BOSS) {
+      game.unlocks.orbital = true;
+      savePersistentProgress();
       game.state = STATE.COMPLETE;
       game.clearTimer = CONFIG.gameplay.orbitalUnlockDelay;
       enemyBullets.length = 0;
@@ -2036,6 +2236,12 @@ function draw() {
 
   if (game.state === STATE.TITLE) {
     drawTitleScreen();
+    drawLcdOverlay();
+    return;
+  }
+
+  if (game.state === STATE.STAGE_SELECT) {
+    drawStageSelectScreen();
     drawLcdOverlay();
     return;
   }
@@ -2084,6 +2290,10 @@ function drawGameScreen() {
     drawStageClearOverlay();
   }
 
+  if (game.spaceBossClearPending) {
+    drawSignalCoreClearOverlay();
+  }
+
   if (game.state === STATE.COMPLETE) {
     drawOrbitalUnlockOverlay();
   }
@@ -2109,15 +2319,18 @@ function drawTitleScreen() {
   ctx.fillText(CONFIG.version, SCREEN_WIDTH / 2, 226);
 
   const blink = Math.floor(game.titleTimer / 28) % 2 === 0;
-  if (blink) {
-    ctx.font = "24px 'Courier New', monospace";
-    ctx.fillText("PRESS SPACE", SCREEN_WIDTH / 2, 300);
+  ctx.font = "18px 'Courier New', monospace";
+  ctx.fillText("SPACE: START STORY", SCREEN_WIDTH / 2, 310);
+  ctx.fillText(`O: ORBITAL SIGNAL${game.unlocks.orbital ? "" : " [LOCKED]"}`, SCREEN_WIDTH / 2, 338);
+  ctx.fillText(`S: STAGE SELECT${game.unlocks.stageSelect ? "" : " [LOCKED]"}`, SCREEN_WIDTH / 2, 366);
+
+  if (blink && game.statusTimer > 0) {
+    ctx.fillText(game.statusText, SCREEN_WIDTH / 2, 396);
   }
 
-  ctx.font = "16px 'Courier New', monospace";
-  ctx.fillText("MOVE: ARROW / WASD    SONAR/RADAR/SCANNER: E / SHIFT", SCREEN_WIDTH / 2, 382);
-  ctx.fillText("CHARGE / AA / BEAM: SPACE    PAUSE: P / ESC", SCREEN_WIDTH / 2, 410);
-  ctx.fillText(`SOUND: ${game.soundEnabled ? "ON" : "OFF"}  (M TO TOGGLE)`, SCREEN_WIDTH / 2, 452);
+  ctx.font = "14px 'Courier New', monospace";
+  ctx.fillText(`BEST SCORE: ${padScore(game.bestScore)}   BEST WAVE: ${game.bestWave}`, SCREEN_WIDTH / 2, 430);
+  ctx.fillText(`SOUND: ${game.soundEnabled ? "ON" : "OFF"}  (M TO TOGGLE)`, SCREEN_WIDTH / 2, 458);
 
   ctx.textAlign = "left";
 }
@@ -2151,6 +2364,51 @@ function drawTitleSubmarineSilhouette() {
   ctx.fillRect(330, 240, 14, 8);
   ctx.fillRect(354, 240, 14, 8);
   ctx.fillRect(378, 240, 14, 8);
+}
+
+function drawStageSelectScreen() {
+  ctx.fillStyle = gb("mid");
+  ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  drawTitleDecorativeGrid();
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = gb("black");
+  ctx.font = "42px 'Courier New', monospace";
+  ctx.fillText("STAGE SELECT", SCREEN_WIDTH / 2, 68);
+
+  const entries = [
+    "1 COASTAL TEST AREA",
+    "2 SUNKEN GRID",
+    "3 MIDNIGHT TRENCH",
+    "4 GHOST CURRENT",
+    "5 BLACK SIGNAL ZONE",
+    "6 ABYSS CORE",
+    "7 SURFACE ALERT",
+    "8 SKY SIGNAL MOTHERSHIP",
+    "ORBITAL SIGNAL MODE",
+  ];
+
+  ctx.font = "18px 'Courier New', monospace";
+  for (let i = 0; i < entries.length; i += 1) {
+    const y = 126 + i * 34;
+    const selected = i === game.stageSelectIndex;
+    ctx.fillStyle = selected ? gb("black") : gb("dark");
+
+    if (selected) {
+      ctx.fillRect(112, y - 14, SCREEN_WIDTH - 224, 26);
+      ctx.fillStyle = gb("light");
+    }
+
+    ctx.fillText(`${selected ? "> " : "  "}${entries[i]}`, SCREEN_WIDTH / 2, y);
+  }
+
+  ctx.fillStyle = gb("dark");
+  ctx.fillText("SECRET: ??? [LOCKED]", SCREEN_WIDTH / 2, 442);
+  ctx.font = "14px 'Courier New', monospace";
+  ctx.fillText("UP/DOWN SELECT   SPACE/ENTER/Z START   ESC/BACKSPACE TITLE", SCREEN_WIDTH / 2, 494);
+  ctx.fillText(`BEST SCORE ${padScore(game.bestScore)}   BEST WAVE ${game.bestWave}`, SCREEN_WIDTH / 2, 526);
+  ctx.textAlign = "left";
 }
 
 function drawBackground() {
@@ -2694,6 +2952,7 @@ function drawEnemySprite(enemy, visibility) {
   if (enemy.type === "orbitalDrone") drawOrbitalDrone(enemy);
   if (enemy.type === "signalWisp") drawSignalWisp(enemy);
   if (enemy.type === "hunterUFO") drawHunterUFO(enemy);
+  if (enemy.type === "signalCore") drawSignalCore(enemy);
 
   ctx.restore();
 }
@@ -2965,6 +3224,41 @@ function drawHunterUFO(enemy) {
   ctx.fillRect(x + 24, y - 2, 7, 7);
   ctx.fillStyle = gb("light");
   ctx.fillRect(x + (player.x > enemy.x ? 7 : -13), y - 11, 10, 4);
+}
+
+function drawSignalCore(enemy) {
+  const x = Math.round(enemy.x - cameraX);
+  const y = Math.round(enemy.y - cameraY);
+  const weakVisible = isSignalCoreWeakPointOpen(enemy);
+  const pulse = Math.floor(game.titleTimer / 12) % 2 === 0;
+
+  ctx.fillStyle = gb("black");
+  ctx.fillRect(x - 66, y - 30, 132, 60);
+  ctx.fillRect(x - 48, y - 48, 96, 18);
+  ctx.fillRect(x - 48, y + 30, 96, 18);
+  ctx.fillStyle = gb("dark");
+  ctx.fillRect(x - 86, y - 8, 20, 16);
+  ctx.fillRect(x + 66, y - 8, 20, 16);
+  ctx.fillRect(x - 12, y - 62, 24, 14);
+  ctx.fillRect(x - 12, y + 48, 24, 14);
+
+  ctx.strokeStyle = gba(enemy.pingTimer > 0 || game.sonarFlashTimer > 0 ? "light" : "mid", weakVisible ? 0.9 : 0.42);
+  ctx.lineWidth = weakVisible ? 4 : 2;
+  ctx.strokeRect(x - 74, y - 56, 148, 112);
+
+  if (weakVisible) {
+    const weak = getSignalCoreWeakPointBox(enemy);
+    ctx.fillStyle = pulse || enemy.pingTimer > 0 ? gb("light") : gb("mid");
+    ctx.fillRect(Math.round(weak.left - cameraX), Math.round(weak.top - cameraY), weak.right - weak.left, weak.bottom - weak.top);
+    ctx.strokeStyle = gb("light");
+    ctx.lineWidth = 3;
+    ctx.strokeRect(Math.round(weak.left - cameraX - 6), Math.round(weak.top - cameraY - 6), weak.right - weak.left + 12, weak.bottom - weak.top + 12);
+  } else {
+    ctx.fillStyle = gb("mid");
+    ctx.fillRect(x - 22, y - 6, 44, 12);
+  }
+
+  drawBossHealthBar(enemy, x - 66, y - 76, 132);
 }
 
 function drawBossHealthBar(enemy, x, y, width) {
@@ -3292,7 +3586,7 @@ function drawBossHudBar() {
   ctx.fillRect(x - 2, y - 2, width + 4, 12);
   ctx.strokeStyle = gb("light");
   ctx.strokeRect(x - 2, y - 2, width + 4, 12);
-  ctx.fillStyle = isSkyBossWeakPointOpen(boss) || isAbyssWeakPointVisible(boss) ? gb("light") : gb("mid");
+  ctx.fillStyle = isSkyBossWeakPointOpen(boss) || isAbyssWeakPointVisible(boss) || (boss.type === "signalCore" && isSignalCoreWeakPointOpen(boss)) ? gb("light") : gb("mid");
   ctx.fillRect(x, y, Math.round(width * rate), 8);
 }
 
@@ -3499,6 +3793,29 @@ function drawSpaceGameOver() {
   ctx.textAlign = "left";
 }
 
+function drawSignalCoreClearOverlay() {
+  const blink = Math.floor(game.spaceWaveTimer / 14) % 2 === 0;
+
+  ctx.fillStyle = gba("black", 0.7);
+  ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  ctx.strokeStyle = blink ? gb("light") : gb("mid");
+  ctx.lineWidth = 4;
+  ctx.strokeRect(94, SCREEN_HEIGHT / 2 - 96, SCREEN_WIDTH - 188, 190);
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = gb("light");
+  ctx.font = "30px 'Courier New', monospace";
+  ctx.fillText("SIGNAL CORE DESTROYED", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 56);
+  ctx.font = "22px 'Courier New', monospace";
+  ctx.fillText("STAGE SELECT UNLOCKED", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 16);
+  ctx.fillStyle = gb("mid");
+  ctx.fillText("ORBITAL SIGNAL CONTINUES", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 24);
+  ctx.font = "16px 'Courier New', monospace";
+  ctx.fillText("PRESS SPACE / ENTER / Z", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 64);
+  ctx.textAlign = "left";
+}
+
 function drawLcdOverlay() {
   // 疑似LCDの走査線と残像感です。低解像度canvasを拡大する前提で薄く重ねます。
   ctx.fillStyle = gba("black", 0.08);
@@ -3522,17 +3839,23 @@ function drawLcdOverlay() {
 // ------------------------------------------------------------
 
 function startNewGame() {
-  game.score = 0;
-  game.lives = CONFIG.player.startLives;
-  game.ammo = CONFIG.player.maxAmmo;
+  resetRunResources();
   game.wave = 0;
   game.reachedWave = 0;
   game.spaceWavePending = false;
   game.spaceWaveTimer = 0;
+  game.spaceBossClearPending = false;
+  game.signalCoreDefeated = false;
   game.lastTime = 0;
   loadStage(0, false);
   game.state = STATE.PLAYING;
   playSound("start");
+}
+
+function resetRunResources() {
+  game.score = 0;
+  game.lives = CONFIG.player.startLives;
+  game.ammo = CONFIG.player.maxAmmo;
 }
 
 function returnToTitle() {
@@ -3540,6 +3863,8 @@ function returnToTitle() {
   game.wave = 0;
   game.spaceWavePending = false;
   game.spaceWaveTimer = 0;
+  game.spaceBossClearPending = false;
+  game.signalCoreDefeated = false;
   loadStage(0, false);
   game.state = STATE.TITLE;
   setStatus("", 0);
@@ -3550,6 +3875,8 @@ function startSpaceMode() {
   game.reachedWave = 1;
   game.spaceWavePending = false;
   game.spaceWaveTimer = 0;
+  game.spaceBossClearPending = false;
+  game.signalCoreDefeated = false;
   loadStage(SPACE_STAGE_INDEX, true);
   game.wave = 1;
   game.reachedWave = 1;
@@ -3558,6 +3885,11 @@ function startSpaceMode() {
   game.clearTimer = 0;
   setStatus("WAVE 1", 130);
   playSound("start");
+}
+
+function startDirectSpaceMode() {
+  resetRunResources();
+  startSpaceMode();
 }
 
 function beginSpaceWaveClear() {
@@ -3575,11 +3907,29 @@ function beginSpaceWaveClear() {
   playSound("clear");
 }
 
+function beginSignalCoreClear() {
+  if (game.spaceWavePending) {
+    return;
+  }
+
+  game.spaceWavePending = true;
+  game.spaceBossClearPending = true;
+  game.spaceWaveTimer = CONFIG.space.signalCoreClearDelay;
+  bombs.length = 0;
+  enemyBullets.length = 0;
+  setStatus("SIGNAL CORE DESTROYED", 180);
+  addPopup("STAGE SELECT UNLOCKED", player.x, player.y - 58);
+  playSound("clear");
+}
+
 function advanceSpaceWave() {
   game.spaceWavePending = false;
   game.spaceWaveTimer = 0;
+  game.spaceBossClearPending = false;
+  game.signalCoreDefeated = false;
   game.wave += 1;
   game.reachedWave = Math.max(game.reachedWave, game.wave);
+  updateBestProgress();
   bombs.length = 0;
   enemyBullets.length = 0;
   explosions.length = 0;
@@ -3601,6 +3951,24 @@ function spawnSpaceWave() {
   enemies.length = 0;
 
   const wave = Math.max(1, game.wave);
+
+  if (wave === CONFIG.space.signalCoreWave) {
+    enemies.push(createEnemy({
+      type: "signalCore",
+      x: player.x,
+      y: clamp(player.y - 280, CONFIG.space.enemyMinY + 80, CONFIG.space.enemyMaxY - 180),
+      direction: Math.random() > 0.5 ? 1 : -1,
+      patrolLeft: 260,
+      patrolRight: WORLD_WIDTH - 260,
+      hatchTimer: 0,
+      summonTimer: 420,
+      initiallyDetected: true,
+    }, 0));
+    setStatus("WAVE 10 / SIGNAL CORE", 180);
+    playSound("warning");
+    return;
+  }
+
   const enemyTypes = getSpaceWaveEnemyTypes(wave);
 
   for (let i = 0; i < enemyTypes.length; i += 1) {
@@ -3718,6 +4086,8 @@ function loadStage(stageIndex, keepPlayerResources) {
   game.sonarFlashTimer = 0;
   game.spaceWavePending = false;
   game.spaceWaveTimer = 0;
+  game.spaceBossClearPending = false;
+  game.signalCoreDefeated = false;
   game.statusText = "";
   game.statusTimer = 0;
 
@@ -3994,6 +4364,73 @@ function setStatus(text, duration) {
   game.statusTimer = duration;
 }
 
+function loadPersistentProgress() {
+  const saved = readStorageProgress();
+
+  if (!saved) {
+    return;
+  }
+
+  game.unlocks.orbital = Boolean(saved.orbitalUnlocked || saved.orbital);
+  game.unlocks.stageSelect = Boolean(saved.stageSelectUnlocked || saved.stageSelect);
+  game.bestScore = Number(saved.bestScore) || 0;
+  game.bestWave = Number(saved.bestWave) || 0;
+}
+
+function readStorageProgress() {
+  try {
+    if (!window.localStorage) {
+      return null;
+    }
+
+    const raw = window.localStorage.getItem(CONFIG.storage.unlockKey);
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function savePersistentProgress() {
+  try {
+    if (!window.localStorage) {
+      return;
+    }
+
+    window.localStorage.setItem(CONFIG.storage.unlockKey, JSON.stringify({
+      orbitalUnlocked: game.unlocks.orbital,
+      stageSelectUnlocked: game.unlocks.stageSelect,
+      bestScore: game.bestScore,
+      bestWave: game.bestWave,
+    }));
+  } catch (error) {
+    // localStorageが使えない環境でもゲーム進行は止めません。
+  }
+}
+
+function unlockOrbitalRewards() {
+  game.unlocks.orbital = true;
+  game.unlocks.stageSelect = true;
+  savePersistentProgress();
+}
+
+function updateBestProgress() {
+  let changed = false;
+
+  if (game.score > game.bestScore) {
+    game.bestScore = game.score;
+    changed = true;
+  }
+
+  if (game.reachedWave > game.bestWave) {
+    game.bestWave = game.reachedWave;
+    changed = true;
+  }
+
+  if (changed) {
+    savePersistentProgress();
+  }
+}
+
 function isAirStage() {
   return game.stageType === STAGE_TYPE.AIR || game.stageType === STAGE_TYPE.AIR_BOSS;
 }
@@ -4058,6 +4495,7 @@ function getEnemyVisibility(enemy) {
   }
 
   if (getEnemyDomain(enemy) === "space") {
+    if (enemy.type === "signalCore") return enemy.detectedTimer > 0 || enemy.pingTimer > 0 ? 1 : 0.86;
     if (enemy.detectedTimer > 0) return 1;
     if (enemy.pingTimer > 0) return enemy.type === "signalWisp" ? 0.94 : 0.9;
     return enemy.type === "signalWisp" ? 0.42 : 0.88;
@@ -4086,6 +4524,7 @@ function getEnemyMapAlpha(enemy) {
   if (getEnemyDomain(enemy) === "air") return enemy.detectedTimer > 0 || enemy.y < 260 ? 1 : 0.76;
   if (getEnemyDomain(enemy) === "space") {
     if (enemy.detectedTimer > 0 || enemy.pingTimer > 0) return 1;
+    if (enemy.type === "signalCore") return 0.9;
     return enemy.type === "signalWisp" ? 0.34 : 0.72;
   }
   if (ENEMY_TYPES[enemy.type].boss) return enemy.detectedTimer > 0 ? 1 : 0.34;
@@ -4131,6 +4570,7 @@ function getEnemyContactBox(enemy) {
   }
 
   if (getEnemyDomain(enemy) === "space") {
+    if (enemy.type === "signalCore") return getContactBox(enemy, 0.58);
     return getContactBox(enemy, enemy.type === "signalWisp" ? 0.62 : enemy.type === "asteroid" ? 0.7 : 0.74);
   }
 
@@ -4285,6 +4725,7 @@ window.__deepSignalDebug = {
 };
 
 // タイトル画面の背景用にステージ1を読み込み、状態だけtitleへ戻します。
+loadPersistentProgress();
 loadStage(0, false);
 game.state = STATE.TITLE;
 requestAnimationFrame(gameLoop);
