@@ -307,7 +307,7 @@
           <div>
             <h2 id="current-title">PLAY CURRENT VERSION</h2>
             <span class="build-label">Latest Development Build</span>
-            <p>現在開発中の最新版。wave 10の宇宙ボス SIGNAL CORE、STAGE SELECT解放、ORBITAL SIGNAL直接開始、localStorageによる進行保存まで入ったバージョン。</p>
+            <p>現在開発中の最新版。ORBITAL SIGNAL MODEのダメージ時フリーズ対策として、敵弾・敵接触・SIGNAL CORE関連の被弾処理を安全化したv0.4.3 hotfix。</p>
           </div>
           <a class="play-button" href="current/index.html">Launch Current</a>
         </section>
@@ -367,6 +367,12 @@
           <h3>v0.4.2 - Signal Core &amp; Stage Select</h3>
           <p>ORBITAL SIGNAL MODE のwave 10に宇宙ボス SIGNAL CORE を追加。SIGNAL CORE撃破後にSTAGE SELECTとORBITAL SIGNAL直接開始を解放し、localStorageで解放状態・BEST SCORE・BEST WAVEを保存するバージョン。SECRET STAGEは??? [LOCKED]として未解放表示。</p>
           <a href="builds/v0.4.2-signal-core-stage-select/index.html">Open v0.4.2</a>
+        </article>
+
+        <article class="version-card">
+          <h3>v0.4.3 - Space Damage Freeze Hotfix</h3>
+          <p>ORBITAL SIGNAL MODEで敵弾・敵接触・SIGNAL CORE接触・SIGNAL CORE弾によるダメージ時にフリーズする可能性を修正したhotfix。damagePlayer、knockback、space clamp、敵弾/接触判定、SIGNAL CORE撃破演出中の残留被弾判定を安全化したバージョン。</p>
+          <a href="builds/v0.4.3-space-damage-freeze-hotfix/index.html">Open v0.4.3</a>
         </article>
       </section>
 
