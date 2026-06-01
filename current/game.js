@@ -1,5 +1,5 @@
 // ============================================================
-// DEEP SIGNAL v0.4.0
+// DEEP SIGNAL v0.4.1
 // Web版の完成ゲームへ育てるためのベース実装です。
 // 将来の展開先:
 // - Web版: このままHTML/CSS/JavaScriptで拡張
@@ -14,7 +14,7 @@
 // ------------------------------------------------------------
 
 const CONFIG = {
-  version: "v0.4.0",
+  version: "v0.4.1",
 
   // 表示は800x600相当の論理座標で作り、canvas内部は400x300で描画します。
   // CSSで2倍表示することで、ピクセルがくっきり見えるようにしています。
@@ -65,11 +65,16 @@ const CONFIG = {
   // 宇宙エンドレス用の基本値です。
   // space タイプだけが全方向自由移動になり、海面や深度の制約を受けません。
   space: {
-    supplyRespawnMin: 1500,
-    supplyRespawnMax: 2160,
+    supplyRespawnMin: 1320,
+    supplyRespawnMax: 1920,
     enemyMinY: 140,
     enemyMaxY: 1220,
     playerMargin: 54,
+    waveClearDelay: 72,
+    beamCooldown: 7,
+    beamSpeed: 9.1,
+    beamWidth: 9,
+    beamHeight: 24,
   },
 
   // 空中戦は「海面から迎撃する」モードなので、海面の高さを固定して描きます。
@@ -180,6 +185,8 @@ const game = {
   clearTimer: 0,
   wave: 0,
   reachedWave: 0,
+  spaceWavePending: false,
+  spaceWaveTimer: 0,
   bossWarningTimer: 0,
   screenShakeTimer: 0,
   screenShakePower: 0,
@@ -298,8 +305,8 @@ const ENEMY_TYPES = {
     width: 44,
     height: 38,
     health: 2,
-    speed: 0.78,
-    score: 130,
+    speed: 0.58,
+    score: 110,
     fireInterval: 0,
   },
   orbitalDrone: {
@@ -308,9 +315,9 @@ const ENEMY_TYPES = {
     width: 44,
     height: 22,
     health: 2,
-    speed: 1.9,
+    speed: 1.56,
     score: 210,
-    fireInterval: 118,
+    fireInterval: 150,
   },
   signalWisp: {
     name: "信号ウィスプ",
@@ -318,7 +325,7 @@ const ENEMY_TYPES = {
     width: 30,
     height: 30,
     health: 1,
-    speed: 1.25,
+    speed: 1.05,
     score: 180,
     fireInterval: 0,
   },
@@ -328,9 +335,9 @@ const ENEMY_TYPES = {
     width: 46,
     height: 24,
     health: 2,
-    speed: 1.55,
+    speed: 1.24,
     score: 260,
-    fireInterval: 130,
+    fireInterval: 158,
   },
 };
 
@@ -812,6 +819,11 @@ document.addEventListener("keydown", (event) => {
     return;
   }
 
+  if (isSpaceStage() && game.spaceWavePending && isContinueKey(event.code)) {
+    advanceSpaceWave();
+    return;
+  }
+
   if (event.code === "Space") {
     dropBomb();
   }
@@ -922,7 +934,20 @@ function updatePlaying(frameScale) {
   updatePopups(frameScale);
   updateMuzzleFlashes(frameScale);
   updateTimers(frameScale);
+  updateSpaceWaveTransition(frameScale);
   checkCollisions();
+}
+
+function updateSpaceWaveTransition(frameScale) {
+  if (!isSpaceStage() || !game.spaceWavePending) {
+    return;
+  }
+
+  game.spaceWaveTimer -= frameScale;
+
+  if (game.spaceWaveTimer <= 0) {
+    advanceSpaceWave();
+  }
 }
 
 function updateStageClear(frameScale) {
@@ -1049,9 +1074,9 @@ function dropBomb() {
       kind: "beam",
       x: player.x,
       y: player.y - player.height / 2 - 12,
-      width: 7,
-      height: 22,
-      speed: 8.4,
+      width: CONFIG.space.beamWidth,
+      height: CONFIG.space.beamHeight,
+      speed: CONFIG.space.beamSpeed,
     });
   } else if (isAirStage()) {
     // 空中戦のSpaceは上方向へ飛ぶ対空弾です。
@@ -1077,7 +1102,7 @@ function dropBomb() {
   }
 
   game.ammo -= 1;
-  game.bombCooldown = isSpaceStage() ? 6 : isAirStage() ? 11 : 16;
+  game.bombCooldown = isSpaceStage() ? CONFIG.space.beamCooldown : isAirStage() ? 11 : 16;
   playSound(isSpaceStage() ? "beam" : "bomb");
 }
 
@@ -1396,7 +1421,8 @@ function updateSpaceEnemyFire(enemy, frameScale) {
       fireEnemyBullet(enemy);
     }
 
-    enemy.fireTimer = enemy.fireInterval;
+    const waveSpread = isSpaceStage() ? randomRange(14, 34) : 0;
+    enemy.fireTimer = enemy.fireInterval + waveSpread;
   }
 }
 
@@ -1448,7 +1474,8 @@ function fireEnemyBullet(enemy) {
     const dx = player.x - enemy.x;
     const dy = player.y - enemy.y;
     const length = Math.max(1, Math.hypot(dx, dy));
-    const speed = enemy.type === "hunterUFO" ? 2.85 : 2.55;
+    const waveBonus = Math.min(0.34, Math.max(0, game.wave - 1) * 0.025);
+    const speed = (enemy.type === "hunterUFO" ? 2.52 : 2.28) + waveBonus;
 
     enemyBullets.push({
       x: enemy.x,
@@ -1966,7 +1993,7 @@ function checkStageClear() {
 
   if (!remainingEnemies) {
     if (isSpaceStage()) {
-      advanceSpaceWave();
+      beginSpaceWaveClear();
       return;
     }
 
@@ -2156,7 +2183,7 @@ function drawSpaceBackground() {
   ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
   // 星は座標ベースで描き、ランダム生成を毎フレーム行わないようにしています。
-  for (let i = 0; i < 90; i += 1) {
+  for (let i = 0; i < 64; i += 1) {
     const worldX = (i * 211 + 97) % WORLD_WIDTH;
     const worldY = (i * 149 + 53) % getWorldHeight();
 
@@ -2165,7 +2192,7 @@ function drawSpaceBackground() {
     }
 
     const blink = (Math.floor(game.titleTimer / 22) + i) % 4 === 0;
-    ctx.fillStyle = blink ? gb("light") : gb("mid");
+    ctx.fillStyle = blink ? gba("light", 0.78) : gba("mid", 0.58);
     ctx.fillRect(Math.round(worldX - cameraX), Math.round(worldY - cameraY), i % 7 === 0 ? 3 : 2, i % 5 === 0 ? 3 : 2);
   }
 
@@ -2177,13 +2204,13 @@ function drawSpaceBackground() {
   ctx.fillRect(planetX - 42, planetY - 8, 84, 8);
   ctx.fillRect(planetX - 30, planetY + 12, 60, 6);
 
-  ctx.strokeStyle = gba("dark", 0.44);
+  ctx.strokeStyle = gba("dark", 0.28);
   ctx.lineWidth = 2;
   for (let y = 120 - (cameraY % 180); y <= SCREEN_HEIGHT; y += 180) {
     line(0, y, SCREEN_WIDTH, y + 42);
   }
 
-  ctx.strokeStyle = gba("light", 0.22);
+  ctx.strokeStyle = gba("light", 0.16);
   const sweepX = Math.round((game.titleTimer * 4 - cameraX * 0.14) % SCREEN_WIDTH);
   line(sweepX, 80, sweepX + 80, SCREEN_HEIGHT - 80);
 
@@ -3082,6 +3109,15 @@ function drawSonarPulses() {
     ctx.beginPath();
     ctx.arc(x, y, pulse.radius * 0.62, 0, Math.PI * 2);
     ctx.stroke();
+
+    if (isSpaceStage()) {
+      // 宇宙ではSCANNERらしく、円形波にグリッド線を重ねて見つけた感触を強めます。
+      ctx.strokeStyle = gba("mid", 0.42 * alpha);
+      ctx.lineWidth = 2;
+      line(x - pulse.radius * 0.72, y, x + pulse.radius * 0.72, y);
+      line(x, y - pulse.radius * 0.72, x, y + pulse.radius * 0.72);
+    }
+
     ctx.restore();
   }
 }
@@ -3164,11 +3200,11 @@ function drawMuzzleFlashes() {
 
 function drawDepthOverlay() {
   if (isSpaceStage()) {
-    ctx.fillStyle = gba("black", 0.08);
+    ctx.fillStyle = gba("black", 0.06);
     ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     if (game.sonarFlashTimer > 0) {
-      ctx.fillStyle = gba("light", game.sonarFlashTimer / 170);
+      ctx.fillStyle = gba("light", game.sonarFlashTimer / 210);
       ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     }
     return;
@@ -3453,8 +3489,10 @@ function drawSpaceGameOver() {
   ctx.fillStyle = gb("mid");
   ctx.font = "22px 'Courier New', monospace";
   ctx.fillText(`FINAL SCORE ${padScore(game.score)}`, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 18);
+  ctx.fillStyle = gb("light");
   ctx.fillText(`REACHED WAVE ${Math.max(game.reachedWave, game.wave)}`, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 20);
 
+  ctx.fillStyle = gb("mid");
   ctx.font = "16px 'Courier New', monospace";
   ctx.fillText("PRESS R TO RESTART", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 68);
   ctx.fillText("PRESS SPACE TO TITLE", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 94);
@@ -3489,6 +3527,8 @@ function startNewGame() {
   game.ammo = CONFIG.player.maxAmmo;
   game.wave = 0;
   game.reachedWave = 0;
+  game.spaceWavePending = false;
+  game.spaceWaveTimer = 0;
   game.lastTime = 0;
   loadStage(0, false);
   game.state = STATE.PLAYING;
@@ -3498,6 +3538,8 @@ function startNewGame() {
 function returnToTitle() {
   game.lastTime = 0;
   game.wave = 0;
+  game.spaceWavePending = false;
+  game.spaceWaveTimer = 0;
   loadStage(0, false);
   game.state = STATE.TITLE;
   setStatus("", 0);
@@ -3506,6 +3548,8 @@ function returnToTitle() {
 function startSpaceMode() {
   game.wave = 1;
   game.reachedWave = 1;
+  game.spaceWavePending = false;
+  game.spaceWaveTimer = 0;
   loadStage(SPACE_STAGE_INDEX, true);
   game.wave = 1;
   game.reachedWave = 1;
@@ -3516,7 +3560,24 @@ function startSpaceMode() {
   playSound("start");
 }
 
+function beginSpaceWaveClear() {
+  if (game.spaceWavePending) {
+    return;
+  }
+
+  // wave間は短い待ちだけにして、テンポを崩さず次の波へ移れるようにします。
+  game.spaceWavePending = true;
+  game.spaceWaveTimer = CONFIG.space.waveClearDelay;
+  bombs.length = 0;
+  enemyBullets.length = 0;
+  setStatus(`WAVE ${game.wave} CLEAR / NEXT WAVE`, 100);
+  addPopup("WAVE CLEAR", player.x, player.y - 52);
+  playSound("clear");
+}
+
 function advanceSpaceWave() {
+  game.spaceWavePending = false;
+  game.spaceWaveTimer = 0;
   game.wave += 1;
   game.reachedWave = Math.max(game.reachedWave, game.wave);
   bombs.length = 0;
@@ -3526,13 +3587,13 @@ function advanceSpaceWave() {
   popups.length = 0;
   spawnSpaceWave();
 
-  if (game.wave % 5 === 0) {
+  if (game.wave % 5 === 0 || game.ammo <= 2) {
     for (const supply of supplies) {
       placeSupplyRandomly(supply);
     }
   }
 
-  setStatus(game.wave % 3 === 0 ? `WAVE ${game.wave} SIGNAL DENSITY UP` : `WAVE ${game.wave}`, 150);
+  setStatus(game.wave % 3 === 0 ? `NEXT WAVE ${game.wave} / SIGNAL DENSITY UP` : `NEXT WAVE ${game.wave}`, 150);
   playSound("sonar");
 }
 
@@ -3540,13 +3601,10 @@ function spawnSpaceWave() {
   enemies.length = 0;
 
   const wave = Math.max(1, game.wave);
-  const enemyCount = Math.min(16, 4 + Math.floor(wave * 1.15));
-  const enemyPool = wave >= 4
-    ? ["asteroid", "orbitalDrone", "signalWisp", "hunterUFO"]
-    : ["asteroid", "orbitalDrone", "signalWisp"];
+  const enemyTypes = getSpaceWaveEnemyTypes(wave);
 
-  for (let i = 0; i < enemyCount; i += 1) {
-    const type = enemyPool[i % enemyPool.length];
+  for (let i = 0; i < enemyTypes.length; i += 1) {
+    const type = enemyTypes[i];
     const x = randomRange(180, WORLD_WIDTH - 180);
     const y = randomRange(CONFIG.space.enemyMinY, CONFIG.space.enemyMaxY);
     const direction = Math.random() > 0.5 ? 1 : -1;
@@ -3558,9 +3616,35 @@ function spawnSpaceWave() {
       direction,
       patrolLeft: Math.max(80, x - randomRange(240, 440)),
       patrolRight: Math.min(WORLD_WIDTH - 80, x + randomRange(240, 440)),
-      initiallyDetected: wave === 1 && i < 2,
+      initiallyDetected: wave <= 2 && i < 2,
     }, enemies.length));
   }
+}
+
+function getSpaceWaveEnemyTypes(wave) {
+  // v0.4.1ではwave 1〜10の上昇を緩やかにし、序盤で各敵に慣れる時間を作ります。
+  if (wave === 1) return ["asteroid", "orbitalDrone", "signalWisp"];
+  if (wave === 2) return ["asteroid", "orbitalDrone", "orbitalDrone", "signalWisp"];
+  if (wave === 3) return ["asteroid", "orbitalDrone", "signalWisp", "signalWisp", "hunterUFO"];
+  if (wave === 4) return ["asteroid", "orbitalDrone", "orbitalDrone", "signalWisp", "hunterUFO", "hunterUFO"];
+  if (wave === 5) return ["asteroid", "asteroid", "orbitalDrone", "orbitalDrone", "signalWisp", "signalWisp", "hunterUFO"];
+
+  const count = Math.min(15, 6 + Math.floor(wave * 0.85));
+  const types = [];
+
+  for (let i = 0; i < count; i += 1) {
+    if (i % 6 === 0) {
+      types.push("asteroid");
+    } else if (i % 5 === 0 || (wave >= 8 && i % 4 === 0)) {
+      types.push("hunterUFO");
+    } else if (i % 3 === 0) {
+      types.push("signalWisp");
+    } else {
+      types.push("orbitalDrone");
+    }
+  }
+
+  return types;
 }
 
 function createEnemy(layout, index) {
@@ -3632,6 +3716,8 @@ function loadStage(stageIndex, keepPlayerResources) {
   game.bombCooldown = 0;
   game.sonarCooldown = 0;
   game.sonarFlashTimer = 0;
+  game.spaceWavePending = false;
+  game.spaceWaveTimer = 0;
   game.statusText = "";
   game.statusTimer = 0;
 
@@ -3711,7 +3797,7 @@ function getRandomSupplyPosition() {
   if (isSpaceStage()) {
     return {
       x: randomWorldX(),
-      y: randomRange(170, getWorldHeight() - 170),
+      y: randomRange(190, getWorldHeight() - 190),
       kind: "spacePod",
     };
   }
@@ -3794,6 +3880,11 @@ function randomSupplyRespawnTime() {
   } else {
     minTime = CONFIG.supply.normalRespawnMin;
     maxTime = CONFIG.supply.normalRespawnMax;
+  }
+
+  if (isSpaceStage() && game.wave > 0 && game.wave % 5 === 0) {
+    minTime *= 0.72;
+    maxTime *= 0.82;
   }
 
   // 弾切れ付近では詰みを避けるため、次の補給を少し早めます。
@@ -3968,8 +4059,8 @@ function getEnemyVisibility(enemy) {
 
   if (getEnemyDomain(enemy) === "space") {
     if (enemy.detectedTimer > 0) return 1;
-    if (enemy.pingTimer > 0) return 0.86;
-    return enemy.type === "signalWisp" ? 0.34 : 0.9;
+    if (enemy.pingTimer > 0) return enemy.type === "signalWisp" ? 0.94 : 0.9;
+    return enemy.type === "signalWisp" ? 0.42 : 0.88;
   }
 
   if (enemy.detectedTimer > 0) {
@@ -3995,7 +4086,7 @@ function getEnemyMapAlpha(enemy) {
   if (getEnemyDomain(enemy) === "air") return enemy.detectedTimer > 0 || enemy.y < 260 ? 1 : 0.76;
   if (getEnemyDomain(enemy) === "space") {
     if (enemy.detectedTimer > 0 || enemy.pingTimer > 0) return 1;
-    return enemy.type === "signalWisp" ? 0.28 : 0.74;
+    return enemy.type === "signalWisp" ? 0.34 : 0.72;
   }
   if (ENEMY_TYPES[enemy.type].boss) return enemy.detectedTimer > 0 ? 1 : 0.34;
   if (enemy.detectedTimer > 0) return 1;
@@ -4040,7 +4131,7 @@ function getEnemyContactBox(enemy) {
   }
 
   if (getEnemyDomain(enemy) === "space") {
-    return getContactBox(enemy, enemy.type === "asteroid" ? 0.72 : 0.76);
+    return getContactBox(enemy, enemy.type === "signalWisp" ? 0.62 : enemy.type === "asteroid" ? 0.7 : 0.74);
   }
 
   if (enemy.type === "mine" || enemy.type === "rammer") {

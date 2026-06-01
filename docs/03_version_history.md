@@ -154,3 +154,15 @@
 - `WAVE 1` から始まるエンドレスウェーブ制を追加し、全滅ごとに敵数・速度・弾頻度が少し上がるように調整
 - v0.3.6までの接触ダメージ、無敵時間、ノックバック、1UP、補給、STAGE CLEARキー送りは維持
 - 宇宙でGAME OVERになった場合、FINAL SCOREとREACHED WAVEを表示
+
+## v0.4.1 - ORBITAL SIGNAL Balance Pass
+
+概要:
+
+- 新機能追加ではなく、v0.4.0で追加した宇宙エンドレスの難易度・テンポ・視認性を調整
+- wave 1〜5の敵構成を明示し、序盤で asteroid / orbitalDrone / signalWisp / hunterUFO に段階的に慣れる構成へ変更
+- wave 6以降の敵数、速度、弾頻度の上昇を緩やかに調整
+- waveクリア後に短い `WAVE CLEAR / NEXT WAVE` 表示を挟み、Space / Enter / Z で早送り可能に変更
+- 宇宙補給ポッドの再出現時間、低ENERGY時補給、5waveごとの補給を調整
+- ビームの弾速・判定・クールダウン、SCANNERの波紋、signalWispの視認性と接触判定を調整
+- 宇宙GAME OVERで `REACHED WAVE` が読みやすくなるよう表示を微調整
