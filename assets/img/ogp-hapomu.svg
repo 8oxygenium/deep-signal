@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">HAPOMU - Happy Omurice Games</title>
+  <desc id="desc">Small browser games from a tiny omurice universe.</desc>
+  <rect width="1200" height="630" fill="#fff1bf"/>
+  <path d="M0 0h1200v630H0z" fill="url(#grid)"/>
+  <defs>
+    <pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse">
+      <path d="M28 0H0v28" fill="none" stroke="#43261c" stroke-opacity="0.08" stroke-width="2"/>
+    </pattern>
+  </defs>
+  <circle cx="1060" cy="110" r="150" fill="#ffd85c" opacity="0.75"/>
+  <circle cx="110" cy="530" r="120" fill="#d83b2d" opacity="0.16"/>
+  <rect x="68" y="70" width="1064" height="490" rx="34" fill="#fff9df" stroke="#43261c" stroke-width="10"/>
+  <ellipse cx="205" cy="382" rx="118" ry="70" fill="#ffd85c" stroke="#43261c" stroke-width="8"/>
+  <path d="M107 386c46-42 93-46 196-8" fill="none" stroke="#d83b2d" stroke-width="14" stroke-linecap="round"/>
+  <path d="M130 416c46-28 103-31 154-3" fill="none" stroke="#d83b2d" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="170" cy="365" r="8" fill="#43261c"/>
+  <circle cx="236" cy="365" r="8" fill="#43261c"/>
+  <path d="M185 402c16 14 36 14 52 0" fill="none" stroke="#43261c" stroke-width="8" stroke-linecap="round"/>
+  <text x="365" y="190" fill="#43261c" font-family="Courier New, monospace" font-size="96" font-weight="700">HAPOMU</text>
+  <text x="370" y="250" fill="#d83b2d" font-family="Courier New, monospace" font-size="44" font-weight="700">Happy Omurice Games</text>
+  <text x="370" y="318" fill="#43261c" font-family="Courier New, monospace" font-size="34">Small browser games from a tiny omurice universe.</text>
+  <g font-family="Courier New, monospace" font-size="30" font-weight="700">
+    <rect x="370" y="378" width="250" height="48" rx="12" fill="#102c22"/>
+    <text x="392" y="411" fill="#d8f7a7">DEEP SIGNAL</text>
+    <rect x="640" y="378" width="290" height="48" rx="12" fill="#ffd85c" stroke="#43261c" stroke-width="4"/>
+    <text x="662" y="411" fill="#43261c">Happy Omurice</text>
+    <rect x="370" y="444" width="320" height="48" rx="12" fill="#d83b2d"/>
+    <text x="392" y="477" fill="#fff9df">JANKEN KITCHEN</text>
+    <rect x="710" y="444" width="310" height="48" rx="12" fill="#fff1bf" stroke="#43261c" stroke-width="4"/>
+    <text x="732" y="477" fill="#43261c">Cup Ramen Kun</text>
+  </g>
+</svg>

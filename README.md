@@ -56,6 +56,11 @@ JANKEN KITCHEN v0.1 prototype added. GUU / CHOKI / PAA の3ボタンジャンケ
 Cup Ramen Kun v0.1 prototype added. 30秒間フタを押さえて完成を目指すミニゲームです。
 DEEP SIGNAL専用紹介ページを追加し、Prototype Archiveを `games/deep-signal.html` に整理しました。
 
+## Assets
+
+- `assets/icons/favicon.svg`: HAPOMUのオムライス風favicon
+- `assets/img/ogp-hapomu.svg`: SNS共有向けOGP画像
+
 ## 現在の主な内容
 
 - STAGE 1〜5: 海中探索ステージ
