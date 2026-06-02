@@ -1,5 +1,5 @@
 // ============================================================
-// DEEP SIGNAL v0.4.5 mobile view hotfix
+// DEEP SIGNAL v0.4.7 visible mobile hotfix
 // Web版の完成ゲームへ育てるためのベース実装です。
 // 将来の展開先:
 // - Web版: このままHTML/CSS/JavaScriptで拡張
@@ -14,7 +14,7 @@
 // ------------------------------------------------------------
 
 const CONFIG = {
-  version: "v0.4.6 kids test hotfix",
+  version: "v0.4.7 visible mobile hotfix",
 
   // 表示は800x600相当の論理座標で作り、canvas内部は400x300で描画します。
   // CSSで2倍表示することで、ピクセルがくっきり見えるようにしています。
@@ -1340,12 +1340,12 @@ function dropBomb() {
   }
 
   if (bombs.length >= CONFIG.gameplay.bombLimit) {
-    setStatus("RELOAD", 32);
+    setStatus("LIMIT / RELOAD", 90);
     return;
   }
 
   if (game.bombCooldown > 0) {
-    setStatus("WAIT", 18);
+    setStatus("WAIT", 70);
     return;
   }
 
@@ -3784,6 +3784,11 @@ function drawHud() {
   ctx.fillStyle = gb("mid");
   ctx.fillText(stageText, 18, 48);
   ctx.fillText(`MODE: ${getStageModeLabel()}`, modeX, 48);
+
+  ctx.fillStyle = gb("light");
+  ctx.font = "12px 'Courier New', monospace";
+  ctx.fillText("v0.4.7 TOUCH", 670, 66);
+  ctx.font = "16px 'Courier New', monospace";
 
   ctx.fillStyle = game.sonarCooldown <= 0 ? gb("light") : gb("mid");
   ctx.fillText(sensorText, sensorX, 48);

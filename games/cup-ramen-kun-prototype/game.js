@@ -23,6 +23,7 @@ const state = {
 const elements = {
   stage: document.getElementById("stage"),
   cup: document.getElementById("cup"),
+  lid: document.getElementById("lid"),
   timeValue: document.getElementById("timeValue"),
   powerValue: document.getElementById("powerValue"),
   scoreValue: document.getElementById("scoreValue"),
@@ -44,6 +45,7 @@ function resetGame() {
   state.lastTime = performance.now();
   elements.eventText.textContent = "HOLD THE LID! 30 SEC SURVIVAL";
   elements.titleText.textContent = "Space / PRESSでフタを守れ。";
+  elements.lid.textContent = "PRESS!";
   elements.stage.classList.remove("shake");
   elements.cup.classList.remove("game-over", "complete");
   updateUi();
@@ -111,6 +113,7 @@ function gameOver() {
   state.lidPower = 0;
   elements.cup.classList.remove("complete", "loose");
   elements.cup.classList.add("game-over");
+  elements.lid.textContent = "FLY!";
   elements.stage.classList.remove("shake");
   void elements.stage.offsetWidth;
   elements.stage.classList.add("shake");
@@ -125,6 +128,7 @@ function completeGame() {
   state.score += state.lidPower * 4;
   elements.cup.classList.remove("game-over", "loose");
   elements.cup.classList.add("complete");
+  elements.lid.textContent = "SAFE!";
   elements.eventText.textContent = "COMPLETE!";
   elements.titleText.textContent = `${getTitle()} フタを守りきった！`;
   updateUi();

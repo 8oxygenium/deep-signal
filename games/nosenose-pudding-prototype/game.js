@@ -23,8 +23,8 @@ const CONFIG = {
   minX: 92,
   maxX: 628,
   moveSpeed: 4.4,
-  fallSpeed: 4.1,
-  fastDropSpeed: 22,
+  fallSpeed: 6.2,
+  fastDropSpeed: 28,
   safeOffset: 58
 };
 
@@ -47,7 +47,7 @@ function resetGame() {
   state.touch = null;
   state.lastTime = performance.now();
   spawnNewPudding(canvas.width / 2);
-  ui.message.textContent = "スタート！プリンは自動で落ちています。左右で場所を決めよう。";
+  ui.message.textContent = "v0.1.5 起動中。放っておくとプリンが落ちるよ。左右で場所を決めよう。";
   updateHud();
 }
 
@@ -120,6 +120,8 @@ function fastDrop() {
 }
 
 function updateFallingPudding(frameScale = 1) {
+  // v0.1.5: 自動落下は一番単純に、playing中は毎フレーム必ずyを増やします。
+  // START待ちやready状態で止まって見える事故を避けるため、activePuddingがなければ即生成します。
   if (state.mode === "playing" && !state.activePudding) {
     spawnNewPudding(canvas.width / 2);
   }

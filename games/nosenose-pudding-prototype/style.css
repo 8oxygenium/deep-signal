@@ -82,6 +82,19 @@ h1 span {
   font-weight: 700;
 }
 
+.visible-hotfix {
+  display: inline-block;
+  margin: 12px 0 0;
+  padding: 8px 12px;
+  border: 3px solid var(--brown);
+  border-radius: 12px;
+  color: var(--plate);
+  font-size: clamp(17px, 4vw, 28px);
+  font-weight: 700;
+  background: var(--cherry);
+  box-shadow: 4px 4px 0 var(--shadow);
+}
+
 p {
   margin: 10px 0 0;
 }
