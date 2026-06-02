@@ -1,5 +1,5 @@
 // ============================================================
-// DEEP SIGNAL v0.4.4 mobile touch hotfix
+// DEEP SIGNAL v0.4.5 mobile view hotfix
 // Web版の完成ゲームへ育てるためのベース実装です。
 // 将来の展開先:
 // - Web版: このままHTML/CSS/JavaScriptで拡張
@@ -14,7 +14,7 @@
 // ------------------------------------------------------------
 
 const CONFIG = {
-  version: "v0.4.4 mobile touch hotfix",
+  version: "v0.4.5 mobile view hotfix",
 
   // 表示は800x600相当の論理座標で作り、canvas内部は400x300で描画します。
   // CSSで2倍表示することで、ピクセルがくっきり見えるようにしています。
@@ -129,6 +129,12 @@ const CONFIG = {
     maxParticles: 78,
   },
 
+  input: {
+    // スマホの左側ドラッグは、指の座標へ吸い寄せるのではなく、
+    // 指を動かした量だけ相対移動させます。調整しやすいよう倍率を設定化しています。
+    touchMoveScale: 1.35,
+  },
+
   // Game Boy風の4階調パレットです。
   // なるべくこの4色だけで画面を作ると、GB風版へ落とし込みやすくなります。
   palette: {
@@ -187,6 +193,12 @@ const touchInput = {
   shootActive: false,
   targetX: 0,
   targetY: 0,
+  dragStartScreenX: 0,
+  dragStartScreenY: 0,
+  dragStartPlayerX: 0,
+  dragStartPlayerY: 0,
+  dragLastScreenX: 0,
+  dragLastScreenY: 0,
 };
 
 const game = {
@@ -932,7 +944,7 @@ function handlePointerDown(event) {
   if (isLeftSide && touchInput.movePointerId === null) {
     touchInput.movePointerId = event.pointerId;
     touchInput.moveActive = true;
-    updateTouchMoveTarget(point);
+    startRelativeTouchDrag(point);
     return;
   }
 
@@ -949,7 +961,7 @@ function handlePointerMove(event) {
   }
 
   event.preventDefault();
-  updateTouchMoveTarget(getPointerWorldPoint(event));
+  updateRelativeTouchDrag(getPointerWorldPoint(event));
 }
 
 function handlePointerEnd(event) {
@@ -1010,9 +1022,26 @@ function getPointerWorldPoint(event) {
   };
 }
 
-function updateTouchMoveTarget(point) {
-  touchInput.targetX = point.worldX;
-  touchInput.targetY = point.worldY;
+function startRelativeTouchDrag(point) {
+  touchInput.dragStartScreenX = point.screenX;
+  touchInput.dragStartScreenY = point.screenY;
+  touchInput.dragStartPlayerX = player.x;
+  touchInput.dragStartPlayerY = player.y;
+  touchInput.dragLastScreenX = point.screenX;
+  touchInput.dragLastScreenY = point.screenY;
+}
+
+function updateRelativeTouchDrag(point) {
+  const dx = (point.screenX - touchInput.dragStartScreenX) * CONFIG.input.touchMoveScale;
+  const dy = (point.screenY - touchInput.dragStartScreenY) * CONFIG.input.touchMoveScale;
+
+  // 指の絶対位置ではなく、ドラッグ開始地点からの移動量だけを自機に反映します。
+  // 指が自機の上に乗らないので、スマホ画面でも自機を見失いにくくなります。
+  player.x = touchInput.dragStartPlayerX + dx;
+  player.y = touchInput.dragStartPlayerY + dy;
+  touchInput.dragLastScreenX = point.screenX;
+  touchInput.dragLastScreenY = point.screenY;
+  clampPlayerToStage();
 }
 
 function clearTouchInput() {
@@ -1020,6 +1049,12 @@ function clearTouchInput() {
   touchInput.shootPointerId = null;
   touchInput.moveActive = false;
   touchInput.shootActive = false;
+  touchInput.dragStartScreenX = 0;
+  touchInput.dragStartScreenY = 0;
+  touchInput.dragStartPlayerX = 0;
+  touchInput.dragStartPlayerY = 0;
+  touchInput.dragLastScreenX = 0;
+  touchInput.dragLastScreenY = 0;
 }
 
 function isGameKey(code) {
@@ -1176,23 +1211,6 @@ function updateTouchInput(frameScale) {
   if (touchInput.shootActive) {
     dropBomb();
   }
-
-  if (!touchInput.moveActive) {
-    return;
-  }
-
-  // タッチ移動は「指の位置へ瞬間移動」ではなく、通常移動に近い速度で追従させます。
-  const dx = touchInput.targetX - player.x;
-  const dy = touchInput.targetY - player.y;
-  const distance = Math.hypot(dx, dy);
-
-  if (distance < 3) {
-    return;
-  }
-
-  const step = Math.min(distance, player.speed * 1.18 * frameScale);
-  player.x += (dx / distance) * step;
-  player.y += (dy / distance) * step;
 }
 
 function updateSpaceWaveTransition(frameScale) {

@@ -10,9 +10,10 @@ body {
 
 body {
   margin: 0;
-  min-height: 100vh;
+  min-height: 100svh;
   display: grid;
   place-items: center;
+  overflow: hidden;
   background:
     radial-gradient(circle at 50% 18%, rgba(155, 188, 15, 0.14), transparent 32%),
     linear-gradient(180deg, #182820 0%, #081820 100%);
@@ -22,7 +23,8 @@ body {
 
 .game-shell {
   width: min(100vw, 880px);
-  padding: 24px;
+  max-height: 100svh;
+  padding: clamp(10px, 3vw, 24px);
   touch-action: none;
 }
 
@@ -40,11 +42,21 @@ h1 span {
   font-size: 14px;
 }
 
+.orientation-hint {
+  display: none;
+  margin: -4px 0 10px;
+  color: #d8f7a7;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+}
+
 canvas {
   display: block;
-  width: 800px;
-  height: 600px;
-  max-width: 100%;
+  width: min(800px, calc(100vw - 24px), calc((100svh - 96px) * 4 / 3));
+  height: auto;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100svh - 96px);
   aspect-ratio: 4 / 3;
   background: #9bbc0f;
   border: 8px solid #346856;
@@ -57,4 +69,26 @@ canvas {
   image-rendering: crisp-edges;
   touch-action: none;
   user-select: none;
+}
+
+@media (orientation: portrait) and (max-width: 820px) {
+  .orientation-hint {
+    display: block;
+  }
+
+  h1 {
+    margin-bottom: 8px;
+    font-size: 18px;
+  }
+
+  h1 span {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+  }
+
+  canvas {
+    width: min(calc(100vw - 20px), calc((100svh - 108px) * 4 / 3));
+    max-height: calc(100svh - 108px);
+  }
 }
