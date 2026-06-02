@@ -5,6 +5,7 @@
 html,
 body {
   min-height: 100%;
+  overscroll-behavior: none;
 }
 
 body {
@@ -22,6 +23,7 @@ body {
 .game-shell {
   width: min(100vw, 880px);
   padding: 24px;
+  touch-action: none;
 }
 
 h1 {
@@ -53,4 +55,6 @@ canvas {
     inset 0 0 34px rgba(8, 24, 32, 0.42);
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+  touch-action: none;
+  user-select: none;
 }

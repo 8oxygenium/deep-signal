@@ -1,5 +1,5 @@
 // ============================================================
-// DEEP SIGNAL v0.4.3
+// DEEP SIGNAL v0.4.4 mobile touch hotfix
 // Web版の完成ゲームへ育てるためのベース実装です。
 // 将来の展開先:
 // - Web版: このままHTML/CSS/JavaScriptで拡張
@@ -14,7 +14,7 @@
 // ------------------------------------------------------------
 
 const CONFIG = {
-  version: "v0.4.3",
+  version: "v0.4.4 mobile touch hotfix",
 
   // 表示は800x600相当の論理座標で作り、canvas内部は400x300で描画します。
   // CSSで2倍表示することで、ピクセルがくっきり見えるようにしています。
@@ -177,6 +177,17 @@ ctx.imageSmoothingEnabled = false;
 const keys = {};
 let cameraX = 0;
 let cameraY = 0;
+
+// スマホ用の仮想入力です。キーボード入力は従来通り残し、
+// タッチ中だけ移動目標とショット継続フラグを足します。
+const touchInput = {
+  movePointerId: null,
+  shootPointerId: null,
+  moveActive: false,
+  shootActive: false,
+  targetX: 0,
+  targetY: 0,
+};
 
 const game = {
   state: STATE.TITLE,
@@ -883,6 +894,134 @@ document.addEventListener("keyup", (event) => {
   keys[event.code] = false;
 });
 
+canvas.addEventListener("pointerdown", handlePointerDown);
+canvas.addEventListener("pointermove", handlePointerMove);
+canvas.addEventListener("pointerup", handlePointerEnd);
+canvas.addEventListener("pointercancel", handlePointerEnd);
+canvas.addEventListener("lostpointercapture", handlePointerEnd);
+
+// 一部のスマホブラウザで pointerdown が拾えない場合の保険です。
+// ゲーム中の操作は pointer 系に任せ、click はタイトルなどの決定だけに使います。
+canvas.addEventListener("click", (event) => {
+  if (game.state !== STATE.PLAYING) {
+    event.preventDefault();
+    handleTouchConfirm();
+  }
+});
+
+function handlePointerDown(event) {
+  event.preventDefault();
+  ensureAudio();
+
+  if (canvas.setPointerCapture) {
+    try {
+      canvas.setPointerCapture(event.pointerId);
+    } catch (error) {
+      // 古いブラウザで失敗しても、タッチ操作自体は続けられます。
+    }
+  }
+
+  if (game.state !== STATE.PLAYING) {
+    handleTouchConfirm();
+    return;
+  }
+
+  const point = getPointerWorldPoint(event);
+  const isLeftSide = point.screenX < SCREEN_WIDTH / 2;
+
+  if (isLeftSide && touchInput.movePointerId === null) {
+    touchInput.movePointerId = event.pointerId;
+    touchInput.moveActive = true;
+    updateTouchMoveTarget(point);
+    return;
+  }
+
+  if (!isLeftSide && touchInput.shootPointerId === null) {
+    touchInput.shootPointerId = event.pointerId;
+    touchInput.shootActive = true;
+    dropBomb();
+  }
+}
+
+function handlePointerMove(event) {
+  if (event.pointerId !== touchInput.movePointerId) {
+    return;
+  }
+
+  event.preventDefault();
+  updateTouchMoveTarget(getPointerWorldPoint(event));
+}
+
+function handlePointerEnd(event) {
+  if (event.pointerId === touchInput.movePointerId) {
+    touchInput.movePointerId = null;
+    touchInput.moveActive = false;
+  }
+
+  if (event.pointerId === touchInput.shootPointerId) {
+    touchInput.shootPointerId = null;
+    touchInput.shootActive = false;
+  }
+}
+
+function handleTouchConfirm() {
+  ensureAudio();
+
+  if (game.state === STATE.TITLE) {
+    startNewGame();
+    return;
+  }
+
+  if (game.state === STATE.STAGE_SELECT) {
+    startFromStageSelect(game.stageSelectIndex);
+    return;
+  }
+
+  if (game.state === STATE.COMPLETE) {
+    startSpaceMode();
+    return;
+  }
+
+  if (game.state === STATE.GAME_OVER) {
+    returnToTitle();
+    return;
+  }
+
+  if (game.state === STATE.STAGE_CLEAR) {
+    advanceStage();
+    return;
+  }
+
+  if (isSpaceStage() && game.spaceWavePending) {
+    advanceSpaceWave();
+  }
+}
+
+function getPointerWorldPoint(event) {
+  const rect = canvas.getBoundingClientRect();
+  const screenX = clamp(((event.clientX - rect.left) / rect.width) * SCREEN_WIDTH, 0, SCREEN_WIDTH);
+  const screenY = clamp(((event.clientY - rect.top) / rect.height) * SCREEN_HEIGHT, 0, SCREEN_HEIGHT);
+
+  return {
+    screenX,
+    screenY,
+    worldX: cameraX + screenX,
+    worldY: cameraY + screenY,
+  };
+}
+
+function updateTouchMoveTarget(point) {
+  touchInput.targetX = point.worldX;
+  touchInput.targetY = point.worldY;
+}
+
+function clearTouchInput() {
+  touchInput.movePointerId = null;
+  touchInput.shootPointerId = null;
+  touchInput.moveActive = false;
+  touchInput.shootActive = false;
+}
+
 function isGameKey(code) {
   return (
     code === "ArrowLeft" ||
@@ -1015,6 +1154,7 @@ function update(frameScale) {
 }
 
 function updatePlaying(frameScale) {
+  updateTouchInput(frameScale);
   updatePlayer(frameScale);
   updateCamera(frameScale);
   updateBombs(frameScale);
@@ -1030,6 +1170,29 @@ function updatePlaying(frameScale) {
   updateTimers(frameScale);
   updateSpaceWaveTransition(frameScale);
   checkCollisions();
+}
+
+function updateTouchInput(frameScale) {
+  if (touchInput.shootActive) {
+    dropBomb();
+  }
+
+  if (!touchInput.moveActive) {
+    return;
+  }
+
+  // タッチ移動は「指の位置へ瞬間移動」ではなく、通常移動に近い速度で追従させます。
+  const dx = touchInput.targetX - player.x;
+  const dy = touchInput.targetY - player.y;
+  const distance = Math.hypot(dx, dy);
+
+  if (distance < 3) {
+    return;
+  }
+
+  const step = Math.min(distance, player.speed * 1.18 * frameScale);
+  player.x += (dx / distance) * step;
+  player.y += (dy / distance) * step;
 }
 
 function updateSpaceWaveTransition(frameScale) {
@@ -2357,17 +2520,21 @@ function drawTitleScreen() {
 
   const blink = Math.floor(game.titleTimer / 28) % 2 === 0;
   ctx.font = "18px 'Courier New', monospace";
-  ctx.fillText("SPACE: START STORY", SCREEN_WIDTH / 2, 310);
-  ctx.fillText(`O: ORBITAL SIGNAL${game.unlocks.orbital ? "" : " [LOCKED]"}`, SCREEN_WIDTH / 2, 338);
-  ctx.fillText(`S: STAGE SELECT${game.unlocks.stageSelect ? "" : " [LOCKED]"}`, SCREEN_WIDTH / 2, 366);
+  ctx.fillText("TAP / SPACE: START STORY", SCREEN_WIDTH / 2, 304);
+  ctx.fillText(`O: ORBITAL SIGNAL${game.unlocks.orbital ? "" : " [LOCKED]"}`, SCREEN_WIDTH / 2, 332);
+  ctx.fillText(`S: STAGE SELECT${game.unlocks.stageSelect ? "" : " [LOCKED]"}`, SCREEN_WIDTH / 2, 360);
+
+  ctx.font = "14px 'Courier New', monospace";
+  ctx.fillText("MOBILE: LEFT DRAG MOVE / RIGHT TAP-HOLD FIRE", SCREEN_WIDTH / 2, 390);
+  ctx.fillText("KEYBOARD: ARROW/WASD MOVE / SPACE FIRE / ENTER OK", SCREEN_WIDTH / 2, 414);
 
   if (blink && game.statusTimer > 0) {
-    ctx.fillText(game.statusText, SCREEN_WIDTH / 2, 396);
+    ctx.fillText(game.statusText, SCREEN_WIDTH / 2, 438);
   }
 
   ctx.font = "14px 'Courier New', monospace";
-  ctx.fillText(`BEST SCORE: ${padScore(game.bestScore)}   BEST WAVE: ${game.bestWave}`, SCREEN_WIDTH / 2, 430);
-  ctx.fillText(`SOUND: ${game.soundEnabled ? "ON" : "OFF"}  (M TO TOGGLE)`, SCREEN_WIDTH / 2, 458);
+  ctx.fillText(`BEST SCORE: ${padScore(game.bestScore)}   BEST WAVE: ${game.bestWave}`, SCREEN_WIDTH / 2, 470);
+  ctx.fillText(`SOUND: ${game.soundEnabled ? "ON" : "OFF"}  (M TO TOGGLE)`, SCREEN_WIDTH / 2, 496);
 
   ctx.textAlign = "left";
 }
@@ -2443,8 +2610,9 @@ function drawStageSelectScreen() {
   ctx.fillStyle = gb("dark");
   ctx.fillText("SECRET: ??? [LOCKED]", SCREEN_WIDTH / 2, 442);
   ctx.font = "14px 'Courier New', monospace";
-  ctx.fillText("UP/DOWN SELECT   SPACE/ENTER/Z START   ESC/BACKSPACE TITLE", SCREEN_WIDTH / 2, 494);
-  ctx.fillText(`BEST SCORE ${padScore(game.bestScore)}   BEST WAVE ${game.bestWave}`, SCREEN_WIDTH / 2, 526);
+  ctx.fillText("UP/DOWN SELECT   SPACE/ENTER/Z START   ESC/BACKSPACE TITLE", SCREEN_WIDTH / 2, 488);
+  ctx.fillText("MOBILE TAP: START SELECTED STAGE", SCREEN_WIDTH / 2, 514);
+  ctx.fillText(`BEST SCORE ${padScore(game.bestScore)}   BEST WAVE ${game.bestWave}`, SCREEN_WIDTH / 2, 540);
   ctx.textAlign = "left";
 }
 
@@ -3697,7 +3865,7 @@ function drawControlHelp() {
   ctx.font = "14px 'Courier New', monospace";
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  ctx.fillText("MOVE ARROW/WASD  SPACE FIRE  E/SHIFT SONAR/RADAR/SCANNER  P/ESC PAUSE  M SOUND  R RESTART", 18, SCREEN_HEIGHT - 18);
+  ctx.fillText("MOVE ARROW/WASD OR LEFT DRAG  SPACE/RIGHT TAP FIRE  E/SHIFT SENSOR  P/ESC PAUSE  R RESTART", 18, SCREEN_HEIGHT - 18);
 }
 
 function drawBossWarning() {
@@ -3879,6 +4047,7 @@ function drawLcdOverlay() {
 // ------------------------------------------------------------
 
 function startNewGame() {
+  clearTouchInput();
   resetRunResources();
   game.wave = 0;
   game.reachedWave = 0;
@@ -3899,6 +4068,7 @@ function resetRunResources() {
 }
 
 function returnToTitle() {
+  clearTouchInput();
   game.lastTime = 0;
   game.wave = 0;
   game.spaceWavePending = false;
@@ -3911,6 +4081,7 @@ function returnToTitle() {
 }
 
 function startSpaceMode() {
+  clearTouchInput();
   game.wave = 1;
   game.reachedWave = 1;
   game.spaceWavePending = false;
@@ -4113,6 +4284,7 @@ function createEnemy(layout, index) {
 function loadStage(stageIndex, keepPlayerResources) {
   const stage = STAGES[stageIndex];
 
+  clearTouchInput();
   game.stageIndex = stageIndex;
   game.stageName = stage.name;
   game.stageType = stage.type || STAGE_TYPE.SEA;
