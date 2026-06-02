@@ -23,7 +23,8 @@ const CONFIG = {
   minX: 92,
   maxX: 628,
   moveSpeed: 4.2,
-  fallSpeed: 8.5,
+  fallSpeed: 1.55,
+  fastFallSpeed: 12,
   safeOffset: 58
 };
 
@@ -37,12 +38,13 @@ const state = {
 };
 
 function resetGame() {
-  state.mode = "ready";
+  state.mode = "falling";
   state.aimX = canvas.width / 2;
   state.falling = null;
   state.stack = [];
   state.keys.clear();
-  ui.message.textContent = "左右で位置を決めて、DROPでプリンを落とそう。";
+  ui.message.textContent = "プリンは自動で落ちてきます。左右で動かして、DROPで一気に落とそう。";
+  spawnPudding();
   updateHud();
 }
 
@@ -55,7 +57,7 @@ function updateHud() {
   } else if (state.mode === "gameOver") {
     ui.status.textContent = "GAME OVER";
   } else if (state.mode === "falling") {
-    ui.status.textContent = "DROP";
+    ui.status.textContent = "FALLING";
   } else {
     ui.status.textContent = "READY";
   }
@@ -70,7 +72,7 @@ function targetYForNextPudding() {
 }
 
 function moveAim() {
-  if (state.mode === "clear" || state.mode === "gameOver" || state.mode === "falling") {
+  if (state.mode === "clear" || state.mode === "gameOver") {
     return;
   }
 
@@ -83,20 +85,35 @@ function moveAim() {
   }
 
   state.aimX = clamp(state.aimX + direction * CONFIG.moveSpeed, CONFIG.minX, CONFIG.maxX);
+  if (state.falling) {
+    state.falling.x = state.aimX;
+  }
 }
 
-function dropPudding() {
-  if (state.mode === "clear" || state.mode === "gameOver" || state.mode === "falling") {
+function spawnPudding() {
+  if (state.mode === "clear" || state.mode === "gameOver") {
     return;
   }
 
   state.mode = "falling";
+  state.aimX = clamp(state.aimX, CONFIG.minX, CONFIG.maxX);
   state.falling = {
     x: state.aimX,
     y: CONFIG.startY,
-    phase: Math.random() * Math.PI * 2
+    phase: Math.random() * Math.PI * 2,
+    fast: false
   };
-  ui.message.textContent = "ぷるぷる落下中...";
+  ui.message.textContent = "ぷるぷる落下中。左右で動かせます。";
+  updateHud();
+}
+
+function dropPudding() {
+  if (state.mode !== "falling" || !state.falling) {
+    return;
+  }
+
+  state.falling.fast = true;
+  ui.message.textContent = "一気に落下！";
   updateHud();
 }
 
@@ -129,8 +146,10 @@ function landPudding() {
     state.mode = "clear";
     ui.message.textContent = "10段プリン完成！ Level 1 CLEAR!";
   } else {
-    state.mode = "ready";
-    ui.message.textContent = "いい感じ！ 次のプリンをのせよう。";
+    state.mode = "falling";
+    state.aimX = state.falling ? state.falling.x : state.aimX;
+    ui.message.textContent = "いい感じ！ 次のプリンが落ちてきます。";
+    spawnPudding();
   }
 
   updateHud();
@@ -141,7 +160,7 @@ function updateFalling() {
     return;
   }
 
-  state.falling.y += CONFIG.fallSpeed;
+  state.falling.y += state.falling.fast ? CONFIG.fastFallSpeed : CONFIG.fallSpeed;
   if (state.falling.y >= targetYForNextPudding()) {
     landPudding();
   }
@@ -227,7 +246,7 @@ function drawPudding(pudding, index, isPreview) {
 }
 
 function drawAim() {
-  if (state.mode === "clear" || state.mode === "gameOver" || state.mode === "falling") {
+  if (state.mode === "clear" || state.mode === "gameOver" || state.falling) {
     return;
   }
 
