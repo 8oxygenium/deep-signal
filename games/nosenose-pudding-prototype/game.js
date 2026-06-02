@@ -34,6 +34,61 @@ const CONFIG = {
   autoSwayMax: 9.5
 };
 
+const PUDDING_TYPES = [
+  {
+    kind: "normal",
+    label: "ノーマル",
+    width: 112,
+    height: 38,
+    bodyColor: "#ffd86b",
+    caramelColor: "#8f4a20",
+    score: 100,
+    unlockStack: 0,
+    weight: 6,
+    squish: 1,
+    swayBonus: 0
+  },
+  {
+    kind: "pucchin",
+    label: "プッチン",
+    width: 96,
+    height: 34,
+    bodyColor: "#ffe58a",
+    caramelColor: "#a55225",
+    score: 120,
+    unlockStack: 1,
+    weight: 4,
+    squish: 0.96,
+    swayBonus: 1.1
+  },
+  {
+    kind: "baked",
+    label: "焼きプリン",
+    width: 126,
+    height: 40,
+    bodyColor: "#f1bc62",
+    caramelColor: "#6f3418",
+    score: 160,
+    unlockStack: 3,
+    weight: 3,
+    squish: 1.02,
+    swayBonus: 0.4
+  },
+  {
+    kind: "big",
+    label: "でかプリン",
+    width: 146,
+    height: 46,
+    bodyColor: "#ffd05c",
+    caramelColor: "#7c3d1f",
+    score: 240,
+    unlockStack: 5,
+    weight: 1,
+    squish: 1.06,
+    swayBonus: 0.1
+  }
+];
+
 const state = {
   mode: "playing",
   activePudding: null,
@@ -53,7 +108,7 @@ function resetGame() {
   state.touch = null;
   state.lastTime = performance.now();
   spawnNewPudding(canvas.width / 2, true);
-  ui.message.textContent = "v0.1.7 起動中。放っておくとプリンがゆっくり落ちるよ。次の位置は少し変わります。";
+  ui.message.textContent = "v0.1.8 起動中。プリンの大きさがかわるよ。放っておくとゆっくり落ちます。";
   updateHud();
 }
 
@@ -77,8 +132,24 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+function getPuddingHeight(pudding) {
+  return pudding?.height || CONFIG.puddingHeight;
+}
+
+function getPuddingWidth(pudding) {
+  return pudding?.width || CONFIG.puddingWidth;
+}
+
+function getStackHeight() {
+  return state.stack.reduce((total, pudding) => total + getPuddingHeight(pudding) - 6, 0);
+}
+
+function landingYForPudding(pudding) {
+  return CONFIG.plateY - getPuddingHeight(pudding) / 2 - getStackHeight();
+}
+
 function landingYForNextPudding() {
-  return CONFIG.plateY - 22 - (state.stack.length * (CONFIG.puddingHeight - 6));
+  return landingYForPudding(state.activePudding || { height: CONFIG.puddingHeight });
 }
 
 function randomRange(min, max) {
@@ -102,17 +173,45 @@ function nextSpawnX(baseX, isFirst = false) {
   return clamp(candidate, CONFIG.spawnMinX, CONFIG.spawnMaxX);
 }
 
+function choosePuddingType(isFirst = false) {
+  if (isFirst) {
+    return PUDDING_TYPES[0];
+  }
+
+  const available = PUDDING_TYPES.filter((type) => state.stack.length >= type.unlockStack);
+  const totalWeight = available.reduce((total, type) => total + type.weight, 0);
+  let roll = Math.random() * totalWeight;
+
+  for (const type of available) {
+    roll -= type.weight;
+    if (roll <= 0) {
+      return type;
+    }
+  }
+
+  return available[0] || PUDDING_TYPES[0];
+}
+
 function spawnNewPudding(x, isFirst = false) {
+  const type = choosePuddingType(isFirst);
   const spawnX = nextSpawnX(x, isFirst);
   const progress = clamp(state.stack.length / CONFIG.goal, 0, 1);
   state.activePudding = {
+    kind: type.kind,
+    label: type.label,
+    width: type.width,
+    height: type.height,
+    bodyColor: type.bodyColor,
+    caramelColor: type.caramelColor,
+    score: type.score,
+    squish: type.squish,
     x: spawnX,
     centerX: spawnX,
     y: CONFIG.startY,
     vy: CONFIG.fallSpeed,
     isFastDrop: false,
     phase: Math.random() * Math.PI * 2,
-    swayAmplitude: CONFIG.autoSwayStart + (CONFIG.autoSwayMax - CONFIG.autoSwayStart) * progress,
+    swayAmplitude: CONFIG.autoSwayStart + (CONFIG.autoSwayMax - CONFIG.autoSwayStart) * progress + type.swayBonus,
     swaySpeed: randomRange(0.024, 0.038),
     tilt: 0
   };
@@ -155,7 +254,7 @@ function fastDrop() {
 }
 
 function updateFallingPudding(frameScale = 1) {
-  // v0.1.7: 自動落下は一番単純に、playing中は毎フレーム必ずyを増やします。
+  // v0.1.8: 自動落下は一番単純に、playing中は毎フレーム必ずyを増やします。
   // START待ちやready状態で止まって見える事故を避けるため、activePuddingがなければ即生成します。
   if (state.mode === "playing" && !state.activePudding) {
     spawnNewPudding(canvas.width / 2, state.stack.length === 0);
@@ -172,25 +271,44 @@ function updateFallingPudding(frameScale = 1) {
   }
 }
 
+function landingSafeOffset(current, previous) {
+  if (!previous) {
+    return CONFIG.safeOffset;
+  }
+
+  const narrowWidth = Math.min(getPuddingWidth(current), getPuddingWidth(previous));
+  return clamp(narrowWidth * 0.52, 46, 70);
+}
+
 function landActivePudding() {
   const pudding = state.activePudding;
   if (!pudding) {
     return;
   }
 
-  const baseX = state.stack.length === 0 ? canvas.width / 2 : state.stack[state.stack.length - 1].x;
+  const previous = state.stack[state.stack.length - 1] || null;
+  const baseX = previous ? previous.x : canvas.width / 2;
   const offset = Math.abs(pudding.x - baseX);
+  const safeOffset = landingSafeOffset(pudding, previous);
 
-  if (state.stack.length > 0 && offset > CONFIG.safeOffset) {
+  if (state.stack.length > 0 && offset > safeOffset) {
     triggerGameOver(pudding);
     return;
   }
 
   state.stack.push({
+    kind: pudding.kind,
+    label: pudding.label,
+    width: pudding.width,
+    height: pudding.height,
+    bodyColor: pudding.bodyColor,
+    caramelColor: pudding.caramelColor,
+    score: pudding.score,
+    squish: pudding.squish,
     x: pudding.x,
     y: pudding.y,
     phase: pudding.phase,
-    tilt: clamp((pudding.x - baseX) / CONFIG.safeOffset, -1, 1)
+    tilt: clamp((pudding.x - baseX) / safeOffset, -1, 1)
   });
 
   state.activePudding = null;
@@ -202,8 +320,8 @@ function landActivePudding() {
     return;
   }
 
-  ui.message.textContent = "のせられた！ 次のプリンは少し違う位置から落ちます。";
   spawnNewPudding(pudding.x);
+  ui.message.textContent = `のせられた！ 次は${state.activePudding.label}、大きさと位置が変わります。`;
   updateHud();
 }
 
@@ -217,6 +335,14 @@ function triggerGameOver(failedPudding) {
 
 function createCollapsePieces(failedPudding) {
   const allPuddings = state.stack.concat([{
+    kind: failedPudding.kind,
+    label: failedPudding.label,
+    width: failedPudding.width,
+    height: failedPudding.height,
+    bodyColor: failedPudding.bodyColor,
+    caramelColor: failedPudding.caramelColor,
+    score: failedPudding.score,
+    squish: failedPudding.squish,
     x: failedPudding.x,
     y: failedPudding.y,
     phase: failedPudding.phase,
@@ -308,8 +434,8 @@ function roundRect(x, y, width, height, radius) {
 
 function drawPudding(pudding, index, isActive) {
   const wobble = Math.sin((state.frame * 0.1) + pudding.phase + index) * (isActive ? 5 : 2.4);
-  const width = (CONFIG.puddingWidth + wobble) * (pudding.squish || 1);
-  const height = CONFIG.puddingHeight / (pudding.squish || 1);
+  const width = (getPuddingWidth(pudding) + wobble) * (pudding.squish || 1);
+  const height = getPuddingHeight(pudding) / (pudding.squish || 1);
   const tilt = (pudding.tilt || 0) * 0.16 + wobble * 0.002;
   const x = pudding.x - width / 2;
   const y = pudding.y - height / 2;
@@ -319,19 +445,27 @@ function drawPudding(pudding, index, isActive) {
   ctx.rotate(tilt);
   ctx.translate(-pudding.x, -pudding.y);
 
-  ctx.fillStyle = "#ffd86b";
+  ctx.fillStyle = pudding.bodyColor || "#ffd86b";
   ctx.strokeStyle = "#43261c";
   ctx.lineWidth = 4;
   roundRect(x, y, width, height, 16);
   ctx.fill();
   ctx.stroke();
 
-  ctx.fillStyle = "#8f4a20";
-  roundRect(x + 15, y + 3, width - 30, 12, 8);
+  ctx.fillStyle = pudding.caramelColor || "#8f4a20";
+  roundRect(x + 15, y + 3, Math.max(20, width - 30), Math.max(9, height * 0.32), 8);
   ctx.fill();
 
   ctx.fillStyle = "rgba(255, 249, 223, 0.8)";
   ctx.fillRect(x + 20, y + height * 0.56, width - 40, 4);
+
+  if (isActive && pudding.label) {
+    ctx.fillStyle = "#43261c";
+    ctx.font = "700 15px 'Courier New', 'MS Gothic', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(pudding.label, pudding.x, y - 10);
+  }
+
   ctx.restore();
 }
 

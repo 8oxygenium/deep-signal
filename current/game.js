@@ -1,5 +1,5 @@
 // ============================================================
-// DEEP SIGNAL v0.4.9 supply random hotfix
+// DEEP SIGNAL v0.5.0 overheat supply search tuning
 // Web版の完成ゲームへ育てるためのベース実装です。
 // 将来の展開先:
 // - Web版: このままHTML/CSS/JavaScriptで拡張
@@ -14,7 +14,7 @@
 // ------------------------------------------------------------
 
 const CONFIG = {
-  version: "v0.4.9 supply random hotfix",
+  version: "v0.5.0 overheat supply search tuning",
 
   // 表示は800x600相当の論理座標で作り、canvas内部は400x300で描画します。
   // CSSで2倍表示することで、ピクセルがくっきり見えるようにしています。
@@ -112,6 +112,7 @@ const CONFIG = {
     bossRespawnMax: 2400,
     edgeMargin: 170,
     lowAmmoRespawnFactor: 0.46,
+    searchSamples: 28,
   },
 
   drops: {
@@ -1344,8 +1345,8 @@ function dropBomb() {
   }
 
   if (bombs.length >= CONFIG.gameplay.bombLimit) {
-    showFireNotice("LIMIT");
-    setStatus("LIMIT / RELOAD", 90);
+    showFireNotice("OVERHEAT");
+    setStatus("OVERHEAT", 90);
     return;
   }
 
@@ -1915,8 +1916,9 @@ function updateSupplies(frameScale) {
 
       if (supply.respawnTimer <= 0) {
         placeSupplyRandomly(supply);
-        setStatus("SUPPLY DETECTED", 90);
-        addPopup("SUPPLY DETECTED", supply.x, supply.y - 24);
+        const supplyHint = getSupplySearchHint(supply);
+        setStatus(supplyHint, 110);
+        addPopup(supplyHint, supply.x, supply.y - 24);
       }
 
       continue;
@@ -3803,7 +3805,7 @@ function drawHud() {
 
   ctx.fillStyle = gb("light");
   ctx.font = "12px 'Courier New', monospace";
-  ctx.fillText("v0.4.9 RAND", 660, 66);
+  ctx.fillText("v0.5.0 HEAT", 658, 66);
   ctx.font = "16px 'Courier New', monospace";
 
   ctx.fillStyle = game.sonarCooldown <= 0 ? gb("light") : gb("mid");
@@ -4464,23 +4466,26 @@ function placeSupplyRandomly(supply) {
 }
 
 function chooseSupplyPosition(supply) {
-  // 何度か候補を引き、前回位置やプレイヤー位置に近すぎる補給を避けます。
-  // 厳しすぎて出ないよりは、最後は一番ましな候補にフォールバックします。
-  const minPreviousDistance = isAirStage() ? 560 : isSpaceStage() ? 560 : 470;
-  const minPlayerDistance = isAirStage() ? 450 : isSpaceStage() ? 440 : 360;
+  // v0.5.0: 補給を探しに行く遊びにするため、複数候補から「遠い」位置を優先します。
+  // 近場に固定化して見えないよう、前回位置とプレイヤー位置の両方から離します。
+  const minPreviousDistance = isAirStage() ? 760 : isSpaceStage() ? 740 : 680;
+  const minPlayerDistance = isAirStage() ? 700 : isSpaceStage() ? 680 : 620;
   let bestPosition = null;
   let bestScore = -Infinity;
 
-  for (let i = 0; i < 14; i += 1) {
+  for (let i = 0; i < CONFIG.supply.searchSamples; i += 1) {
     const candidate = getRandomSupplyPosition();
     const previousDistance = hasPreviousSupplyPosition(supply)
       ? distance(candidate.x, candidate.y, supply.x, supply.y)
       : minPreviousDistance + 1;
     const playerDistance = distance(candidate.x, candidate.y, player.x, player.y);
-    const score = previousDistance + playerDistance * 0.82 + Math.random() * 90;
+    let score = playerDistance * 1.48 + previousDistance * 0.78 + Math.random() * 220;
 
-    if (previousDistance >= minPreviousDistance && playerDistance >= minPlayerDistance) {
-      return candidate;
+    if (previousDistance < minPreviousDistance) {
+      score -= (minPreviousDistance - previousDistance) * 2.4;
+    }
+    if (playerDistance < minPlayerDistance) {
+      score -= (minPlayerDistance - playerDistance) * 3.1;
     }
 
     if (score > bestScore) {
@@ -4490,6 +4495,25 @@ function chooseSupplyPosition(supply) {
   }
 
   return bestPosition || getRandomSupplyPosition();
+}
+
+function getSupplySearchHint(supply) {
+  const dx = supply.x - player.x;
+  const dy = supply.y - player.y;
+
+  if (Math.abs(dx) > Math.abs(dy) * 1.15) {
+    return dx >= 0 ? "FAR SUPPLY EAST" : "FAR SUPPLY WEST";
+  }
+
+  if (isSpaceStage()) {
+    return dy >= 0 ? "FAR SUPPLY DOWN" : "FAR SUPPLY UP";
+  }
+
+  if (isAirStage()) {
+    return dx >= 0 ? "FAR SUPPLY EAST" : "FAR SUPPLY WEST";
+  }
+
+  return dy >= 0 ? "FAR SUPPLY DEEP" : "FAR SUPPLY SHALLOW";
 }
 
 function hasPreviousSupplyPosition(supply) {
@@ -4523,8 +4547,8 @@ function getRandomSupplyPosition() {
 
   if (game.stageIndex === 0) {
     return {
-      x: randomRange(360, 920),
-      y: randomRange(CONFIG.sea.supplyMinDepth, 430),
+      x: randomWorldX(),
+      y: randomRange(CONFIG.sea.supplyMinDepth, 560),
       kind: "seaPod",
     };
   }
