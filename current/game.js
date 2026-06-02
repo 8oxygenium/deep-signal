@@ -1,5 +1,5 @@
 // ============================================================
-// DEEP SIGNAL v0.4.7 visible mobile hotfix
+// DEEP SIGNAL v0.4.8 gameplay clarity hotfix
 // Web版の完成ゲームへ育てるためのベース実装です。
 // 将来の展開先:
 // - Web版: このままHTML/CSS/JavaScriptで拡張
@@ -14,7 +14,7 @@
 // ------------------------------------------------------------
 
 const CONFIG = {
-  version: "v0.4.7 visible mobile hotfix",
+  version: "v0.4.8 gameplay clarity hotfix",
 
   // 表示は800x600相当の論理座標で作り、canvas内部は400x300で描画します。
   // CSSで2倍表示することで、ピクセルがくっきり見えるようにしています。
@@ -231,6 +231,8 @@ const game = {
   screenShakePower: 0,
   statusText: "",
   statusTimer: 0,
+  fireNoticeText: "",
+  fireNoticeTimer: 0,
   titleTimer: 0,
   lastTime: 0,
   soundEnabled: true,
@@ -1273,6 +1275,7 @@ function updateTimers(frameScale) {
   game.bossWarningTimer = Math.max(0, game.bossWarningTimer - frameScale);
   game.screenShakeTimer = Math.max(0, game.screenShakeTimer - frameScale);
   game.statusTimer = Math.max(0, game.statusTimer - frameScale);
+  game.fireNoticeTimer = Math.max(0, game.fireNoticeTimer - frameScale);
   player.invincibleTimer = Math.max(0, player.invincibleTimer - frameScale);
 }
 
@@ -1334,17 +1337,20 @@ function updateCamera(frameScale) {
 
 function dropBomb() {
   if (game.ammo <= 0) {
+    showFireNotice("RELOAD");
     setStatus(isSpaceStage() ? "NO ENERGY" : isAirStage() ? "NO AA SHELLS" : "NO DEPTH CHARGES", 90);
     playSound("empty");
     return;
   }
 
   if (bombs.length >= CONFIG.gameplay.bombLimit) {
+    showFireNotice("LIMIT");
     setStatus("LIMIT / RELOAD", 90);
     return;
   }
 
   if (game.bombCooldown > 0) {
+    showFireNotice("WAIT");
     setStatus("WAIT", 70);
     return;
   }
@@ -1395,6 +1401,13 @@ function dropBomb() {
     setStatus(fireHint, 24);
   }
   playSound(isSpaceStage() ? "beam" : "bomb");
+}
+
+function showFireNotice(text) {
+  // 子どもテストで「押しても何が起きたか分からない」と分かったため、
+  // 発射できない理由を機体の真上にも短く出します。
+  game.fireNoticeText = text;
+  game.fireNoticeTimer = 58;
 }
 
 function updateBombs(frameScale) {
@@ -1902,6 +1915,8 @@ function updateSupplies(frameScale) {
 
       if (supply.respawnTimer <= 0) {
         placeSupplyRandomly(supply);
+        setStatus("SUPPLY DETECTED", 90);
+        addPopup("SUPPLY DETECTED", supply.x, supply.y - 24);
       }
 
       continue;
@@ -2503,6 +2518,7 @@ function drawGameScreen() {
   drawParticles();
   drawPopups();
   drawDepthOverlay();
+  drawPlayerFireNotice();
   drawHud();
   drawMinimap();
   drawControlHelp();
@@ -3787,7 +3803,7 @@ function drawHud() {
 
   ctx.fillStyle = gb("light");
   ctx.font = "12px 'Courier New', monospace";
-  ctx.fillText("v0.4.7 TOUCH", 670, 66);
+  ctx.fillText("v0.4.8 CLEAR", 660, 66);
   ctx.font = "16px 'Courier New', monospace";
 
   ctx.fillStyle = game.sonarCooldown <= 0 ? gb("light") : gb("mid");
@@ -3812,6 +3828,29 @@ function drawHud() {
   }
 
   drawBossHudBar();
+}
+
+function drawPlayerFireNotice() {
+  if (game.fireNoticeTimer <= 0 || !game.fireNoticeText || game.state !== STATE.PLAYING) {
+    return;
+  }
+
+  const noticeX = clamp(Math.round(player.x - cameraX), 74, SCREEN_WIDTH - 74);
+  const noticeY = clamp(Math.round(player.y - cameraY - player.height / 2 - 34), 92, SCREEN_HEIGHT - 58);
+  const blinkOn = Math.floor(game.fireNoticeTimer / 7) % 2 === 0;
+
+  ctx.save();
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = "24px 'Courier New', monospace";
+  ctx.fillStyle = blinkOn ? gb("light") : gb("mid");
+  ctx.fillRect(noticeX - 62, noticeY - 18, 124, 36);
+  ctx.strokeStyle = gb("black");
+  ctx.lineWidth = 3;
+  ctx.strokeRect(noticeX - 62, noticeY - 18, 124, 36);
+  ctx.fillStyle = gb("black");
+  ctx.fillText(game.fireNoticeText, noticeX, noticeY + 1);
+  ctx.restore();
 }
 
 function drawBossHudBar() {
@@ -4341,6 +4380,8 @@ function loadStage(stageIndex, keepPlayerResources) {
   game.signalCoreDefeated = false;
   game.statusText = "";
   game.statusTimer = 0;
+  game.fireNoticeText = "";
+  game.fireNoticeTimer = 0;
 
   if (!keepPlayerResources) {
     game.score = 0;
@@ -4403,6 +4444,8 @@ function createStageSupplyPoint() {
 }
 
 function placeSupplyRandomly(supply) {
+  // 取得後の再出現も必ずここを通し、ステージ種別ごとのランダム位置へ置き直します。
+  // 「補給が固定に戻った」ように見えないよう、固定フォールバックも避けます。
   const position = getRandomSupplyPosition();
 
   supply.x = position.x;
@@ -4480,7 +4523,12 @@ function getAirBossSupplyPosition() {
     }
   }
 
-  return { x: 320, y: getAirSupplyY(), kind: "airBuoy" };
+  const sideMin = CONFIG.supply.edgeMargin;
+  const sideMax = WORLD_WIDTH - CONFIG.supply.edgeMargin;
+  const fallbackX = boss && boss.x < WORLD_WIDTH / 2
+    ? randomRange(WORLD_WIDTH * 0.58, sideMax)
+    : randomRange(sideMin, WORLD_WIDTH * 0.42);
+  return { x: fallbackX, y: getAirSupplyY(), kind: "airBuoy" };
 }
 
 function randomSupplyRespawnTime() {
