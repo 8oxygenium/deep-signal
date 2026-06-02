@@ -23,8 +23,8 @@ const CONFIG = {
   minX: 92,
   maxX: 628,
   moveSpeed: 4.4,
-  fallSpeed: 2.45,
-  fastDropSpeed: 18,
+  fallSpeed: 4.1,
+  fastDropSpeed: 22,
   safeOffset: 58
 };
 
@@ -35,7 +35,8 @@ const state = {
   collapsePieces: [],
   keys: new Set(),
   touch: null,
-  frame: 0
+  frame: 0,
+  lastTime: 0
 };
 
 function resetGame() {
@@ -44,8 +45,9 @@ function resetGame() {
   state.collapsePieces = [];
   state.keys.clear();
   state.touch = null;
+  state.lastTime = performance.now();
   spawnNewPudding(canvas.width / 2);
-  ui.message.textContent = "スマホは左側タッチで左、右側タッチで右、中央を下スワイプでDROP。";
+  ui.message.textContent = "スタート！プリンは自動で落ちています。左右で場所を決めよう。";
   updateHud();
 }
 
@@ -84,7 +86,7 @@ function spawnNewPudding(x) {
   };
 }
 
-function moveActivePudding() {
+function moveActivePudding(frameScale = 1) {
   if (state.mode !== "playing" || !state.activePudding) {
     return;
   }
@@ -99,7 +101,7 @@ function moveActivePudding() {
 
   if (direction !== 0) {
     state.activePudding.x = clamp(
-      state.activePudding.x + direction * CONFIG.moveSpeed,
+      state.activePudding.x + direction * CONFIG.moveSpeed * frameScale,
       CONFIG.minX,
       CONFIG.maxX
     );
@@ -117,12 +119,16 @@ function fastDrop() {
   updateHud();
 }
 
-function updateFallingPudding() {
+function updateFallingPudding(frameScale = 1) {
+  if (state.mode === "playing" && !state.activePudding) {
+    spawnNewPudding(canvas.width / 2);
+  }
+
   if (state.mode !== "playing" || !state.activePudding) {
     return;
   }
 
-  state.activePudding.y += state.activePudding.vy;
+  state.activePudding.y += state.activePudding.vy * frameScale;
   if (state.activePudding.y >= landingYForNextPudding()) {
     state.activePudding.y = landingYForNextPudding();
     landActivePudding();
@@ -370,10 +376,20 @@ function draw() {
   drawOverlay();
 }
 
-function loop() {
-  state.frame += 1;
-  moveActivePudding();
-  updateFallingPudding();
+function loop(timestamp) {
+  if (!state.lastTime) {
+    state.lastTime = timestamp;
+  }
+
+  // スマホで一時的にフレームが遅れても、時間差分に合わせて落下を進めます。
+  // これで「何もしないと落ちてこない」ように見える状態を避けます。
+  const elapsed = Math.max(0, timestamp - state.lastTime);
+  const frameScale = clamp(elapsed / (1000 / 60), 0.5, 2.4);
+  state.lastTime = timestamp;
+
+  state.frame += frameScale;
+  moveActivePudding(frameScale);
+  updateFallingPudding(frameScale);
   draw();
   requestAnimationFrame(loop);
 }
@@ -487,4 +503,4 @@ canvas.addEventListener("pointercancel", endCanvasTouch);
 canvas.addEventListener("pointerleave", endCanvasTouch);
 
 resetGame();
-loop();
+requestAnimationFrame(loop);

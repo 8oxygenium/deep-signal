@@ -45,6 +45,7 @@ function resetGame() {
   elements.eventText.textContent = "HOLD THE LID! 30 SEC SURVIVAL";
   elements.titleText.textContent = "Space / PRESSでフタを守れ。";
   elements.stage.classList.remove("shake");
+  elements.cup.classList.remove("game-over", "complete");
   updateUi();
 }
 
@@ -108,16 +109,25 @@ function triggerTrouble() {
 function gameOver() {
   state.mode = "gameOver";
   state.lidPower = 0;
-  elements.eventText.textContent = "GAME OVER";
-  elements.titleText.textContent = "フタが開いた。TRY AGAIN!";
+  elements.cup.classList.remove("complete", "loose");
+  elements.cup.classList.add("game-over");
+  elements.stage.classList.remove("shake");
+  void elements.stage.offsetWidth;
+  elements.stage.classList.add("shake");
+  elements.eventText.textContent = "フタがとんだ！";
+  elements.titleText.textContent = "こぼれた！ RESETでやりなおし。";
+  updateUi();
 }
 
 function completeGame() {
   state.mode = "complete";
   state.timeLeft = 0;
   state.score += state.lidPower * 4;
+  elements.cup.classList.remove("game-over", "loose");
+  elements.cup.classList.add("complete");
   elements.eventText.textContent = "COMPLETE!";
-  elements.titleText.textContent = getTitle();
+  elements.titleText.textContent = `${getTitle()} フタを守りきった！`;
+  updateUi();
 }
 
 function getTitle() {
@@ -137,7 +147,7 @@ function updateUi() {
   elements.timeValue.textContent = state.timeLeft.toFixed(1);
   elements.powerValue.textContent = String(Math.round(state.lidPower));
   elements.scoreValue.textContent = String(Math.floor(state.score));
-  elements.statusValue.textContent = state.mode.toUpperCase();
+  elements.statusValue.textContent = state.mode === "gameOver" ? "GAME OVER" : state.mode.toUpperCase();
   elements.powerBar.style.width = `${state.lidPower}%`;
   elements.cup.classList.toggle("loose", state.lidPower < 45 && state.mode === "playing");
 }

@@ -14,7 +14,7 @@
 // ------------------------------------------------------------
 
 const CONFIG = {
-  version: "v0.4.5 mobile view hotfix",
+  version: "v0.4.6 kids test hotfix",
 
   // 表示は800x600相当の論理座標で作り、canvas内部は400x300で描画します。
   // CSSで2倍表示することで、ピクセルがくっきり見えるようにしています。
@@ -58,7 +58,7 @@ const CONFIG = {
   gameplay: {
     supplyRadius: 70,
     clearDelay: 180,
-    bombLimit: 6,
+    bombLimit: 10,
     orbitalUnlockDelay: 300,
   },
 
@@ -1339,9 +1339,17 @@ function dropBomb() {
     return;
   }
 
-  if (game.bombCooldown > 0 || bombs.length >= CONFIG.gameplay.bombLimit) {
+  if (bombs.length >= CONFIG.gameplay.bombLimit) {
+    setStatus("RELOAD", 32);
     return;
   }
+
+  if (game.bombCooldown > 0) {
+    setStatus("WAIT", 18);
+    return;
+  }
+
+  let fireHint = "";
 
   if (isSpaceStage()) {
     // 宇宙モードでは上方向へ短いパルスビームを撃ちます。
@@ -1353,6 +1361,8 @@ function dropBomb() {
       height: CONFIG.space.beamHeight,
       speed: CONFIG.space.beamSpeed,
     });
+    addMuzzleFlash(player.x, player.y - player.height / 2 - 18);
+    fireHint = "BEAM UP";
   } else if (isAirStage()) {
     // 空中戦のSpaceは上方向へ飛ぶ対空弾です。
     bombs.push({
@@ -1364,6 +1374,7 @@ function dropBomb() {
       speed: 6.65,
     });
     addMuzzleFlash(player.x, player.y - player.height / 2 - 18);
+    fireHint = "AA SHELL UP";
   } else {
     // 海中戦のSpaceは従来通り、ワールド座標で下へ沈む爆雷です。
     bombs.push({
@@ -1372,12 +1383,17 @@ function dropBomb() {
       y: player.y + player.height / 2 + 6,
       width: 8,
       height: 14,
-      baseSpeed: 2.45,
+      baseSpeed: 3.35,
     });
+    addMuzzleFlash(player.x, player.y + player.height / 2 + 14);
+    fireHint = "DEPTH CHARGE DOWN";
   }
 
   game.ammo -= 1;
-  game.bombCooldown = isSpaceStage() ? CONFIG.space.beamCooldown : isAirStage() ? 11 : 16;
+  game.bombCooldown = isSpaceStage() ? 6 : isAirStage() ? 8 : 10;
+  if (game.statusTimer <= 0 && fireHint) {
+    setStatus(fireHint, 24);
+  }
   playSound(isSpaceStage() ? "beam" : "bomb");
 }
 
@@ -1386,7 +1402,7 @@ function updateBombs(frameScale) {
     if (bomb.kind === "aa" || bomb.kind === "beam") {
       bomb.y -= bomb.speed * frameScale;
     } else {
-      const depthDrag = 1 - getDepthFactor(bomb.y) * 0.42;
+      const depthDrag = 1 - getDepthFactor(bomb.y) * 0.28;
       bomb.y += bomb.baseSpeed * depthDrag * frameScale;
     }
   }

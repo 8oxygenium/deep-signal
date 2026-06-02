@@ -161,6 +161,29 @@ p {
   transform: translateY(-20px) rotate(-2deg);
 }
 
+.cup.game-over {
+  animation: cupPanic 0.42s steps(2, end) 2;
+}
+
+.cup.game-over .lid {
+  transform: translate(62px, -88px) rotate(24deg);
+  background: var(--red);
+  color: var(--white);
+}
+
+.cup.complete .lid {
+  transform: translateY(-3px);
+  background: var(--green);
+  color: var(--white);
+}
+
+@keyframes cupPanic {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(-6px, 2px) rotate(-2deg); }
+  50% { transform: translate(5px, -3px) rotate(2deg); }
+  75% { transform: translate(-3px, -1px) rotate(-1deg); }
+}
+
 .lid {
   position: absolute;
   left: -18px;
@@ -200,6 +223,108 @@ p {
   border: 4px solid var(--ink);
   border-top: 0;
   border-radius: 0 0 50px 50px;
+}
+
+.cup.game-over .eye {
+  height: 10px;
+  margin-top: 12px;
+  border-radius: 0;
+  background: var(--ink);
+}
+
+.cup.game-over .mouth {
+  width: 42px;
+  height: 34px;
+  border-top: 4px solid var(--ink);
+  border-bottom: 0;
+  border-radius: 50px 50px 0 0;
+}
+
+.cup.complete .mouth {
+  width: 56px;
+  height: 30px;
+  background: rgba(255, 211, 77, 0.55);
+}
+
+.spill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -74px;
+  height: 105px;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.cup.game-over .spill {
+  opacity: 1;
+}
+
+.noodle,
+.topping,
+.soup-drop {
+  position: absolute;
+  display: block;
+}
+
+.noodle {
+  width: 78px;
+  height: 26px;
+  border: 5px solid var(--yellow);
+  border-right: 0;
+  border-bottom: 0;
+  border-radius: 999px 0 0 0;
+}
+
+.noodle-a {
+  left: 30px;
+  top: 34px;
+  transform: rotate(-24deg);
+}
+
+.noodle-b {
+  right: 26px;
+  top: 12px;
+  transform: rotate(26deg) scaleX(-1);
+}
+
+.topping {
+  width: 22px;
+  height: 22px;
+  border: 4px solid var(--ink);
+  border-radius: 50%;
+}
+
+.topping-a {
+  left: 84px;
+  top: 2px;
+  background: var(--green);
+}
+
+.topping-b {
+  right: 72px;
+  top: 44px;
+  background: var(--red);
+}
+
+.soup-drop {
+  width: 18px;
+  height: 24px;
+  border: 3px solid var(--ink);
+  border-radius: 50% 50% 60% 60%;
+  background: var(--brown);
+}
+
+.soup-a {
+  left: 20px;
+  top: 72px;
+  transform: rotate(18deg);
+}
+
+.soup-b {
+  right: 18px;
+  top: 72px;
+  transform: rotate(-18deg);
 }
 
 .label {
