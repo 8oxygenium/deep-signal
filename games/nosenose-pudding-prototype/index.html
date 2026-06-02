@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-SHZ3P81R05"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-SHZ3P81R05');
+    </script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>のせのせプリン v0.1 - HAPOMU</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <main class="game-shell" aria-label="のせのせプリン v0.1">
+      <header class="hero">
+        <p class="eyebrow">HAPOMU balance prototype</p>
+        <h1>のせのせプリン <span>v0.1</span></h1>
+        <p class="sub-title">Pudding Stack</p>
+        <p>ぷるぷるプリンをお皿にどんどん積み上げる、バランス落ち物ゲーム。</p>
+      </header>
+
+      <section class="play-area">
+        <div class="canvas-frame">
+          <canvas id="gameCanvas" width="720" height="480" aria-label="のせのせプリン game canvas"></canvas>
+        </div>
+
+        <aside class="hud" aria-label="game status">
+          <div><span>LEVEL</span><strong id="levelValue">1</strong></div>
+          <div><span>STACK</span><strong id="stackValue">0</strong></div>
+          <div><span>GOAL</span><strong id="goalValue">10</strong></div>
+          <div><span>STATUS</span><strong id="statusValue">READY</strong></div>
+        </aside>
+
+        <div class="message-panel">
+          <p id="messageText">左右で位置を決めて、DROPでプリンを落とそう。</p>
+          <p>Levelは下がりません。Level 2以降、さくらんぼ、デコプリンはComing later。</p>
+        </div>
+
+        <div class="controls" aria-label="game controls">
+          <button id="leftButton" type="button">LEFT</button>
+          <button id="rightButton" type="button">RIGHT</button>
+          <button id="dropButton" type="button">DROP</button>
+          <button id="resetButton" type="button">RESET</button>
+        </div>
+
+        <p class="help">← / → or A / D: MOVE　Space: DROP　R: RESET</p>
+      </section>
+
+      <nav class="links" aria-label="page links">
+        <a href="../nosenose-pudding.html">Back to Concept</a>
+        <a href="../index.html">Back to Games</a>
+        <a href="../../index.html">Back to Top</a>
+      </nav>
+    </main>
+
+    <script src="game.js"></script>
+  </body>
+</html>
