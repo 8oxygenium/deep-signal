@@ -22,29 +22,28 @@ const CONFIG = {
   startY: 72,
   minX: 92,
   maxX: 628,
-  moveSpeed: 4.2,
-  fallSpeed: 1.55,
-  fastFallSpeed: 12,
+  moveSpeed: 4.4,
+  fallSpeed: 2.45,
+  fastDropSpeed: 18,
   safeOffset: 58
 };
 
 const state = {
-  mode: "ready",
-  aimX: canvas.width / 2,
-  falling: null,
+  mode: "playing",
+  activePudding: null,
   stack: [],
+  collapsePieces: [],
   keys: new Set(),
   frame: 0
 };
 
 function resetGame() {
-  state.mode = "falling";
-  state.aimX = canvas.width / 2;
-  state.falling = null;
+  state.mode = "playing";
   state.stack = [];
+  state.collapsePieces = [];
   state.keys.clear();
-  ui.message.textContent = "プリンは自動で落ちてきます。左右で動かして、DROPで一気に落とそう。";
-  spawnPudding();
+  spawnNewPudding(canvas.width / 2);
+  ui.message.textContent = "プリンは自動で落ちます。左右で動かして、DROPで一気に落とそう。";
   updateHud();
 }
 
@@ -52,14 +51,15 @@ function updateHud() {
   ui.level.textContent = String(CONFIG.level);
   ui.stack.textContent = String(state.stack.length);
   ui.goal.textContent = String(CONFIG.goal);
+
   if (state.mode === "clear") {
     ui.status.textContent = "CLEAR";
   } else if (state.mode === "gameOver") {
     ui.status.textContent = "GAME OVER";
-  } else if (state.mode === "falling") {
-    ui.status.textContent = "FALLING";
+  } else if (state.activePudding && state.activePudding.isFastDrop) {
+    ui.status.textContent = "FAST DROP";
   } else {
-    ui.status.textContent = "READY";
+    ui.status.textContent = "FALLING";
   }
 }
 
@@ -67,12 +67,23 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-function targetYForNextPudding() {
+function landingYForNextPudding() {
   return CONFIG.plateY - 22 - (state.stack.length * (CONFIG.puddingHeight - 6));
 }
 
-function moveAim() {
-  if (state.mode === "clear" || state.mode === "gameOver") {
+function spawnNewPudding(x) {
+  state.activePudding = {
+    x: clamp(x, CONFIG.minX, CONFIG.maxX),
+    y: CONFIG.startY,
+    vy: CONFIG.fallSpeed,
+    isFastDrop: false,
+    phase: Math.random() * Math.PI * 2,
+    tilt: 0
+  };
+}
+
+function moveActivePudding() {
+  if (state.mode !== "playing" || !state.activePudding) {
     return;
   }
 
@@ -84,86 +95,120 @@ function moveAim() {
     direction += 1;
   }
 
-  state.aimX = clamp(state.aimX + direction * CONFIG.moveSpeed, CONFIG.minX, CONFIG.maxX);
-  if (state.falling) {
-    state.falling.x = state.aimX;
+  if (direction !== 0) {
+    state.activePudding.x = clamp(
+      state.activePudding.x + direction * CONFIG.moveSpeed,
+      CONFIG.minX,
+      CONFIG.maxX
+    );
   }
 }
 
-function spawnPudding() {
-  if (state.mode === "clear" || state.mode === "gameOver") {
+function fastDrop() {
+  if (state.mode !== "playing" || !state.activePudding) {
     return;
   }
 
-  state.mode = "falling";
-  state.aimX = clamp(state.aimX, CONFIG.minX, CONFIG.maxX);
-  state.falling = {
-    x: state.aimX,
-    y: CONFIG.startY,
-    phase: Math.random() * Math.PI * 2,
-    fast: false
-  };
-  ui.message.textContent = "ぷるぷる落下中。左右で動かせます。";
-  updateHud();
-}
-
-function dropPudding() {
-  if (state.mode !== "falling" || !state.falling) {
-    return;
-  }
-
-  state.falling.fast = true;
+  state.activePudding.isFastDrop = true;
+  state.activePudding.vy = CONFIG.fastDropSpeed;
   ui.message.textContent = "一気に落下！";
   updateHud();
 }
 
-function landPudding() {
-  if (!state.falling) {
+function updateFallingPudding() {
+  if (state.mode !== "playing" || !state.activePudding) {
+    return;
+  }
+
+  state.activePudding.y += state.activePudding.vy;
+  if (state.activePudding.y >= landingYForNextPudding()) {
+    state.activePudding.y = landingYForNextPudding();
+    landActivePudding();
+  }
+}
+
+function landActivePudding() {
+  const pudding = state.activePudding;
+  if (!pudding) {
     return;
   }
 
   const baseX = state.stack.length === 0 ? canvas.width / 2 : state.stack[state.stack.length - 1].x;
-  const offset = Math.abs(state.falling.x - baseX);
+  const offset = Math.abs(pudding.x - baseX);
 
   if (state.stack.length > 0 && offset > CONFIG.safeOffset) {
-    state.mode = "gameOver";
-    ui.message.textContent = "くずれた！ RESETで再挑戦。到達Levelは下がりません。";
-    state.falling = null;
-    updateHud();
+    triggerGameOver(pudding);
     return;
   }
 
   state.stack.push({
-    x: state.falling.x,
-    y: targetYForNextPudding(),
-    phase: state.falling.phase,
-    tilt: clamp((state.falling.x - baseX) / CONFIG.safeOffset, -1, 1)
+    x: pudding.x,
+    y: pudding.y,
+    phase: pudding.phase,
+    tilt: clamp((pudding.x - baseX) / CONFIG.safeOffset, -1, 1)
   });
 
-  state.falling = null;
+  state.activePudding = null;
 
   if (state.stack.length >= CONFIG.goal) {
     state.mode = "clear";
     ui.message.textContent = "10段プリン完成！ Level 1 CLEAR!";
-  } else {
-    state.mode = "falling";
-    state.aimX = state.falling ? state.falling.x : state.aimX;
-    ui.message.textContent = "いい感じ！ 次のプリンが落ちてきます。";
-    spawnPudding();
-  }
-
-  updateHud();
-}
-
-function updateFalling() {
-  if (!state.falling) {
+    updateHud();
     return;
   }
 
-  state.falling.y += state.falling.fast ? CONFIG.fastFallSpeed : CONFIG.fallSpeed;
-  if (state.falling.y >= targetYForNextPudding()) {
-    landPudding();
-  }
+  ui.message.textContent = "のせられた！ 次のプリンも自動で落ちます。";
+  spawnNewPudding(pudding.x);
+  updateHud();
+}
+
+function triggerGameOver(failedPudding) {
+  state.mode = "gameOver";
+  state.collapsePieces = createCollapsePieces(failedPudding);
+  state.activePudding = null;
+  ui.message.textContent = "くずれた！ RESETで再挑戦。到達Levelは下がりません。";
+  updateHud();
+}
+
+function createCollapsePieces(failedPudding) {
+  const allPuddings = state.stack.concat([{
+    x: failedPudding.x,
+    y: failedPudding.y,
+    phase: failedPudding.phase,
+    tilt: 1
+  }]);
+
+  const center = canvas.width / 2;
+  return allPuddings.map((pudding, index) => {
+    const side = index % 2 === 0 ? -1 : 1;
+    const spread = 52 + index * 16;
+    const lowRows = Math.min(index * 9, 88);
+    return {
+      x: clamp(pudding.x + side * spread + Math.sin(index * 1.7) * 18, 60, canvas.width - 60),
+      y: clamp(CONFIG.plateY - 18 - lowRows + Math.cos(index * 1.2) * 14, 230, CONFIG.plateY + 28),
+      phase: pudding.phase + index,
+      tilt: side * (0.35 + index * 0.08),
+      fallen: true,
+      squish: index % 3 === 0 ? 1.16 : 1
+    };
+  }).concat([
+    {
+      x: clamp(center - 170, 60, canvas.width - 60),
+      y: CONFIG.plateY + 22,
+      phase: 0.4,
+      tilt: -0.95,
+      fallen: true,
+      squish: 1.1
+    },
+    {
+      x: clamp(center + 172, 60, canvas.width - 60),
+      y: CONFIG.plateY + 10,
+      phase: 1.7,
+      tilt: 0.82,
+      fallen: true,
+      squish: 1.08
+    }
+  ]);
 }
 
 function drawBackground() {
@@ -216,11 +261,11 @@ function roundRect(x, y, width, height, radius) {
   ctx.closePath();
 }
 
-function drawPudding(pudding, index, isPreview) {
-  const wobble = Math.sin((state.frame * 0.09) + pudding.phase + index) * (isPreview ? 5 : 2.4);
-  const tilt = (pudding.tilt || 0) * 0.08 + wobble * 0.002;
-  const width = CONFIG.puddingWidth + wobble;
-  const height = CONFIG.puddingHeight;
+function drawPudding(pudding, index, isActive) {
+  const wobble = Math.sin((state.frame * 0.1) + pudding.phase + index) * (isActive ? 5 : 2.4);
+  const width = (CONFIG.puddingWidth + wobble) * (pudding.squish || 1);
+  const height = CONFIG.puddingHeight / (pudding.squish || 1);
+  const tilt = (pudding.tilt || 0) * 0.16 + wobble * 0.002;
   const x = pudding.x - width / 2;
   const y = pudding.y - height / 2;
 
@@ -241,23 +286,21 @@ function drawPudding(pudding, index, isPreview) {
   ctx.fill();
 
   ctx.fillStyle = "rgba(255, 249, 223, 0.8)";
-  ctx.fillRect(x + 20, y + 21, width - 40, 4);
+  ctx.fillRect(x + 20, y + height * 0.56, width - 40, 4);
   ctx.restore();
 }
 
-function drawAim() {
-  if (state.mode === "clear" || state.mode === "gameOver" || state.falling) {
+function drawDropGuide() {
+  if (state.mode !== "playing" || !state.activePudding) {
     return;
   }
 
-  drawPudding({ x: state.aimX, y: CONFIG.startY, phase: 0, tilt: 0 }, 0, true);
-
-  ctx.strokeStyle = "#d83b2d";
+  ctx.strokeStyle = "rgba(216, 59, 45, 0.55)";
   ctx.lineWidth = 3;
   ctx.setLineDash([8, 8]);
   ctx.beginPath();
-  ctx.moveTo(state.aimX, CONFIG.startY + 28);
-  ctx.lineTo(state.aimX, targetYForNextPudding() - 24);
+  ctx.moveTo(state.activePudding.x, state.activePudding.y + 28);
+  ctx.lineTo(state.activePudding.x, landingYForNextPudding() - 24);
   ctx.stroke();
   ctx.setLineDash([]);
 }
@@ -267,43 +310,45 @@ function drawOverlay() {
     return;
   }
 
-  ctx.fillStyle = "rgba(67, 38, 28, 0.68)";
+  ctx.fillStyle = "rgba(67, 38, 28, 0.5)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = "#fff9df";
-  ctx.strokeStyle = "#ffd86b";
-  ctx.lineWidth = 4;
-  ctx.strokeRect(150, 166, 420, 138);
-  ctx.fillRect(150, 166, 420, 138);
+  ctx.strokeStyle = state.mode === "clear" ? "#4c7a46" : "#d83b2d";
+  ctx.lineWidth = 5;
+  ctx.strokeRect(150, 150, 420, 150);
+  ctx.fillRect(150, 150, 420, 150);
   ctx.fillStyle = state.mode === "clear" ? "#4c7a46" : "#d83b2d";
   ctx.font = "700 40px 'Courier New', monospace";
   ctx.textAlign = "center";
-  ctx.fillText(state.mode === "clear" ? "CLEAR!" : "GAME OVER", canvas.width / 2, 218);
+  ctx.fillText(state.mode === "clear" ? "CLEAR!" : "GAME OVER", canvas.width / 2, 204);
   ctx.fillStyle = "#43261c";
   ctx.font = "700 22px 'Courier New', monospace";
-  ctx.fillText(state.mode === "clear" ? "10段プリン完成!" : "くずれた!", canvas.width / 2, 256);
-  ctx.fillText("R / RESETで再挑戦", canvas.width / 2, 284);
+  ctx.fillText(state.mode === "clear" ? "10段プリン完成!" : "くずれた!", canvas.width / 2, 244);
+  ctx.fillText("R / RESETで再挑戦", canvas.width / 2, 276);
 }
 
 function draw() {
   drawBackground();
   drawPlate();
 
-  state.stack.forEach((pudding, index) => {
-    drawPudding(pudding, index, false);
-  });
-
-  if (state.falling) {
-    drawPudding(state.falling, state.stack.length, true);
+  if (state.mode === "gameOver" && state.collapsePieces.length > 0) {
+    state.collapsePieces.forEach((piece, index) => drawPudding(piece, index, false));
+  } else {
+    state.stack.forEach((pudding, index) => drawPudding(pudding, index, false));
   }
 
-  drawAim();
+  if (state.activePudding) {
+    drawDropGuide();
+    drawPudding(state.activePudding, state.stack.length, true);
+  }
+
   drawOverlay();
 }
 
 function loop() {
   state.frame += 1;
-  moveAim();
-  updateFalling();
+  moveActivePudding();
+  updateFallingPudding();
   draw();
   requestAnimationFrame(loop);
 }
@@ -333,7 +378,7 @@ document.addEventListener("keydown", (event) => {
     setHeld(event.code, true);
   } else if (event.code === "Space") {
     event.preventDefault();
-    dropPudding();
+    fastDrop();
   } else if (event.code === "KeyR") {
     resetGame();
   }
@@ -345,7 +390,7 @@ document.addEventListener("keyup", (event) => {
 
 bindHoldButton(ui.left, "ArrowLeft");
 bindHoldButton(ui.right, "ArrowRight");
-ui.drop.addEventListener("click", dropPudding);
+ui.drop.addEventListener("click", fastDrop);
 ui.reset.addEventListener("click", resetGame);
 
 resetGame();
