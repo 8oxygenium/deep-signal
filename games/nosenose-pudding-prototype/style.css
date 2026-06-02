@@ -98,6 +98,8 @@ p {
   display: grid;
   min-width: 0;
   place-items: center;
+  touch-action: none;
+  user-select: none;
   border: 4px solid var(--caramel);
   border-radius: 12px;
   background:
@@ -113,6 +115,7 @@ canvas {
   height: auto;
   image-rendering: pixelated;
   touch-action: none;
+  user-select: none;
 }
 
 .hud {
@@ -210,6 +213,10 @@ button:focus-visible,
   .play-area,
   .controls {
     grid-template-columns: 1fr;
+  }
+
+  .controls {
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .hud {

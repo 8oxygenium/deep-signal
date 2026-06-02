@@ -34,6 +34,7 @@ const state = {
   stack: [],
   collapsePieces: [],
   keys: new Set(),
+  touch: null,
   frame: 0
 };
 
@@ -42,8 +43,9 @@ function resetGame() {
   state.stack = [];
   state.collapsePieces = [];
   state.keys.clear();
+  state.touch = null;
   spawnNewPudding(canvas.width / 2);
-  ui.message.textContent = "プリンは自動で落ちます。左右で動かして、DROPで一気に落とそう。";
+  ui.message.textContent = "スマホは左側タッチで左、右側タッチで右、中央を下スワイプでDROP。";
   updateHud();
 }
 
@@ -88,10 +90,10 @@ function moveActivePudding() {
   }
 
   let direction = 0;
-  if (state.keys.has("ArrowLeft") || state.keys.has("KeyA")) {
+  if (state.keys.has("ArrowLeft") || state.keys.has("KeyA") || state.keys.has("TouchLeft")) {
     direction -= 1;
   }
-  if (state.keys.has("ArrowRight") || state.keys.has("KeyD")) {
+  if (state.keys.has("ArrowRight") || state.keys.has("KeyD") || state.keys.has("TouchRight")) {
     direction += 1;
   }
 
@@ -305,6 +307,28 @@ function drawDropGuide() {
   ctx.setLineDash([]);
 }
 
+function drawTouchGuide() {
+  if (state.mode !== "playing") {
+    return;
+  }
+
+  ctx.save();
+  ctx.globalAlpha = 0.22;
+  ctx.fillStyle = "#fff9df";
+  ctx.fillRect(0, 0, canvas.width / 3, canvas.height);
+  ctx.fillRect((canvas.width / 3) * 2, 0, canvas.width / 3, canvas.height);
+  ctx.fillStyle = "#d83b2d";
+  ctx.fillRect(canvas.width / 3, 0, canvas.width / 3, canvas.height);
+  ctx.globalAlpha = 0.62;
+  ctx.fillStyle = "#43261c";
+  ctx.font = "700 22px 'Courier New', monospace";
+  ctx.textAlign = "center";
+  ctx.fillText("LEFT", canvas.width / 6, 38);
+  ctx.fillText("DROP", canvas.width / 2, 38);
+  ctx.fillText("RIGHT", (canvas.width / 6) * 5, 38);
+  ctx.restore();
+}
+
 function drawOverlay() {
   if (state.mode !== "clear" && state.mode !== "gameOver") {
     return;
@@ -329,6 +353,7 @@ function drawOverlay() {
 
 function draw() {
   drawBackground();
+  drawTouchGuide();
   drawPlate();
 
   if (state.mode === "gameOver" && state.collapsePieces.length > 0) {
@@ -372,6 +397,69 @@ function bindHoldButton(button, code) {
   button.addEventListener("pointerleave", () => setHeld(code, false));
 }
 
+function clearTouchMovement() {
+  state.keys.delete("TouchLeft");
+  state.keys.delete("TouchRight");
+}
+
+function getTouchZone(clientX) {
+  const rect = canvas.getBoundingClientRect();
+  const localX = clientX - rect.left;
+  if (localX < rect.width / 3) {
+    return "left";
+  }
+  if (localX > (rect.width / 3) * 2) {
+    return "right";
+  }
+  return "center";
+}
+
+function startCanvasTouch(event) {
+  event.preventDefault();
+  const zone = getTouchZone(event.clientX);
+  state.touch = {
+    pointerId: event.pointerId,
+    zone,
+    startX: event.clientX,
+    startY: event.clientY,
+    dropped: false
+  };
+  canvas.setPointerCapture(event.pointerId);
+  clearTouchMovement();
+
+  if (zone === "left") {
+    setHeld("TouchLeft", true);
+  } else if (zone === "right") {
+    setHeld("TouchRight", true);
+  }
+}
+
+function moveCanvasTouch(event) {
+  if (!state.touch || state.touch.pointerId !== event.pointerId) {
+    return;
+  }
+
+  event.preventDefault();
+  if (state.touch.zone !== "center") {
+    return;
+  }
+
+  const deltaY = event.clientY - state.touch.startY;
+  const deltaX = Math.abs(event.clientX - state.touch.startX);
+  if (!state.touch.dropped && deltaY > 42 && deltaY > deltaX * 1.2) {
+    state.touch.dropped = true;
+    fastDrop();
+  }
+}
+
+function endCanvasTouch(event) {
+  if (state.touch && state.touch.pointerId === event.pointerId) {
+    event.preventDefault();
+    clearTouchMovement();
+    state.touch = null;
+  }
+}
+
 document.addEventListener("keydown", (event) => {
   if (event.code === "ArrowLeft" || event.code === "ArrowRight" || event.code === "KeyA" || event.code === "KeyD") {
     event.preventDefault();
@@ -392,6 +480,11 @@ bindHoldButton(ui.left, "ArrowLeft");
 bindHoldButton(ui.right, "ArrowRight");
 ui.drop.addEventListener("click", fastDrop);
 ui.reset.addEventListener("click", resetGame);
+canvas.addEventListener("pointerdown", startCanvasTouch);
+canvas.addEventListener("pointermove", moveCanvasTouch);
+canvas.addEventListener("pointerup", endCanvasTouch);
+canvas.addEventListener("pointercancel", endCanvasTouch);
+canvas.addEventListener("pointerleave", endCanvasTouch);
 
 resetGame();
 loop();
