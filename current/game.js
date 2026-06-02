@@ -1,5 +1,5 @@
 // ============================================================
-// DEEP SIGNAL v0.4.8 gameplay clarity hotfix
+// DEEP SIGNAL v0.4.9 supply random hotfix
 // Web版の完成ゲームへ育てるためのベース実装です。
 // 将来の展開先:
 // - Web版: このままHTML/CSS/JavaScriptで拡張
@@ -14,7 +14,7 @@
 // ------------------------------------------------------------
 
 const CONFIG = {
-  version: "v0.4.8 gameplay clarity hotfix",
+  version: "v0.4.9 supply random hotfix",
 
   // 表示は800x600相当の論理座標で作り、canvas内部は400x300で描画します。
   // CSSで2倍表示することで、ピクセルがくっきり見えるようにしています。
@@ -3803,7 +3803,7 @@ function drawHud() {
 
   ctx.fillStyle = gb("light");
   ctx.font = "12px 'Courier New', monospace";
-  ctx.fillText("v0.4.8 CLEAR", 660, 66);
+  ctx.fillText("v0.4.9 RAND", 660, 66);
   ctx.font = "16px 'Courier New', monospace";
 
   ctx.fillStyle = game.sonarCooldown <= 0 ? gb("light") : gb("mid");
@@ -4437,6 +4437,8 @@ function createStageSupplyPoint() {
     respawnTimer: 0,
     flashTimer: 80,
     phase: Math.random() * Math.PI * 2,
+    previousX: null,
+    previousY: null,
   };
 
   placeSupplyRandomly(supply);
@@ -4446,8 +4448,12 @@ function createStageSupplyPoint() {
 function placeSupplyRandomly(supply) {
   // 取得後の再出現も必ずここを通し、ステージ種別ごとのランダム位置へ置き直します。
   // 「補給が固定に戻った」ように見えないよう、固定フォールバックも避けます。
-  const position = getRandomSupplyPosition();
+  const position = chooseSupplyPosition(supply);
 
+  if (hasPreviousSupplyPosition(supply)) {
+    supply.previousX = supply.x;
+    supply.previousY = supply.y;
+  }
   supply.x = position.x;
   supply.y = position.y;
   supply.kind = position.kind;
@@ -4455,6 +4461,39 @@ function placeSupplyRandomly(supply) {
   supply.respawnTimer = 0;
   supply.flashTimer = 90;
   supply.phase = Math.random() * Math.PI * 2;
+}
+
+function chooseSupplyPosition(supply) {
+  // 何度か候補を引き、前回位置やプレイヤー位置に近すぎる補給を避けます。
+  // 厳しすぎて出ないよりは、最後は一番ましな候補にフォールバックします。
+  const minPreviousDistance = isAirStage() ? 560 : isSpaceStage() ? 560 : 470;
+  const minPlayerDistance = isAirStage() ? 450 : isSpaceStage() ? 440 : 360;
+  let bestPosition = null;
+  let bestScore = -Infinity;
+
+  for (let i = 0; i < 14; i += 1) {
+    const candidate = getRandomSupplyPosition();
+    const previousDistance = hasPreviousSupplyPosition(supply)
+      ? distance(candidate.x, candidate.y, supply.x, supply.y)
+      : minPreviousDistance + 1;
+    const playerDistance = distance(candidate.x, candidate.y, player.x, player.y);
+    const score = previousDistance + playerDistance * 0.82 + Math.random() * 90;
+
+    if (previousDistance >= minPreviousDistance && playerDistance >= minPlayerDistance) {
+      return candidate;
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestPosition = candidate;
+    }
+  }
+
+  return bestPosition || getRandomSupplyPosition();
+}
+
+function hasPreviousSupplyPosition(supply) {
+  return Number.isFinite(supply.x) && Number.isFinite(supply.y) && !(supply.x === 0 && supply.y === 0);
 }
 
 function getRandomSupplyPosition() {
@@ -4509,7 +4548,11 @@ function getSeaBossSupplyPosition() {
     }
   }
 
-  return { x: 360, y: 420, kind: "seaPod" };
+  return {
+    x: randomWorldX(),
+    y: randomRange(CONFIG.sea.bossSupplyMinDepth, CONFIG.sea.bossSupplyMaxDepth),
+    kind: "seaPod",
+  };
 }
 
 function getAirBossSupplyPosition() {

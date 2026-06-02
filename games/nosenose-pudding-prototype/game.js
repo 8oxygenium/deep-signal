@@ -25,7 +25,13 @@ const CONFIG = {
   moveSpeed: 4.4,
   fallSpeed: 1.25,
   fastDropSpeed: 28,
-  safeOffset: 58
+  safeOffset: 58,
+  spawnMinX: 170,
+  spawnMaxX: 550,
+  spawnOffsetStart: 24,
+  spawnOffsetMax: 48,
+  autoSwayStart: 2.8,
+  autoSwayMax: 9.5
 };
 
 const state = {
@@ -46,8 +52,8 @@ function resetGame() {
   state.keys.clear();
   state.touch = null;
   state.lastTime = performance.now();
-  spawnNewPudding(canvas.width / 2);
-  ui.message.textContent = "v0.1.6 起動中。放っておくとプリンがゆっくり落ちるよ。左右で場所を決めよう。";
+  spawnNewPudding(canvas.width / 2, true);
+  ui.message.textContent = "v0.1.7 起動中。放っておくとプリンがゆっくり落ちるよ。次の位置は少し変わります。";
   updateHud();
 }
 
@@ -75,13 +81,39 @@ function landingYForNextPudding() {
   return CONFIG.plateY - 22 - (state.stack.length * (CONFIG.puddingHeight - 6));
 }
 
-function spawnNewPudding(x) {
+function randomRange(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+function nextSpawnX(baseX, isFirst = false) {
+  if (isFirst) {
+    return clamp(canvas.width / 2 + randomRange(-18, 18), CONFIG.spawnMinX, CONFIG.spawnMaxX);
+  }
+
+  const progress = clamp(state.stack.length / CONFIG.goal, 0, 1);
+  const offsetRange = CONFIG.spawnOffsetStart + (CONFIG.spawnOffsetMax - CONFIG.spawnOffsetStart) * progress;
+  let candidate = baseX + randomRange(-offsetRange, offsetRange);
+
+  // あまりに同じ位置だと「置くだけ」になってしまうので、最低限のずれを作ります。
+  if (Math.abs(candidate - baseX) < 12) {
+    candidate += Math.random() > 0.5 ? 16 : -16;
+  }
+
+  return clamp(candidate, CONFIG.spawnMinX, CONFIG.spawnMaxX);
+}
+
+function spawnNewPudding(x, isFirst = false) {
+  const spawnX = nextSpawnX(x, isFirst);
+  const progress = clamp(state.stack.length / CONFIG.goal, 0, 1);
   state.activePudding = {
-    x: clamp(x, CONFIG.minX, CONFIG.maxX),
+    x: spawnX,
+    centerX: spawnX,
     y: CONFIG.startY,
     vy: CONFIG.fallSpeed,
     isFastDrop: false,
     phase: Math.random() * Math.PI * 2,
+    swayAmplitude: CONFIG.autoSwayStart + (CONFIG.autoSwayMax - CONFIG.autoSwayStart) * progress,
+    swaySpeed: randomRange(0.024, 0.038),
     tilt: 0
   };
 }
@@ -100,12 +132,15 @@ function moveActivePudding(frameScale = 1) {
   }
 
   if (direction !== 0) {
-    state.activePudding.x = clamp(
-      state.activePudding.x + direction * CONFIG.moveSpeed * frameScale,
+    state.activePudding.centerX = clamp(
+      state.activePudding.centerX + direction * CONFIG.moveSpeed * frameScale,
       CONFIG.minX,
       CONFIG.maxX
     );
   }
+
+  const sway = Math.sin(state.frame * state.activePudding.swaySpeed + state.activePudding.phase) * state.activePudding.swayAmplitude;
+  state.activePudding.x = clamp(state.activePudding.centerX + sway, CONFIG.minX, CONFIG.maxX);
 }
 
 function fastDrop() {
@@ -120,10 +155,10 @@ function fastDrop() {
 }
 
 function updateFallingPudding(frameScale = 1) {
-  // v0.1.6: 自動落下は一番単純に、playing中は毎フレーム必ずyを増やします。
+  // v0.1.7: 自動落下は一番単純に、playing中は毎フレーム必ずyを増やします。
   // START待ちやready状態で止まって見える事故を避けるため、activePuddingがなければ即生成します。
   if (state.mode === "playing" && !state.activePudding) {
-    spawnNewPudding(canvas.width / 2);
+    spawnNewPudding(canvas.width / 2, state.stack.length === 0);
   }
 
   if (state.mode !== "playing" || !state.activePudding) {
@@ -167,7 +202,7 @@ function landActivePudding() {
     return;
   }
 
-  ui.message.textContent = "のせられた！ 次のプリンも自動で落ちます。";
+  ui.message.textContent = "のせられた！ 次のプリンは少し違う位置から落ちます。";
   spawnNewPudding(pudding.x);
   updateHud();
 }
