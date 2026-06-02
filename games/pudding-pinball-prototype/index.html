@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-SHZ3P81R05"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-SHZ3P81R05');
+    </script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>プリンピンボール v0.1 - HAPOMU</title>
+    <link rel="stylesheet" href="style.css?v=0.1">
+  </head>
+  <body>
+    <main class="game-shell" aria-label="プリンピンボール v0.1">
+      <header class="hero">
+        <p class="eyebrow">HAPOMU pinball prototype</p>
+        <h1>プリンピンボール <span>v0.1</span></h1>
+        <p class="sub-title">Pudding Pinball</p>
+        <p class="visible-version">v0.1 prototype / 左右タップでスプーンフリッパー</p>
+        <p>カラメル玉をはじいて、プリン・さくらんぼ・スプーンのバンパーに当てよう。</p>
+      </header>
+
+      <section class="play-area">
+        <div class="canvas-frame">
+          <canvas id="gameCanvas" width="720" height="920" aria-label="プリンピンボール game canvas"></canvas>
+        </div>
+
+        <aside class="hud" aria-label="game status">
+          <div><span>SCORE</span><strong id="scoreValue">0</strong></div>
+          <div><span>BALL</span><strong id="ballsValue">3</strong></div>
+          <div><span>STATUS</span><strong id="statusValue">READY</strong></div>
+        </aside>
+
+        <div class="message-panel">
+          <p id="messageText">左/右を押してスプーンを動かそう。落ちたらMISS、残り0でGAME OVER。</p>
+        </div>
+
+        <div class="controls" aria-label="game controls">
+          <button id="leftButton" type="button">LEFT</button>
+          <button id="rightButton" type="button">RIGHT</button>
+          <button id="resetButton" type="button">もう一回</button>
+        </div>
+
+        <p class="help">スマホ: 左半分タップ/長押しで左フリッパー、右半分タップ/長押しで右フリッパー。PC: ← / A、→ / D、RでRESET。</p>
+      </section>
+
+      <nav class="links" aria-label="page links">
+        <a href="../pudding-pinball.html">Back to Detail</a>
+        <a href="../index.html">Back to Games</a>
+        <a href="../../index.html">Back to Top</a>
+      </nav>
+    </main>
+
+    <script src="game.js?v=0.1"></script>
+  </body>
+</html>
