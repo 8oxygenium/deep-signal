@@ -58,12 +58,21 @@ h1 {
   margin: 0;
   font-size: clamp(34px, 8vw, 72px);
   line-height: 0.95;
+  letter-spacing: 0;
   text-transform: uppercase;
   text-shadow: 4px 4px 0 rgba(216, 59, 45, 0.5);
 }
 
 h1 span {
   font-size: 0.42em;
+}
+
+.sub-title {
+  margin-top: 6px;
+  color: var(--dark-red);
+  font-size: clamp(15px, 2.4vw, 22px);
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 p {

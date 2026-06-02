@@ -66,12 +66,20 @@ h2 {
 
 h1 {
   font-size: clamp(34px, 8vw, 68px);
+  letter-spacing: 0;
   text-shadow: 3px 3px 0 var(--panel);
 }
 
 h1 span {
   color: var(--ketchup);
   font-size: 0.48em;
+}
+
+.sub-title {
+  margin-top: 4px;
+  color: var(--ketchup-dark);
+  font-size: clamp(15px, 2.4vw, 22px);
+  font-weight: 700;
 }
 
 p {
