@@ -142,6 +142,11 @@ p {
   animation: handFlash 0.32s steps(2, end) 2;
 }
 
+.versus > div.roulette-flash {
+  box-shadow: 0 0 16px #ffd34d;
+  background: rgba(216, 247, 167, 0.16);
+}
+
 @keyframes handFlash {
   0%, 100% { box-shadow: none; }
   50% { box-shadow: 0 0 22px #d8f7a7; background: rgba(216, 247, 167, 0.22); }

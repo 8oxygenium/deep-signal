@@ -51,10 +51,10 @@ const PUDDING_TYPES = [
   {
     kind: "pucchin",
     label: "プッチン",
-    width: 96,
-    height: 34,
-    bodyColor: "#ffe58a",
-    caramelColor: "#a55225",
+    width: 84,
+    height: 31,
+    bodyColor: "#ffef91",
+    caramelColor: "#b45a28",
     score: 120,
     unlockStack: 1,
     weight: 4,
@@ -64,10 +64,10 @@ const PUDDING_TYPES = [
   {
     kind: "baked",
     label: "焼きプリン",
-    width: 126,
-    height: 40,
-    bodyColor: "#f1bc62",
-    caramelColor: "#6f3418",
+    width: 140,
+    height: 42,
+    bodyColor: "#e4a94f",
+    caramelColor: "#4f2412",
     score: 160,
     unlockStack: 3,
     weight: 3,
@@ -77,10 +77,10 @@ const PUDDING_TYPES = [
   {
     kind: "big",
     label: "でかプリン",
-    width: 146,
-    height: 46,
-    bodyColor: "#ffd05c",
-    caramelColor: "#7c3d1f",
+    width: 168,
+    height: 52,
+    bodyColor: "#ffc94a",
+    caramelColor: "#6c2f17",
     score: 240,
     unlockStack: 5,
     weight: 1,
@@ -108,7 +108,7 @@ function resetGame() {
   state.touch = null;
   state.lastTime = performance.now();
   spawnNewPudding(canvas.width / 2, true);
-  ui.message.textContent = "v0.1.8 起動中。プリンの大きさがかわるよ。放っておくとゆっくり落ちます。";
+  ui.message.textContent = "v0.1.9 起動中。プリンの大きさがもっと分かるようになりました。";
   updateHud();
 }
 
@@ -254,7 +254,7 @@ function fastDrop() {
 }
 
 function updateFallingPudding(frameScale = 1) {
-  // v0.1.8: 自動落下は一番単純に、playing中は毎フレーム必ずyを増やします。
+  // v0.1.9: 自動落下は一番単純に、playing中は毎フレーム必ずyを増やします。
   // START待ちやready状態で止まって見える事故を避けるため、activePuddingがなければ即生成します。
   if (state.mode === "playing" && !state.activePudding) {
     spawnNewPudding(canvas.width / 2, state.stack.length === 0);
@@ -458,13 +458,6 @@ function drawPudding(pudding, index, isActive) {
 
   ctx.fillStyle = "rgba(255, 249, 223, 0.8)";
   ctx.fillRect(x + 20, y + height * 0.56, width - 40, 4);
-
-  if (isActive && pudding.label) {
-    ctx.fillStyle = "#43261c";
-    ctx.font = "700 15px 'Courier New', 'MS Gothic', monospace";
-    ctx.textAlign = "center";
-    ctx.fillText(pudding.label, pudding.x, y - 10);
-  }
 
   ctx.restore();
 }

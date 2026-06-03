@@ -1,5 +1,5 @@
 // ============================================================
-// DEEP SIGNAL v0.5.0 overheat supply search tuning
+// DEEP SIGNAL v0.5.1 vertical control hint tuning
 // Web版の完成ゲームへ育てるためのベース実装です。
 // 将来の展開先:
 // - Web版: このままHTML/CSS/JavaScriptで拡張
@@ -14,7 +14,7 @@
 // ------------------------------------------------------------
 
 const CONFIG = {
-  version: "v0.5.0 overheat supply search tuning",
+  version: "v0.5.1 vertical control hint tuning",
 
   // 表示は800x600相当の論理座標で作り、canvas内部は400x300で描画します。
   // CSSで2倍表示することで、ピクセルがくっきり見えるようにしています。
@@ -134,6 +134,7 @@ const CONFIG = {
     // スマホの左側ドラッグは、指の座標へ吸い寄せるのではなく、
     // 指を動かした量だけ相対移動させます。調整しやすいよう倍率を設定化しています。
     touchMoveScale: 1.35,
+    touchVerticalMoveScale: 1.68,
   },
 
   // Game Boy風の4階調パレットです。
@@ -1036,7 +1037,7 @@ function startRelativeTouchDrag(point) {
 
 function updateRelativeTouchDrag(point) {
   const dx = (point.screenX - touchInput.dragStartScreenX) * CONFIG.input.touchMoveScale;
-  const dy = (point.screenY - touchInput.dragStartScreenY) * CONFIG.input.touchMoveScale;
+  const dy = (point.screenY - touchInput.dragStartScreenY) * CONFIG.input.touchVerticalMoveScale;
 
   // 指の絶対位置ではなく、ドラッグ開始地点からの移動量だけを自機に反映します。
   // 指が自機の上に乗らないので、スマホ画面でも自機を見失いにくくなります。
@@ -1045,6 +1046,11 @@ function updateRelativeTouchDrag(point) {
   touchInput.dragLastScreenX = point.screenX;
   touchInput.dragLastScreenY = point.screenY;
   clampPlayerToStage();
+
+  if (isAirStage() && Math.abs(dy) > 18 && game.statusTimer <= 0) {
+    setStatus("SURFACE MODE", 36);
+    showFireNotice("ALT LOCK");
+  }
 }
 
 function clearTouchInput() {
@@ -1307,7 +1313,13 @@ function updatePlayer(frameScale) {
   } else if (isAirStage()) {
     // 空中戦では浮上潜水艦として海面付近に留まり、少しだけ上下できます。
     const surfaceY = getAirSeaSurfaceY();
+    const beforeClampY = player.y;
     player.y = clamp(player.y, surfaceY + CONFIG.air.playerMinOffset, surfaceY + CONFIG.air.playerMaxOffset);
+    const wantsAirVertical = keys.ArrowUp || keys.KeyW || keys.ArrowDown || keys.KeyS;
+
+    if ((wantsAirVertical || Math.abs(beforeClampY - player.y) > 10) && game.statusTimer <= 0) {
+      setStatus("SURFACE MODE", 36);
+    }
   } else if (isSeaStage()) {
     // 海中戦では潜航艇として扱います。海面境界より上へは絶対に出られません。
     const surfaceLimit = getSeaSurfaceY() + CONFIG.sea.playerSafeMargin;
@@ -1409,6 +1421,45 @@ function showFireNotice(text) {
   // 発射できない理由を機体の真上にも短く出します。
   game.fireNoticeText = text;
   game.fireNoticeTimer = 58;
+}
+
+function drawSupplyDirectionHint() {
+  if (game.state !== STATE.PLAYING) {
+    return;
+  }
+
+  const supply = supplies.find((item) => item.active);
+  if (!supply) {
+    return;
+  }
+
+  const screenX = supply.x - cameraX;
+  const screenY = supply.y - cameraY;
+
+  if (screenX >= 28 && screenX <= SCREEN_WIDTH - 28 && screenY >= 82 && screenY <= SCREEN_HEIGHT - 36) {
+    return;
+  }
+
+  const dx = supply.x - player.x;
+  const dy = supply.y - player.y;
+  const horizontal = Math.abs(dx) > Math.abs(dy) * 1.12;
+  const label = horizontal
+    ? (dx >= 0 ? "SUPPLY >" : "< SUPPLY")
+    : (dy >= 0 ? "SUPPLY v" : "^ SUPPLY");
+  const edgeX = clamp(screenX, 34, SCREEN_WIDTH - 116);
+  const edgeY = clamp(screenY, 92, SCREEN_HEIGHT - 42);
+
+  ctx.save();
+  ctx.fillStyle = "rgba(8, 24, 32, 0.86)";
+  ctx.fillRect(edgeX - 8, edgeY - 18, 106, 24);
+  ctx.strokeStyle = gb("light");
+  ctx.lineWidth = 2;
+  ctx.strokeRect(edgeX - 8, edgeY - 18, 106, 24);
+  ctx.fillStyle = gb("light");
+  ctx.font = "14px 'Courier New', monospace";
+  ctx.textAlign = "left";
+  ctx.fillText(label, edgeX, edgeY);
+  ctx.restore();
 }
 
 function updateBombs(frameScale) {
@@ -2521,6 +2572,7 @@ function drawGameScreen() {
   drawPopups();
   drawDepthOverlay();
   drawPlayerFireNotice();
+  drawSupplyDirectionHint();
   drawHud();
   drawMinimap();
   drawControlHelp();
@@ -3805,7 +3857,7 @@ function drawHud() {
 
   ctx.fillStyle = gb("light");
   ctx.font = "12px 'Courier New', monospace";
-  ctx.fillText("v0.5.0 HEAT", 658, 66);
+  ctx.fillText("v0.5.1 V-MOVE", 636, 66);
   ctx.font = "16px 'Courier New', monospace";
 
   ctx.fillStyle = game.sonarCooldown <= 0 ? gb("light") : gb("mid");
@@ -4466,7 +4518,7 @@ function placeSupplyRandomly(supply) {
 }
 
 function chooseSupplyPosition(supply) {
-  // v0.5.0: 補給を探しに行く遊びにするため、複数候補から「遠い」位置を優先します。
+  // v0.5.1: 補給を探しに行く遊びにするため、複数候補から「遠い」位置を優先します。
   // 近場に固定化して見えないよう、前回位置とプレイヤー位置の両方から離します。
   const minPreviousDistance = isAirStage() ? 760 : isSpaceStage() ? 740 : 680;
   const minPlayerDistance = isAirStage() ? 700 : isSpaceStage() ? 680 : 620;
@@ -4502,18 +4554,18 @@ function getSupplySearchHint(supply) {
   const dy = supply.y - player.y;
 
   if (Math.abs(dx) > Math.abs(dy) * 1.15) {
-    return dx >= 0 ? "FAR SUPPLY EAST" : "FAR SUPPLY WEST";
+    return dx >= 0 ? "SUPPLY EAST" : "SUPPLY WEST";
   }
 
   if (isSpaceStage()) {
-    return dy >= 0 ? "FAR SUPPLY DOWN" : "FAR SUPPLY UP";
+    return dy >= 0 ? "SUPPLY DOWN" : "SUPPLY UP";
   }
 
   if (isAirStage()) {
-    return dx >= 0 ? "FAR SUPPLY EAST" : "FAR SUPPLY WEST";
+    return dx >= 0 ? "SUPPLY EAST" : "SUPPLY WEST";
   }
 
-  return dy >= 0 ? "FAR SUPPLY DEEP" : "FAR SUPPLY SHALLOW";
+  return dy >= 0 ? "SUPPLY DEEP" : "SUPPLY ABOVE";
 }
 
 function hasPreviousSupplyPosition(supply) {

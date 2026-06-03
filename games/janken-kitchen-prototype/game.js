@@ -19,7 +19,9 @@ const state = {
   omuCoin: 0,
   streak: 0,
   mode: "ready",
-  rival: "INSERT COIN"
+  rival: "INSERT COIN",
+  rouletteTimer: null,
+  rouletteIndex: 0
 };
 
 const elements = {
@@ -43,6 +45,7 @@ const elements = {
 };
 
 function resetGame() {
+  stopCpuRoulette();
   state.life = 3;
   state.omuCoin = 0;
   state.streak = 0;
@@ -53,7 +56,7 @@ function resetGame() {
   setHandDisplay("cpu", null, "???");
   setResultState("");
   elements.resultText.textContent = "INSERT COIN";
-  elements.commentText.textContent = "1 / 2 / 3 or big buttons";
+  elements.commentText.textContent = "じゃん・けん・ぽんでCPUが止まるよ";
   updateUi();
 }
 
@@ -77,7 +80,6 @@ function lightLamp(name) {
   elements.resultText.textContent = name === "PON" ? "PON!" : `${name}...`;
   if (name !== "PON") {
     setHandDisplay("player", null, "???");
-    setHandDisplay("cpu", null, "???");
   }
 }
 
@@ -125,20 +127,46 @@ function chooseHand(playerHand) {
   setResultState("");
   setHandDisplay("player", null, "READY");
   setHandDisplay("cpu", null, "???");
-  elements.commentText.textContent = "JAN... KEN...";
+  elements.commentText.textContent = "CPUの手がぐるぐるします。PON!で止まるよ。";
   updateUi();
 
   runJankenSequence(playerHand);
 }
 
 function runJankenSequence(playerHand) {
-  setTimeout(() => lightLamp("JAN"), 120);
-  setTimeout(() => lightLamp("KEN"), 420);
-  setTimeout(() => lightLamp("PON"), 720);
-  setTimeout(() => resolveRound(playerHand), 980);
+  setTimeout(() => {
+    lightLamp("JAN");
+    startCpuRoulette();
+  }, 120);
+  setTimeout(() => lightLamp("KEN"), 520);
+  setTimeout(() => {
+    lightLamp("PON");
+    stopCpuRoulette();
+  }, 1160);
+  setTimeout(() => resolveRound(playerHand), 1370);
+}
+
+function startCpuRoulette() {
+  stopCpuRoulette();
+  state.rouletteIndex = 0;
+  state.rouletteTimer = setInterval(() => {
+    const hand = HANDS[state.rouletteIndex % HANDS.length];
+    state.rouletteIndex += 1;
+    setHandDisplay("cpu", hand);
+    elements.cpuIcon.parentElement.classList.toggle("roulette-flash");
+  }, 110);
+}
+
+function stopCpuRoulette() {
+  if (state.rouletteTimer) {
+    clearInterval(state.rouletteTimer);
+    state.rouletteTimer = null;
+  }
+  elements.cpuIcon.parentElement.classList.remove("roulette-flash");
 }
 
 function resolveRound(playerHand) {
+  stopCpuRoulette();
   const cpuHand = HANDS[Math.floor(Math.random() * HANDS.length)];
   const result = judge(playerHand, cpuHand);
   setHandDisplay("player", playerHand);
