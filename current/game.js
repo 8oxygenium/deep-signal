@@ -1,5 +1,5 @@
 // ============================================================
-// DEEP SIGNAL v0.5.1 vertical control hint tuning
+// DEEP SIGNAL v0.5.2 supply arrow hint tuning
 // Web版の完成ゲームへ育てるためのベース実装です。
 // 将来の展開先:
 // - Web版: このままHTML/CSS/JavaScriptで拡張
@@ -14,7 +14,7 @@
 // ------------------------------------------------------------
 
 const CONFIG = {
-  version: "v0.5.1 vertical control hint tuning",
+  version: "v0.5.2 supply arrow hint tuning",
 
   // 表示は800x600相当の論理座標で作り、canvas内部は400x300で描画します。
   // CSSで2倍表示することで、ピクセルがくっきり見えるようにしています。
@@ -1442,24 +1442,36 @@ function drawSupplyDirectionHint() {
 
   const dx = supply.x - player.x;
   const dy = supply.y - player.y;
-  const horizontal = Math.abs(dx) > Math.abs(dy) * 1.12;
-  const label = horizontal
-    ? (dx >= 0 ? "SUPPLY >" : "< SUPPLY")
-    : (dy >= 0 ? "SUPPLY v" : "^ SUPPLY");
-  const edgeX = clamp(screenX, 34, SCREEN_WIDTH - 116);
-  const edgeY = clamp(screenY, 92, SCREEN_HEIGHT - 42);
+  const arrow = getSupplyArrow(dx, dy);
+  const edgeX = clamp(screenX, 42, SCREEN_WIDTH - 42);
+  const edgeY = clamp(screenY, 104, SCREEN_HEIGHT - 54);
 
   ctx.save();
-  ctx.fillStyle = "rgba(8, 24, 32, 0.86)";
-  ctx.fillRect(edgeX - 8, edgeY - 18, 106, 24);
-  ctx.strokeStyle = gb("light");
-  ctx.lineWidth = 2;
-  ctx.strokeRect(edgeX - 8, edgeY - 18, 106, 24);
   ctx.fillStyle = gb("light");
-  ctx.font = "14px 'Courier New', monospace";
-  ctx.textAlign = "left";
-  ctx.fillText(label, edgeX, edgeY);
+  ctx.strokeStyle = gb("dark");
+  ctx.lineWidth = 4;
+  ctx.font = "34px 'Courier New', monospace";
+  ctx.textAlign = "center";
+  ctx.strokeText(arrow, edgeX, edgeY);
+  ctx.fillText(arrow, edgeX, edgeY);
+  ctx.font = "10px 'Courier New', monospace";
+  ctx.fillText("SUPPLY", edgeX, edgeY + 15);
   ctx.restore();
+}
+
+function getSupplyArrow(dx, dy) {
+  const deadZone = 36;
+  const horizontal = Math.abs(dx) > deadZone;
+  const vertical = Math.abs(dy) > deadZone;
+
+  if (horizontal && vertical) {
+    if (dx >= 0 && dy < 0) return "↗";
+    if (dx >= 0 && dy >= 0) return "↘";
+    if (dx < 0 && dy >= 0) return "↙";
+    return "↖";
+  }
+  if (vertical) return dy >= 0 ? "↓" : "↑";
+  return dx >= 0 ? "→" : "←";
 }
 
 function updateBombs(frameScale) {
@@ -3857,7 +3869,7 @@ function drawHud() {
 
   ctx.fillStyle = gb("light");
   ctx.font = "12px 'Courier New', monospace";
-  ctx.fillText("v0.5.1 V-MOVE", 636, 66);
+  ctx.fillText("v0.5.2 ARROW", 636, 66);
   ctx.font = "16px 'Courier New', monospace";
 
   ctx.fillStyle = game.sonarCooldown <= 0 ? gb("light") : gb("mid");
@@ -4518,7 +4530,7 @@ function placeSupplyRandomly(supply) {
 }
 
 function chooseSupplyPosition(supply) {
-  // v0.5.1: 補給を探しに行く遊びにするため、複数候補から「遠い」位置を優先します。
+  // v0.5.2: 補給を探しに行く遊びにするため、複数候補から「遠い」位置を優先します。
   // 近場に固定化して見えないよう、前回位置とプレイヤー位置の両方から離します。
   const minPreviousDistance = isAirStage() ? 760 : isSpaceStage() ? 740 : 680;
   const minPlayerDistance = isAirStage() ? 700 : isSpaceStage() ? 680 : 620;
@@ -4554,18 +4566,18 @@ function getSupplySearchHint(supply) {
   const dy = supply.y - player.y;
 
   if (Math.abs(dx) > Math.abs(dy) * 1.15) {
-    return dx >= 0 ? "SUPPLY EAST" : "SUPPLY WEST";
+    return dx >= 0 ? "SUPPLY →" : "SUPPLY ←";
   }
 
   if (isSpaceStage()) {
-    return dy >= 0 ? "SUPPLY DOWN" : "SUPPLY UP";
+    return dy >= 0 ? "SUPPLY ↓" : "SUPPLY ↑";
   }
 
   if (isAirStage()) {
-    return dx >= 0 ? "SUPPLY EAST" : "SUPPLY WEST";
+    return dx >= 0 ? "SUPPLY →" : "SUPPLY ←";
   }
 
-  return dy >= 0 ? "SUPPLY DEEP" : "SUPPLY ABOVE";
+  return dy >= 0 ? "SUPPLY ↓" : "SUPPLY ↑";
 }
 
 function hasPreviousSupplyPosition(supply) {

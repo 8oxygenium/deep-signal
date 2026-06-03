@@ -18,8 +18,8 @@ const CONFIG = {
   friction: 0.998,
   wallBounce: 0.86,
   bumperBounce: 1.08,
-  flipperKick: 12.8,
-  flipperLift: 8.6,
+  flipperKick: 11.4,
+  flipperLift: 7.4,
   ballRadius: 14,
   startBalls: 3,
   launchSpeedY: -7.4
@@ -44,8 +44,12 @@ const bumpers = [
   { x: 545, y: 510, r: 44, kind: "pudding", score: 100 }
 ];
 
-const leftFlipper = { x1: 210, y1: 770, x2: 340, y2: 815 };
-const rightFlipper = { x1: 510, y1: 770, x2: 380, y2: 815 };
+const leftFlipper = { x1: 168, y1: 762, x2: 358, y2: 812 };
+const rightFlipper = { x1: 552, y1: 762, x2: 362, y2: 812 };
+const guideRails = [
+  { x1: 72, y1: 690, x2: 178, y2: 764, side: "left" },
+  { x1: 648, y1: 690, x2: 542, y2: 764, side: "right" }
+];
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -73,7 +77,7 @@ function resetGame() {
   state.leftFlipper = false;
   state.rightFlipper = false;
   resetBall();
-  setMessage("v0.1 prototype 起動中。左右タップでスプーンを動かそう。", 140);
+  setMessage("v0.1.1 起動中。ガイドレールで横落ちを減らしました。", 140);
   updateHud();
 }
 
@@ -163,10 +167,30 @@ function collideFlipper(base, pressed, isLeft) {
   ball.x = hit.x + nx * (ball.r + 11);
   ball.y = hit.y + ny * (ball.r + 11);
 
-  const sideKick = isLeft ? 2.8 : -2.8;
-  ball.vx = ball.vx * 0.55 + sideKick + (pressed ? (isLeft ? 3.4 : -3.4) : 0);
-  ball.vy = -CONFIG.flipperKick - (pressed ? CONFIG.flipperLift : 0);
+  const sideKick = isLeft ? 2.0 : -2.0;
+  ball.vx = ball.vx * 0.7 + sideKick + (pressed ? (isLeft ? 3.0 : -3.0) : 0);
+  ball.vy = pressed ? -CONFIG.flipperKick - CONFIG.flipperLift : Math.min(ball.vy * 0.2, -3.2);
   setMessage(pressed ? "SPOON FLIP!" : "SPOON BOUNCE!", 45);
+}
+
+function collideGuideRail(rail) {
+  const ball = state.ball;
+  const hit = pointToSegmentDistance(ball.x, ball.y, rail.x1, rail.y1, rail.x2, rail.y2);
+
+  if (hit.distance > ball.r + 9 || ball.vy < -8) {
+    return;
+  }
+
+  const dx = ball.x - hit.x;
+  const dy = ball.y - hit.y;
+  const len = Math.max(1, Math.hypot(dx, dy));
+  const nx = dx / len;
+  const ny = dy / len;
+  ball.x = hit.x + nx * (ball.r + 10);
+  ball.y = hit.y + ny * (ball.r + 10);
+  ball.vx = ball.vx * 0.58 + (rail.side === "left" ? 2.8 : -2.8);
+  ball.vy = Math.min(ball.vy * 0.28, -2.5);
+  setMessage("GUIDE RAIL!", 36);
 }
 
 function updateBall() {
@@ -198,6 +222,7 @@ function updateBall() {
     reflectCircle(bumper);
   }
 
+  guideRails.forEach(collideGuideRail);
   collideFlipper(leftFlipper, state.leftFlipper, true);
   collideFlipper(rightFlipper, state.rightFlipper, false);
 
@@ -245,7 +270,7 @@ function drawTable() {
   ctx.textAlign = "center";
   ctx.fillText("プリンピンボール", CONFIG.width / 2, 110);
   ctx.font = "700 18px 'Courier New', monospace";
-  ctx.fillText("Pudding Pinball v0.1 prototype", CONFIG.width / 2, 138);
+  ctx.fillText("Pudding Pinball v0.1.1 prototype", CONFIG.width / 2, 138);
 
   ctx.fillStyle = "rgba(216, 59, 45, 0.12)";
   ctx.fillRect(0, 0, CONFIG.width / 2, CONFIG.height);
@@ -316,6 +341,21 @@ function drawFlipper(base, pressed, isLeft) {
   ctx.restore();
 }
 
+function drawGuideRail(rail) {
+  ctx.save();
+  ctx.strokeStyle = "#4c7a46";
+  ctx.lineWidth = 16;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(rail.x1, rail.y1);
+  ctx.lineTo(rail.x2, rail.y2);
+  ctx.stroke();
+  ctx.strokeStyle = "#43261c";
+  ctx.lineWidth = 4;
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawBall() {
   const ball = state.ball;
   if (!ball) {
@@ -365,6 +405,7 @@ function drawOverlay() {
 function draw() {
   drawTable();
   bumpers.forEach(drawBumper);
+  guideRails.forEach(drawGuideRail);
   drawFlipper(leftFlipper, state.leftFlipper, true);
   drawFlipper(rightFlipper, state.rightFlipper, false);
   drawBall();

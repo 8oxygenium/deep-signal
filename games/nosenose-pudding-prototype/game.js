@@ -26,6 +26,8 @@ const CONFIG = {
   fallSpeed: 1.25,
   fastDropSpeed: 28,
   safeOffset: 58,
+  plateSafeLeft: 170,
+  plateSafeRight: 550,
   spawnMinX: 170,
   spawnMaxX: 550,
   spawnOffsetStart: 24,
@@ -108,7 +110,7 @@ function resetGame() {
   state.touch = null;
   state.lastTime = performance.now();
   spawnNewPudding(canvas.width / 2, true);
-  ui.message.textContent = "v0.1.9 起動中。プリンの大きさがもっと分かるようになりました。";
+  ui.message.textContent = "v0.2.0 起動中。お皿の上ならセーフ！";
   updateHud();
 }
 
@@ -254,7 +256,7 @@ function fastDrop() {
 }
 
 function updateFallingPudding(frameScale = 1) {
-  // v0.1.9: 自動落下は一番単純に、playing中は毎フレーム必ずyを増やします。
+  // v0.2.0: 自動落下は一番単純に、playing中は毎フレーム必ずyを増やします。
   // START待ちやready状態で止まって見える事故を避けるため、activePuddingがなければ即生成します。
   if (state.mode === "playing" && !state.activePudding) {
     spawnNewPudding(canvas.width / 2, state.stack.length === 0);
@@ -277,7 +279,13 @@ function landingSafeOffset(current, previous) {
   }
 
   const narrowWidth = Math.min(getPuddingWidth(current), getPuddingWidth(previous));
-  return clamp(narrowWidth * 0.52, 46, 70);
+  return clamp(narrowWidth * 0.6, 54, 82);
+}
+
+function isOnPlate(pudding) {
+  const left = pudding.x - getPuddingWidth(pudding) / 2;
+  const right = pudding.x + getPuddingWidth(pudding) / 2;
+  return right >= CONFIG.plateSafeLeft && left <= CONFIG.plateSafeRight;
 }
 
 function landActivePudding() {
@@ -290,6 +298,11 @@ function landActivePudding() {
   const baseX = previous ? previous.x : canvas.width / 2;
   const offset = Math.abs(pudding.x - baseX);
   const safeOffset = landingSafeOffset(pudding, previous);
+
+  if (state.stack.length === 0 && !isOnPlate(pudding)) {
+    triggerGameOver(pudding);
+    return;
+  }
 
   if (state.stack.length > 0 && offset > safeOffset) {
     triggerGameOver(pudding);
@@ -321,7 +334,7 @@ function landActivePudding() {
   }
 
   spawnNewPudding(pudding.x);
-  ui.message.textContent = `のせられた！ 次は${state.activePudding.label}、大きさと位置が変わります。`;
+  ui.message.textContent = `のせられた！ お皿の上ならセーフ。次は${state.activePudding.label}です。`;
   updateHud();
 }
 
@@ -413,6 +426,13 @@ function drawPlate() {
   ctx.lineWidth = 3;
   ctx.beginPath();
   ctx.ellipse(0, 0, 130, 15, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(76, 122, 70, 0.76)";
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(CONFIG.plateSafeLeft - canvas.width / 2, -3);
+  ctx.lineTo(CONFIG.plateSafeRight - canvas.width / 2, -3);
   ctx.stroke();
   ctx.restore();
 }

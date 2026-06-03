@@ -78,9 +78,6 @@ function lightLamp(name) {
   clearLamps();
   elements.lamps[name].classList.add("active");
   elements.resultText.textContent = name === "PON" ? "PON!" : `${name}...`;
-  if (name !== "PON") {
-    setHandDisplay("player", null, "???");
-  }
 }
 
 function setResultState(result) {
@@ -125,25 +122,28 @@ function chooseHand(playerHand) {
   state.mode = "playing";
   state.rival = state.rival === "INSERT COIN" ? pickRival() : state.rival;
   setResultState("");
-  setHandDisplay("player", null, "READY");
+  setHandDisplay("player", playerHand);
   setHandDisplay("cpu", null, "???");
-  elements.commentText.textContent = "CPUの手がぐるぐるします。PON!で止まるよ。";
+  elements.commentText.textContent = "選んだ手はそのまま表示。CPUが少し長くぐるぐるします。";
   updateUi();
 
   runJankenSequence(playerHand);
 }
 
 function runJankenSequence(playerHand) {
+  const finalCpuHand = HANDS[Math.floor(Math.random() * HANDS.length)];
   setTimeout(() => {
     lightLamp("JAN");
     startCpuRoulette();
   }, 120);
-  setTimeout(() => lightLamp("KEN"), 520);
+  setTimeout(() => lightLamp("KEN"), 680);
   setTimeout(() => {
     lightLamp("PON");
     stopCpuRoulette();
-  }, 1160);
-  setTimeout(() => resolveRound(playerHand), 1370);
+    setHandDisplay("cpu", finalCpuHand);
+    flashHands();
+  }, 1380);
+  setTimeout(() => resolveRound(playerHand, finalCpuHand), 1580);
 }
 
 function startCpuRoulette() {
@@ -154,7 +154,7 @@ function startCpuRoulette() {
     state.rouletteIndex += 1;
     setHandDisplay("cpu", hand);
     elements.cpuIcon.parentElement.classList.toggle("roulette-flash");
-  }, 110);
+  }, 95);
 }
 
 function stopCpuRoulette() {
@@ -165,9 +165,9 @@ function stopCpuRoulette() {
   elements.cpuIcon.parentElement.classList.remove("roulette-flash");
 }
 
-function resolveRound(playerHand) {
+function resolveRound(playerHand, fixedCpuHand) {
   stopCpuRoulette();
-  const cpuHand = HANDS[Math.floor(Math.random() * HANDS.length)];
+  const cpuHand = fixedCpuHand || HANDS[Math.floor(Math.random() * HANDS.length)];
   const result = judge(playerHand, cpuHand);
   setHandDisplay("player", playerHand);
   setHandDisplay("cpu", cpuHand);
