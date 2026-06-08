@@ -1,5 +1,5 @@
 // ============================================================
-// DEEP SIGNAL v0.5.3 virtual stick tuning
+// DEEP SIGNAL v0.5.4 mobile sonar button
 // Web版の完成ゲームへ育てるためのベース実装です。
 // 将来の展開先:
 // - Web版: このままHTML/CSS/JavaScriptで拡張
@@ -14,7 +14,7 @@
 // ------------------------------------------------------------
 
 const CONFIG = {
-  version: "v0.5.3 virtual stick tuning",
+  version: "v0.5.4 mobile sonar button",
 
   // 表示は800x600相当の論理座標で作り、canvas内部は400x300で描画します。
   // CSSで2倍表示することで、ピクセルがくっきり見えるようにしています。
@@ -630,6 +630,11 @@ const enemyBullets = [];
 const explosions = [];
 const enemies = [];
 const sonarPulses = [];
+
+// v0.5.4: スマホ用ソナーボタン。右下のショットボタンの少し上（論理座標800x600系）。
+// 右側=ショット領域内にあるので、handlePointerDownで最優先に判定して操作を奪われないようにする。
+// ショット(708,504 r44)の真上に縦に並べる＝右親指で「撃つ↓／ソナー↑」を押し分け。右上のミニマップに被らない。
+const sonarButton = { x: 708, y: 396, r: 34 };
 const supplies = [];
 const oneUps = [];
 const muzzleFlashes = [];
@@ -954,6 +959,14 @@ function handlePointerDown(event) {
   }
 
   const point = getPointerWorldPoint(event);
+
+  // v0.5.4: SONARボタンを最優先で判定。右側のショット領域内にあるため、
+  // ここで先に処理して return しないと、ショットに操作を奪われてソナーが撃てない。
+  if (distance(point.screenX, point.screenY, sonarButton.x, sonarButton.y) <= sonarButton.r) {
+    activateSonar();
+    return;
+  }
+
   const isLeftSide = point.screenX < SCREEN_WIDTH / 2;
 
   if (isLeftSide && touchInput.movePointerId === null) {
@@ -2711,6 +2724,20 @@ function drawVirtualTouchControls() {
   ctx.font = "12px 'Courier New', monospace";
   ctx.textAlign = "center";
   ctx.fillText("SHOT", shotX, shotY + 4);
+
+  // v0.5.4: SONARボタン。撃てる時は明るく、クールダウン中は暗く（押せない見た目）。
+  const sonarReady = game.sonarCooldown <= 0;
+  ctx.globalAlpha = sonarReady ? 0.62 : 0.26;
+  ctx.fillStyle = "rgba(155, 188, 15, 0.08)";
+  ctx.strokeStyle = gb("light");
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(sonarButton.x, sonarButton.y, sonarButton.r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = gb("light");
+  ctx.font = "11px 'Courier New', monospace";
+  ctx.fillText("SONAR", sonarButton.x, sonarButton.y + 4);
   ctx.restore();
 }
 
@@ -3968,7 +3995,7 @@ function drawHud() {
 
   ctx.fillStyle = gb("light");
   ctx.font = "12px 'Courier New', monospace";
-  ctx.fillText("v0.5.3 STICK", 636, 66);
+  ctx.fillText("v0.5.4 SONAR", 636, 66);
   ctx.font = "16px 'Courier New', monospace";
 
   ctx.fillStyle = game.sonarCooldown <= 0 ? gb("light") : gb("mid");
@@ -4141,7 +4168,7 @@ function drawStageClearOverlay() {
   ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
   ctx.strokeStyle = blink ? gb("light") : gb("mid");
   ctx.lineWidth = 4;
-  ctx.strokeRect(112, SCREEN_HEIGHT / 2 - 72, SCREEN_WIDTH - 224, 144);
+  ctx.strokeRect(112, SCREEN_HEIGHT / 2 - 80, SCREEN_WIDTH - 224, 168);
 
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
