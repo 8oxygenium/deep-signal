@@ -112,7 +112,7 @@ function resetGame() {
   state.touch = null;
   state.lastTime = performance.now();
   spawnNewPudding(canvas.width / 2, true);
-  ui.message.textContent = "v0.2.2 起動中。傾いても重心がお皿の上なら乗ったまま、外に出たら落ちます。";
+  ui.message.textContent = "v0.2.3 起動中。お皿の上ならどこでも乗る、外に出たら落ちます。";
   updateHud();
 }
 
@@ -302,14 +302,8 @@ function getPuddingOverlap(current, previous) {
   return Math.max(0, Math.min(currentRight, previousRight) - Math.max(currentLeft, previousLeft));
 }
 
-function getSupportSpan(previous) {
-  // 支持面：1段目はお皿の安全ゾーン、2段目以降は「下のプリンの幅」。
-  if (previous) {
-    return {
-      left: previous.x - getPuddingWidth(previous) / 2,
-      right: previous.x + getPuddingWidth(previous) / 2
-    };
-  }
+function getSupportSpan() {
+  // v0.2.3: 全段「お皿」を支持面とする。段数で変えない。
   return { left: CONFIG.plateSafeLeft, right: CONFIG.plateSafeRight };
 }
 
@@ -319,8 +313,7 @@ function landActivePudding() {
     return;
   }
 
-  const previous = state.stack[state.stack.length - 1] || null;
-  const support = getSupportSpan(previous);
+  const support = getSupportSpan();
   const supportCenter = (support.left + support.right) / 2;
   const supportHalf = Math.max(1, (support.right - support.left) / 2);
 
@@ -580,7 +573,7 @@ function drawVersion() {
   ctx.fillStyle = "#43261c";
   ctx.font = "700 18px 'Courier New', monospace";
   ctx.textAlign = "right";
-  ctx.fillText("v0.2.2", canvas.width - 12, canvas.height - 12);
+  ctx.fillText("v0.2.3", canvas.width - 12, canvas.height - 12);
   ctx.restore();
 }
 
