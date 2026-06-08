@@ -14,15 +14,16 @@ const ui = {
 const CONFIG = {
   width: 720,
   height: 920,
-  gravity: 0.18,
+  gravity: 0.22,
   friction: 0.998,
   wallBounce: 0.86,
   bumperBounce: 1.08,
-  flipperKick: 11.4,
-  flipperLift: 7.4,
+  flipperKick: 9.0,
+  flipperLift: 6.0,
   ballRadius: 14,
   startBalls: 3,
-  launchSpeedY: -7.4
+  launchSpeedY: -7.4,
+  minActiveSpeed: 2.2
 };
 
 const state = {
@@ -44,11 +45,14 @@ const bumpers = [
   { x: 545, y: 510, r: 44, kind: "pudding", score: 100 }
 ];
 
-const leftFlipper = { x1: 168, y1: 762, x2: 358, y2: 812 };
-const rightFlipper = { x1: 552, y1: 762, x2: 362, y2: 812 };
+const leftFlipper = { x1: 186, y1: 762, x2: 348, y2: 812 };
+const rightFlipper = { x1: 534, y1: 762, x2: 372, y2: 812 };
+// アウトレーン封鎖壁: 外壁からフリッパーの軸まで斜めにつなぎ、
+// 横の隙間からボールがすり抜けて理不尽に落ちるのを防ぐ。
+// これでドレイン(落下口)は中央のフリッパー2本の間だけになる。
 const guideRails = [
-  { x1: 72, y1: 690, x2: 178, y2: 764, side: "left" },
-  { x1: 648, y1: 690, x2: 542, y2: 764, side: "right" }
+  { x1: 42, y1: 672, x2: 188, y2: 770, side: "left" },
+  { x1: 678, y1: 672, x2: 532, y2: 770, side: "right" }
 ];
 
 function clamp(value, min, max) {
@@ -77,7 +81,7 @@ function resetGame() {
   state.leftFlipper = false;
   state.rightFlipper = false;
   resetBall();
-  setMessage("v0.1.1 起動中。ガイドレールで横落ちを減らしました。", 140);
+  setMessage("v0.1.2 横の隙間をふさぎました。落ちるのは中央だけ！左右でフリッパー。", 160);
   updateHud();
 }
 
@@ -155,42 +159,79 @@ function collideFlipper(base, pressed, isLeft) {
   const flipper = getFlipperLine(base, pressed, isLeft);
   const hit = pointToSegmentDistance(ball.x, ball.y, flipper.x1, flipper.y1, flipper.x2, flipper.y2);
 
-  if (hit.distance > ball.r + 10 || ball.vy < -12) {
+  // フリップ直後に上へ速く飛んでいる時だけ再衝突を無視する
+  if (hit.distance > ball.r + 10 || ball.vy < -13) {
+    return;
+  }
+  // 内側チップ(t>0.94)：押していない時はボールを捕まえず中央ドレインへ落とす。
+  // 押している時はチップでも受けて確実に救う。
+  if (!pressed && hit.t > 0.94) {
     return;
   }
 
-  const dx = ball.x - hit.x;
-  const dy = ball.y - hit.y;
-  const len = Math.max(1, Math.hypot(dx, dy));
-  const nx = dx / len;
-  const ny = dy / len;
-  ball.x = hit.x + nx * (ball.r + 11);
-  ball.y = hit.y + ny * (ball.r + 11);
+  let dx = ball.x - hit.x;
+  let dy = ball.y - hit.y;
+  let len = Math.max(1, Math.hypot(dx, dy));
+  let nx = dx / len;
+  let ny = dy / len;
+  // 法線は必ずフリッパーの上面(上向き)にそろえる
+  if (ny > 0) {
+    nx = -nx;
+    ny = -ny;
+  }
+  ball.x = hit.x + nx * (ball.r + 10);
+  ball.y = hit.y + ny * (ball.r + 10);
 
-  const sideKick = isLeft ? 2.0 : -2.0;
-  ball.vx = ball.vx * 0.7 + sideKick + (pressed ? (isLeft ? 3.0 : -3.0) : 0);
-  ball.vy = pressed ? -CONFIG.flipperKick - CONFIG.flipperLift : Math.min(ball.vy * 0.2, -3.2);
-  setMessage(pressed ? "SPOON FLIP!" : "SPOON BOUNCE!", 45);
+  if (pressed) {
+    // 押した時だけ強く上＋中央へ弾き上げる
+    ball.vx = ball.vx * 0.5 + (isLeft ? 3.4 : -3.4);
+    ball.vy = -CONFIG.flipperKick - CONFIG.flipperLift;
+    setMessage("SPOON FLIP!", 45);
+  } else {
+    // 置いたフリッパーは「坂」: 上には弾かず、めり込みだけ止めて
+    // 重力で中央のチップ方向へゆっくり転がり落ちる
+    const dot = ball.vx * nx + ball.vy * ny;
+    if (dot < 0) {
+      ball.vx -= dot * nx * 1.1;
+      ball.vy -= dot * ny * 1.1;
+    }
+    // 中央(落下口)方向へやさしく転がす
+    ball.vx += isLeft ? 0.45 : -0.45;
+  }
 }
 
 function collideGuideRail(rail) {
+  // アウトレーン封鎖壁との衝突。常に有効な「壁」として扱い、
+  // ボールは大きく跳ね返らず、壁に沿ってフリッパー方向へ転がり落ちる。
   const ball = state.ball;
   const hit = pointToSegmentDistance(ball.x, ball.y, rail.x1, rail.y1, rail.x2, rail.y2);
 
-  if (hit.distance > ball.r + 9 || ball.vy < -8) {
+  if (hit.distance > ball.r + 8) {
     return;
   }
 
-  const dx = ball.x - hit.x;
-  const dy = ball.y - hit.y;
-  const len = Math.max(1, Math.hypot(dx, dy));
+  let dx = ball.x - hit.x;
+  let dy = ball.y - hit.y;
+  let len = Math.hypot(dx, dy);
+  if (len < 0.001) {
+    // ちょうど壁の上に重なった場合は、内側(上向き)を法線とみなす
+    dx = rail.side === "left" ? 1 : -1;
+    dy = -1;
+    len = Math.hypot(dx, dy);
+  }
   const nx = dx / len;
   const ny = dy / len;
-  ball.x = hit.x + nx * (ball.r + 10);
-  ball.y = hit.y + ny * (ball.r + 10);
-  ball.vx = ball.vx * 0.58 + (rail.side === "left" ? 2.8 : -2.8);
-  ball.vy = Math.min(ball.vy * 0.28, -2.5);
-  setMessage("GUIDE RAIL!", 36);
+  // 壁の外へ押し出す
+  ball.x = hit.x + nx * (ball.r + 8);
+  ball.y = hit.y + ny * (ball.r + 8);
+  // 壁にめり込む速度成分だけを抑える(ほぼ滑らせる)。横には弾き返さない。
+  const dot = ball.vx * nx + ball.vy * ny;
+  if (dot < 0) {
+    ball.vx -= dot * nx * 1.2;
+    ball.vy -= dot * ny * 1.2;
+  }
+  // フリッパー側(中央寄り)へ少しだけ転がす
+  ball.vx += rail.side === "left" ? 0.55 : -0.55;
 }
 
 function updateBall() {
@@ -204,6 +245,13 @@ function updateBall() {
   ball.vy *= CONFIG.friction;
   ball.x += ball.vx;
   ball.y += ball.vy;
+
+  const speed = Math.hypot(ball.vx, ball.vy);
+  if (speed < CONFIG.minActiveSpeed && ball.y < 600) {
+    const boost = CONFIG.minActiveSpeed / Math.max(0.1, speed);
+    ball.vx *= boost;
+    ball.vy = Math.max(ball.vy * boost, 0.8);
+  }
 
   if (ball.x < 42 + ball.r) {
     ball.x = 42 + ball.r;
@@ -270,7 +318,7 @@ function drawTable() {
   ctx.textAlign = "center";
   ctx.fillText("プリンピンボール", CONFIG.width / 2, 110);
   ctx.font = "700 18px 'Courier New', monospace";
-  ctx.fillText("Pudding Pinball v0.1.1 prototype", CONFIG.width / 2, 138);
+  ctx.fillText("Pudding Pinball v0.1.2 prototype", CONFIG.width / 2, 138);
 
   ctx.fillStyle = "rgba(216, 59, 45, 0.12)";
   ctx.fillRect(0, 0, CONFIG.width / 2, CONFIG.height);
@@ -280,6 +328,13 @@ function drawTable() {
   ctx.font = "700 22px 'Courier New', monospace";
   ctx.fillText("LEFT", 145, CONFIG.height - 28);
   ctx.fillText("RIGHT", CONFIG.width - 145, CONFIG.height - 28);
+
+  ctx.fillStyle = "rgba(216, 59, 45, 0.18)";
+  drawRoundedRect(CONFIG.width / 2 - 64, CONFIG.height - 88, 128, 48, 18);
+  ctx.fill();
+  ctx.fillStyle = "#43261c";
+  ctx.font = "700 16px 'Courier New', monospace";
+  ctx.fillText("DRAIN", CONFIG.width / 2, CONFIG.height - 57);
 }
 
 function drawBumper(bumper) {
@@ -343,8 +398,8 @@ function drawFlipper(base, pressed, isLeft) {
 
 function drawGuideRail(rail) {
   ctx.save();
-  ctx.strokeStyle = "#4c7a46";
-  ctx.lineWidth = 16;
+  ctx.strokeStyle = "#8f4a20";
+  ctx.lineWidth = 18;
   ctx.lineCap = "round";
   ctx.beginPath();
   ctx.moveTo(rail.x1, rail.y1);
