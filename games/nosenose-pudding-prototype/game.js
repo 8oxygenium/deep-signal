@@ -25,8 +25,11 @@ const CONFIG = {
   moveSpeed: 4.4,
   fallSpeed: 1.25,
   fastDropSpeed: 28,
+  safeOffset: 58,
   plateSafeLeft: 170,
   plateSafeRight: 550,
+  minPlateOverlap: 18,
+  minPuddingOverlap: 16,
   spawnMinX: 170,
   spawnMaxX: 550,
   spawnOffsetStart: 24,
@@ -109,7 +112,7 @@ function resetGame() {
   state.touch = null;
   state.lastTime = performance.now();
   spawnNewPudding(canvas.width / 2, true);
-  ui.message.textContent = "v0.2.1 起動中。中心がお皿の上ならセーフ、端寄りで傾くよ。";
+  ui.message.textContent = "v0.2.2 起動中。傾いても重心がお皿の上なら乗ったまま、外に出たら落ちます。";
   updateHud();
 }
 
@@ -272,9 +275,44 @@ function updateFallingPudding(frameScale = 1) {
   }
 }
 
-// 着地判定: 「重心が支持面の上にあるか」の1判定。
-// 傾き角(tilt)と重心X(gravX)の2値だけで決着させます。
-// 重心X = プリンの中心X（傾きによる微小ズレより中心位置が支配的なため単純化）
+function landingSafeOffset(current, previous) {
+  if (!previous) {
+    return CONFIG.safeOffset;
+  }
+
+  const narrowWidth = Math.min(getPuddingWidth(current), getPuddingWidth(previous));
+  return clamp(narrowWidth * 0.6, 54, 82);
+}
+
+function isOnPlate(pudding) {
+  return getPlateOverlap(pudding) >= CONFIG.minPlateOverlap;
+}
+
+function getPlateOverlap(pudding) {
+  const left = pudding.x - getPuddingWidth(pudding) / 2;
+  const right = pudding.x + getPuddingWidth(pudding) / 2;
+  return Math.max(0, Math.min(right, CONFIG.plateSafeRight) - Math.max(left, CONFIG.plateSafeLeft));
+}
+
+function getPuddingOverlap(current, previous) {
+  const currentLeft = current.x - getPuddingWidth(current) / 2;
+  const currentRight = current.x + getPuddingWidth(current) / 2;
+  const previousLeft = previous.x - getPuddingWidth(previous) / 2;
+  const previousRight = previous.x + getPuddingWidth(previous) / 2;
+  return Math.max(0, Math.min(currentRight, previousRight) - Math.max(currentLeft, previousLeft));
+}
+
+function getSupportSpan(previous) {
+  // 支持面：1段目はお皿の安全ゾーン、2段目以降は「下のプリンの幅」。
+  if (previous) {
+    return {
+      left: previous.x - getPuddingWidth(previous) / 2,
+      right: previous.x + getPuddingWidth(previous) / 2
+    };
+  }
+  return { left: CONFIG.plateSafeLeft, right: CONFIG.plateSafeRight };
+}
+
 function landActivePudding() {
   const pudding = state.activePudding;
   if (!pudding) {
@@ -282,32 +320,23 @@ function landActivePudding() {
   }
 
   const previous = state.stack[state.stack.length - 1] || null;
-  const supportLeft = previous
-    ? previous.x - getPuddingWidth(previous) / 2
-    : CONFIG.plateSafeLeft;
-  const supportRight = previous
-    ? previous.x + getPuddingWidth(previous) / 2
-    : CONFIG.plateSafeRight;
-  const supportCenter = (supportLeft + supportRight) / 2;
-  const supportHalfWidth = (supportRight - supportLeft) / 2;
+  const support = getSupportSpan(previous);
+  const supportCenter = (support.left + support.right) / 2;
+  const supportHalf = Math.max(1, (support.right - support.left) / 2);
 
-  // 完全に支持面の外 → 即アウト
-  const puddingHalfWidth = getPuddingWidth(pudding) / 2;
-  if (pudding.x + puddingHalfWidth <= supportLeft || pudding.x - puddingHalfWidth >= supportRight) {
-    triggerGameOver(pudding);
-    return;
-  }
-
-  // 重心X = プリン中心X。支持面の外に出たら滑り落ちてアウト。
+  // ★v0.2.2の核心：判定は「重心X（＝プリンの中心 pudding.x）が支持面の上にあるか」の1本だけ。
+  //   - 重心が支持面の内側 → 傾きつきでセーフ（端ほど大きく傾くが、即アウトにしない）
+  //   - 重心が支持面の外   → 滑り落ちてアウト
+  // 「半分以上乗っていればセーフ」＝「中心が支持面の内側」と数学的に一致するので、これ1本で合格条件1〜4を満たす。
   const gravX = pudding.x;
-  if (gravX < supportLeft || gravX > supportRight) {
+  if (gravX < support.left || gravX > support.right) {
     triggerGameOver(pudding);
     return;
   }
 
-  // 傾き量（視覚表現用）。重心判定とは独立して計算します。
-  const tilt = clamp((pudding.x - supportCenter) / Math.max(1, supportHalfWidth), -1.4, 1.4);
-  const isWobble = Math.abs(tilt) > 0.7;
+  // 端に寄るほど大きく傾ける（重心が中なら留まる）。着地時に1回だけ確定＝永久ぷるぷる無し。
+  const edgeRatio = clamp((gravX - supportCenter) / supportHalf, -1, 1);
+  const tilt = edgeRatio * 1.2;
 
   state.stack.push({
     kind: pudding.kind,
@@ -334,9 +363,11 @@ function landActivePudding() {
   }
 
   spawnNewPudding(pudding.x);
-  ui.message.textContent = isWobble
-    ? "斜めってるけど乗ってる！セーフ！"
-    : `のせられた！ 次は${state.activePudding.label}です。`;
+  if (Math.abs(edgeRatio) > 0.7) {
+    ui.message.textContent = `ぐらぐら！でも乗ってる、セーフ！次は${state.activePudding.label}です。`;
+  } else {
+    ui.message.textContent = `のせられた！次は${state.activePudding.label}です。`;
+  }
   updateHud();
 }
 
@@ -543,6 +574,16 @@ function drawOverlay() {
   ctx.fillText("R / RESETで再挑戦", canvas.width / 2, 276);
 }
 
+function drawVersion() {
+  ctx.save();
+  ctx.globalAlpha = 0.85;
+  ctx.fillStyle = "#43261c";
+  ctx.font = "700 18px 'Courier New', monospace";
+  ctx.textAlign = "right";
+  ctx.fillText("v0.2.2", canvas.width - 12, canvas.height - 12);
+  ctx.restore();
+}
+
 function draw() {
   drawBackground();
   drawTouchGuide();
@@ -560,14 +601,7 @@ function draw() {
   }
 
   drawOverlay();
-
-  ctx.save();
-  ctx.globalAlpha = 0.42;
-  ctx.fillStyle = "#43261c";
-  ctx.font = "11px 'Courier New', monospace";
-  ctx.textAlign = "right";
-  ctx.fillText("v0.2.1", canvas.width - 8, canvas.height - 8);
-  ctx.restore();
+  drawVersion();
 }
 
 function loop(timestamp) {
