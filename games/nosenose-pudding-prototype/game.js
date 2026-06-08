@@ -25,7 +25,6 @@ const CONFIG = {
   moveSpeed: 4.4,
   fallSpeed: 1.25,
   fastDropSpeed: 28,
-  safeOffset: 58,
   plateSafeLeft: 170,
   plateSafeRight: 550,
   spawnMinX: 170,
@@ -110,7 +109,7 @@ function resetGame() {
   state.touch = null;
   state.lastTime = performance.now();
   spawnNewPudding(canvas.width / 2, true);
-  ui.message.textContent = "v0.2.0 起動中。お皿の上ならセーフ！";
+  ui.message.textContent = "v0.2.1 起動中。中心がお皿の上ならセーフ、端寄りで傾くよ。";
   updateHud();
 }
 
@@ -273,21 +272,9 @@ function updateFallingPudding(frameScale = 1) {
   }
 }
 
-function landingSafeOffset(current, previous) {
-  if (!previous) {
-    return CONFIG.safeOffset;
-  }
-
-  const narrowWidth = Math.min(getPuddingWidth(current), getPuddingWidth(previous));
-  return clamp(narrowWidth * 0.6, 54, 82);
-}
-
-function isOnPlate(pudding) {
-  const left = pudding.x - getPuddingWidth(pudding) / 2;
-  const right = pudding.x + getPuddingWidth(pudding) / 2;
-  return right >= CONFIG.plateSafeLeft && left <= CONFIG.plateSafeRight;
-}
-
+// 着地判定: 「重心が支持面の上にあるか」の1判定。
+// 傾き角(tilt)と重心X(gravX)の2値だけで決着させます。
+// 重心X = プリンの中心X（傾きによる微小ズレより中心位置が支配的なため単純化）
 function landActivePudding() {
   const pudding = state.activePudding;
   if (!pudding) {
@@ -295,19 +282,32 @@ function landActivePudding() {
   }
 
   const previous = state.stack[state.stack.length - 1] || null;
-  const baseX = previous ? previous.x : canvas.width / 2;
-  const offset = Math.abs(pudding.x - baseX);
-  const safeOffset = landingSafeOffset(pudding, previous);
+  const supportLeft = previous
+    ? previous.x - getPuddingWidth(previous) / 2
+    : CONFIG.plateSafeLeft;
+  const supportRight = previous
+    ? previous.x + getPuddingWidth(previous) / 2
+    : CONFIG.plateSafeRight;
+  const supportCenter = (supportLeft + supportRight) / 2;
+  const supportHalfWidth = (supportRight - supportLeft) / 2;
 
-  if (state.stack.length === 0 && !isOnPlate(pudding)) {
+  // 完全に支持面の外 → 即アウト
+  const puddingHalfWidth = getPuddingWidth(pudding) / 2;
+  if (pudding.x + puddingHalfWidth <= supportLeft || pudding.x - puddingHalfWidth >= supportRight) {
     triggerGameOver(pudding);
     return;
   }
 
-  if (state.stack.length > 0 && offset > safeOffset) {
+  // 重心X = プリン中心X。支持面の外に出たら滑り落ちてアウト。
+  const gravX = pudding.x;
+  if (gravX < supportLeft || gravX > supportRight) {
     triggerGameOver(pudding);
     return;
   }
+
+  // 傾き量（視覚表現用）。重心判定とは独立して計算します。
+  const tilt = clamp((pudding.x - supportCenter) / Math.max(1, supportHalfWidth), -1.4, 1.4);
+  const isWobble = Math.abs(tilt) > 0.7;
 
   state.stack.push({
     kind: pudding.kind,
@@ -321,7 +321,7 @@ function landActivePudding() {
     x: pudding.x,
     y: pudding.y,
     phase: pudding.phase,
-    tilt: clamp((pudding.x - baseX) / safeOffset, -1, 1)
+    tilt
   });
 
   state.activePudding = null;
@@ -334,7 +334,9 @@ function landActivePudding() {
   }
 
   spawnNewPudding(pudding.x);
-  ui.message.textContent = `のせられた！ お皿の上ならセーフ。次は${state.activePudding.label}です。`;
+  ui.message.textContent = isWobble
+    ? "斜めってるけど乗ってる！セーフ！"
+    : `のせられた！ 次は${state.activePudding.label}です。`;
   updateHud();
 }
 
@@ -456,7 +458,7 @@ function drawPudding(pudding, index, isActive) {
   const wobble = Math.sin((state.frame * 0.1) + pudding.phase + index) * (isActive ? 5 : 2.4);
   const width = (getPuddingWidth(pudding) + wobble) * (pudding.squish || 1);
   const height = getPuddingHeight(pudding) / (pudding.squish || 1);
-  const tilt = (pudding.tilt || 0) * 0.16 + wobble * 0.002;
+  const tilt = (pudding.tilt || 0) * 0.22 + wobble * 0.002;
   const x = pudding.x - width / 2;
   const y = pudding.y - height / 2;
 
@@ -558,6 +560,14 @@ function draw() {
   }
 
   drawOverlay();
+
+  ctx.save();
+  ctx.globalAlpha = 0.42;
+  ctx.fillStyle = "#43261c";
+  ctx.font = "11px 'Courier New', monospace";
+  ctx.textAlign = "right";
+  ctx.fillText("v0.2.1", canvas.width - 8, canvas.height - 8);
+  ctx.restore();
 }
 
 function loop(timestamp) {
