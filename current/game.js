@@ -1,5 +1,5 @@
 // ============================================================
-// DEEP SIGNAL v0.5.2 supply arrow hint tuning
+// DEEP SIGNAL v0.5.3 virtual stick tuning
 // Web版の完成ゲームへ育てるためのベース実装です。
 // 将来の展開先:
 // - Web版: このままHTML/CSS/JavaScriptで拡張
@@ -14,7 +14,7 @@
 // ------------------------------------------------------------
 
 const CONFIG = {
-  version: "v0.5.2 supply arrow hint tuning",
+  version: "v0.5.3 virtual stick tuning",
 
   // 表示は800x600相当の論理座標で作り、canvas内部は400x300で描画します。
   // CSSで2倍表示することで、ピクセルがくっきり見えるようにしています。
@@ -135,6 +135,10 @@ const CONFIG = {
     // 指を動かした量だけ相対移動させます。調整しやすいよう倍率を設定化しています。
     touchMoveScale: 1.35,
     touchVerticalMoveScale: 1.68,
+    stickRadius: 52,
+    stickDeadZone: 0.14,
+    stickCenterX: 104,
+    stickCenterY: 492,
   },
 
   // Game Boy風の4階調パレットです。
@@ -201,6 +205,13 @@ const touchInput = {
   dragStartPlayerY: 0,
   dragLastScreenX: 0,
   dragLastScreenY: 0,
+  stickActive: false,
+  stickCenterX: 104,
+  stickCenterY: 492,
+  stickKnobX: 104,
+  stickKnobY: 492,
+  stickVectorX: 0,
+  stickVectorY: 0,
 };
 
 const game = {
@@ -948,7 +959,7 @@ function handlePointerDown(event) {
   if (isLeftSide && touchInput.movePointerId === null) {
     touchInput.movePointerId = event.pointerId;
     touchInput.moveActive = true;
-    startRelativeTouchDrag(point);
+    startVirtualStick(point);
     return;
   }
 
@@ -965,13 +976,14 @@ function handlePointerMove(event) {
   }
 
   event.preventDefault();
-  updateRelativeTouchDrag(getPointerWorldPoint(event));
+  updateVirtualStick(getPointerWorldPoint(event));
 }
 
 function handlePointerEnd(event) {
   if (event.pointerId === touchInput.movePointerId) {
     touchInput.movePointerId = null;
     touchInput.moveActive = false;
+    resetVirtualStick();
   }
 
   if (event.pointerId === touchInput.shootPointerId) {
@@ -1053,6 +1065,43 @@ function updateRelativeTouchDrag(point) {
   }
 }
 
+function startVirtualStick(point) {
+  touchInput.stickActive = true;
+  touchInput.stickCenterX = CONFIG.input.stickCenterX;
+  touchInput.stickCenterY = CONFIG.input.stickCenterY;
+  updateVirtualStick(point);
+}
+
+function updateVirtualStick(point) {
+  const radius = CONFIG.input.stickRadius;
+  const dx = point.screenX - touchInput.stickCenterX;
+  const dy = point.screenY - touchInput.stickCenterY;
+  const length = Math.hypot(dx, dy);
+  const limited = length > radius ? radius / Math.max(1, length) : 1;
+  const knobDx = dx * limited;
+  const knobDy = dy * limited;
+  const vectorX = knobDx / radius;
+  const vectorY = knobDy / radius;
+
+  touchInput.stickKnobX = touchInput.stickCenterX + knobDx;
+  touchInput.stickKnobY = touchInput.stickCenterY + knobDy;
+  touchInput.stickVectorX = Math.abs(vectorX) < CONFIG.input.stickDeadZone ? 0 : vectorX;
+  touchInput.stickVectorY = Math.abs(vectorY) < CONFIG.input.stickDeadZone ? 0 : vectorY;
+
+  if (isAirStage() && Math.abs(touchInput.stickVectorY) > 0.22 && game.statusTimer <= 0) {
+    setStatus("SURFACE MODE", 36);
+    showFireNotice("ALT LOCK");
+  }
+}
+
+function resetVirtualStick() {
+  touchInput.stickActive = false;
+  touchInput.stickKnobX = touchInput.stickCenterX;
+  touchInput.stickKnobY = touchInput.stickCenterY;
+  touchInput.stickVectorX = 0;
+  touchInput.stickVectorY = 0;
+}
+
 function clearTouchInput() {
   touchInput.movePointerId = null;
   touchInput.shootPointerId = null;
@@ -1064,6 +1113,7 @@ function clearTouchInput() {
   touchInput.dragStartPlayerY = 0;
   touchInput.dragLastScreenX = 0;
   touchInput.dragLastScreenY = 0;
+  resetVirtualStick();
 }
 
 function isGameKey(code) {
@@ -1301,6 +1351,11 @@ function updatePlayer(frameScale) {
 
   if (keys.ArrowDown || keys.KeyS) {
     player.y += player.speed * frameScale;
+  }
+
+  if (touchInput.stickActive) {
+    player.x += touchInput.stickVectorX * player.speed * frameScale;
+    player.y += touchInput.stickVectorY * player.speed * frameScale;
   }
 
   const halfWidth = player.width / 2;
@@ -2585,6 +2640,7 @@ function drawGameScreen() {
   drawDepthOverlay();
   drawPlayerFireNotice();
   drawSupplyDirectionHint();
+  drawVirtualTouchControls();
   drawHud();
   drawMinimap();
   drawControlHelp();
@@ -2613,6 +2669,49 @@ function drawGameScreen() {
   if (game.state === STATE.COMPLETE) {
     drawOrbitalUnlockOverlay();
   }
+}
+
+function drawVirtualTouchControls() {
+  if (game.state !== STATE.PLAYING) {
+    return;
+  }
+
+  const radius = CONFIG.input.stickRadius;
+  const baseX = touchInput.stickCenterX || CONFIG.input.stickCenterX;
+  const baseY = touchInput.stickCenterY || CONFIG.input.stickCenterY;
+  const knobX = touchInput.stickActive ? touchInput.stickKnobX : baseX;
+  const knobY = touchInput.stickActive ? touchInput.stickKnobY : baseY;
+  const shotX = SCREEN_WIDTH - 92;
+  const shotY = SCREEN_HEIGHT - 96;
+
+  ctx.save();
+  ctx.globalAlpha = 0.42;
+  ctx.strokeStyle = gb("light");
+  ctx.fillStyle = "rgba(155, 188, 15, 0.08)";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(baseX, baseY, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.globalAlpha = touchInput.stickActive ? 0.72 : 0.36;
+  ctx.fillStyle = gb("light");
+  ctx.beginPath();
+  ctx.arc(knobX, knobY, 18, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.globalAlpha = touchInput.shootActive ? 0.68 : 0.32;
+  ctx.fillStyle = "rgba(155, 188, 15, 0.08)";
+  ctx.strokeStyle = gb("light");
+  ctx.beginPath();
+  ctx.arc(shotX, shotY, 44, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = gb("light");
+  ctx.font = "12px 'Courier New', monospace";
+  ctx.textAlign = "center";
+  ctx.fillText("SHOT", shotX, shotY + 4);
+  ctx.restore();
 }
 
 function drawTitleScreen() {
@@ -3869,7 +3968,7 @@ function drawHud() {
 
   ctx.fillStyle = gb("light");
   ctx.font = "12px 'Courier New', monospace";
-  ctx.fillText("v0.5.2 ARROW", 636, 66);
+  ctx.fillText("v0.5.3 STICK", 636, 66);
   ctx.font = "16px 'Courier New', monospace";
 
   ctx.fillStyle = game.sonarCooldown <= 0 ? gb("light") : gb("mid");
