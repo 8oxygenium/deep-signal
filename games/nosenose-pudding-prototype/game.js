@@ -112,7 +112,7 @@ function resetGame() {
   state.touch = null;
   state.lastTime = performance.now();
   spawnNewPudding(canvas.width / 2, true);
-  ui.message.textContent = "v0.2.3 起動中。お皿の上ならどこでも乗る、外に出たら落ちます。";
+  ui.message.textContent = "v0.2.4 起動中。お皿の上ならどこでもセーフ。下のプリンやお皿の上にちゃんと乗ります。";
   updateHud();
 }
 
@@ -149,7 +149,30 @@ function getStackHeight() {
 }
 
 function landingYForPudding(pudding) {
-  return CONFIG.plateY - getPuddingHeight(pudding) / 2 - getStackHeight();
+  // v0.2.4: 着地する高さは「このプリンの真下にある面」で決める。
+  //   - X範囲が重なる既存プリンがあれば、その一番高い上端に乗る（積み上げ）。
+  //   - 何も無ければお皿の上に乗る（横に並べてもOK）。
+  // ※横（重心がお皿の上か）のセーフ判定は landActivePudding 側で別途。ここは縦の置き場所だけ。
+  const half = getPuddingWidth(pudding) / 2;
+  const left = pudding.x - half;
+  const right = pudding.x + half;
+
+  let surfaceTop = CONFIG.plateY; // お皿の面（y）。何にも乗らなければここ。
+  let onPudding = false;
+  for (const p of state.stack) {
+    const pHalf = getPuddingWidth(p) / 2;
+    const overlap = Math.min(right, p.x + pHalf) - Math.max(left, p.x - pHalf);
+    if (overlap > 0) {
+      const pTop = p.y - getPuddingHeight(p) / 2; // その下プリンの上端
+      if (pTop < surfaceTop) {
+        surfaceTop = pTop;
+        onPudding = true;
+      }
+    }
+  }
+
+  const sink = onPudding ? 6 : 0; // 重ねたときだけ少しめり込ませてくっついて見せる
+  return surfaceTop - getPuddingHeight(pudding) / 2 + sink;
 }
 
 function landingYForNextPudding() {
@@ -573,7 +596,7 @@ function drawVersion() {
   ctx.fillStyle = "#43261c";
   ctx.font = "700 18px 'Courier New', monospace";
   ctx.textAlign = "right";
-  ctx.fillText("v0.2.3", canvas.width - 12, canvas.height - 12);
+  ctx.fillText("v0.2.4", canvas.width - 12, canvas.height - 12);
   ctx.restore();
 }
 
