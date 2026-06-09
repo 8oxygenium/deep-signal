@@ -184,7 +184,8 @@
         vx: 0,
         settled: false,
         sliding: false,
-        radius: PUDDING_RADIUS
+        radius: PUDDING_RADIUS,
+        bounceScale: 1.0
       };
       waitingDrop = true;
     }
@@ -227,6 +228,7 @@
         // angleはそのまま（update()でイージング）
         pudding.vy = 0;
         pudding.vx = 0;
+        pudding.bounceScale = 1.2;
         puddings.push(pudding);
         fallingPudding = null;
         setTimeout(spawnPudding, 500);
@@ -320,10 +322,11 @@
         }
       }
 
-      // settledプリンのangle イージング
+      // settledプリンのangle・bounceScale イージング
       for (const p of puddings) {
         if (!p.settled) continue;
         p.angle += (p.targetAngle - p.angle) * 0.15;
+        p.bounceScale += (1.0 - p.bounceScale) * 0.2;
       }
 
       // 画面外に出たプリンを除去
@@ -358,6 +361,9 @@
       ctx.save();
       ctx.translate(p.x, p.y);
       ctx.rotate(p.angle);
+      if (p.bounceScale && p.bounceScale !== 1.0) {
+        ctx.scale(p.bounceScale, p.bounceScale);
+      }
 
       const r = p.radius;
 
@@ -459,6 +465,15 @@
           drawPudding(fallingPudding);
         }
       }
+
+      // 積み数カウント表示
+      const settledCount = puddings.filter(p => p.settled).length;
+      ctx.save();
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillStyle = '#6B3A2A';
+      ctx.textAlign = 'left';
+      ctx.fillText(`${settledCount}こ のった！`, 10, 30);
+      ctx.restore();
 
       drawVersionLabel();
     }
