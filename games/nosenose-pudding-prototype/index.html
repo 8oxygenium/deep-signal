@@ -292,6 +292,32 @@
         p.y += p.vy;
         p.x += p.vx;
         p.angle += p.vAngle + (p.vx > 0 ? 0.04 : -0.04);
+
+        // お皿との衝突（滑り中）
+        if (p.y + p.radius >= DISH_Y) {
+          p.y = DISH_Y - p.radius;
+          p.vy *= -0.3;
+        }
+
+        // settled済みプリンとの衝突（sliding同士はスキップ）
+        for (let j = puddings.length - 1; j >= 0; j--) {
+          if (i === j) continue;
+          const q = puddings[j];
+          if (!q.settled) continue;
+          const dx = p.x - q.x;
+          const dy = p.y - q.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const minDist = p.radius + q.radius;
+          if (dist < minDist && dist > 0) {
+            const nx = dx / dist, ny = dy / dist;
+            const overlap = minDist - dist;
+            p.x += nx * overlap;
+            p.y += ny * overlap;
+            const dot = p.vx * nx + p.vy * ny;
+            p.vx -= dot * nx * 1.3;
+            p.vy -= dot * ny * 1.3;
+          }
+        }
       }
 
       // settledプリンのangle イージング
