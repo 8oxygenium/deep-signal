@@ -249,7 +249,6 @@
           // お皿の横幅内かチェック
           if (Math.abs(p.x - DISH_CX) < DISH_HALF_W + p.radius * 0.5) {
             p.y = DISH_Y - p.radius;
-            p.vy = 0;
             settle(p, null);
             return;
           } else {
@@ -273,7 +272,6 @@
           if (dist < minDist && dy < 0) {
             // めり込み修正
             p.y = q.y - minDist;
-            p.vy = 0;
             settle(p, q);
             return;
           }
