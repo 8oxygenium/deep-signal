@@ -178,6 +178,7 @@
         x: nextX,
         y: SPAWN_Y,
         angle: 0,
+        targetAngle: 0,
         vy: 0,
         vAngle: 0,
         vx: 0,
@@ -210,7 +211,8 @@
         pudding.settled = false;
         pudding.sliding = true;
         pudding.vx = offset * 3.5;
-        pudding.vy = 0.5;
+        // vyはそのまま引き継ぐ（落下速度を維持）。上向きの場合のみ補正
+        if (pudding.vy <= 0) pudding.vy = 0.5;
         // 着地済み配列には入れない
         fallingPudding = null;
         puddings.push(pudding); // sliding状態で配列に入れて画面外で消す
@@ -219,9 +221,10 @@
         // 正常着地
         pudding.settled = true;
         pudding.sliding = false;
-        // 傾きを計算（下の土台の傾き＋オフセット分）
+        // 傾き目標を設定（イージングで近づける）
         const baseAngle = (base === null) ? 0 : base.angle;
-        pudding.angle = baseAngle + offset * 0.45;
+        pudding.targetAngle = baseAngle + offset * 0.45;
+        // angleはそのまま（update()でイージング）
         pudding.vy = 0;
         pudding.vx = 0;
         puddings.push(pudding);
@@ -289,6 +292,12 @@
         p.y += p.vy;
         p.x += p.vx;
         p.angle += p.vAngle + (p.vx > 0 ? 0.04 : -0.04);
+      }
+
+      // settledプリンのangle イージング
+      for (const p of puddings) {
+        if (!p.settled) continue;
+        p.angle += (p.targetAngle - p.angle) * 0.15;
       }
 
       // 画面外に出たプリンを除去
