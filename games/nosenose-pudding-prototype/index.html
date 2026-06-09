@@ -236,6 +236,7 @@
     let fallingPudding = null;
     let nextX = DISH_CX;
     let waitingDrop = true;
+    let spawnTimer = null; // Fix A: clearTimeout管理用
 
     // ---- 状態変更ヘルパー ----
     function setGameState(state) {
@@ -255,6 +256,8 @@
 
     // ---- リスタート ③ ----
     function restartGame() {
+      clearTimeout(spawnTimer);  // Fix A: 残りsetTimeoutをキャンセル
+      spawnTimer = null;
       puddings = [];
       fallingPudding = null;
       nextX = DISH_CX;
@@ -304,7 +307,7 @@
         if (pudding.vy <= 0) pudding.vy = 0.5;
         fallingPudding = null;
         puddings.push(pudding);
-        setTimeout(spawnPudding, 700);
+        spawnTimer = setTimeout(spawnPudding, 700); // Fix A
       } else {
         // 正常着地
         pudding.settled = true;
@@ -316,7 +319,7 @@
         pudding.bounceScale = 1.2;
         puddings.push(pudding);
         fallingPudding = null;
-        setTimeout(spawnPudding, 500);
+        spawnTimer = setTimeout(spawnPudding, 500); // Fix A
       }
     }
 
