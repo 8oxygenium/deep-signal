@@ -12,7 +12,7 @@
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>のせのせプリン v0.3.0 - HAPOMU</title>
+  <title>のせのせプリン v0.3.1 - HAPOMU</title>
   <style>
     * {
       box-sizing: border-box;
@@ -38,12 +38,63 @@
       letter-spacing: 0.05em;
     }
 
+    #canvasWrap {
+      position: relative;
+      display: inline-block;
+    }
+
     #gameCanvas {
       display: block;
       border: 2px solid #D4A96A;
       border-radius: 8px;
       background: #FFF8E7;
       touch-action: none;
+    }
+
+    /* ---- オーバーレイ（クリア / GAME OVER） ---- */
+    #overlay {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 248, 231, 0.88);
+      border-radius: 8px;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      z-index: 10;
+    }
+
+    #overlayMsg {
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: #6B3A2A;
+      text-align: center;
+      line-height: 1.5;
+      padding: 0 16px;
+    }
+
+    #btnRestart {
+      padding: 14px 36px;
+      font-size: 1.2rem;
+      font-family: inherit;
+      font-weight: bold;
+      background: #E8734A;
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.18);
+      letter-spacing: 0.05em;
+      transition: transform 0.08s, box-shadow 0.08s;
+    }
+
+    #btnRestart:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 rgba(0,0,0,0.18);
     }
 
     #controls {
@@ -113,7 +164,13 @@
 </head>
 <body>
   <h1>のせのせプリン</h1>
-  <canvas id="gameCanvas" width="360" height="580"></canvas>
+  <div id="canvasWrap">
+    <canvas id="gameCanvas" width="360" height="580"></canvas>
+    <div id="overlay">
+      <div id="overlayMsg"></div>
+      <button id="btnRestart">もう一回！</button>
+    </div>
+  </div>
   <div id="controls">
     <button id="btnLeft">←</button>
     <button id="btnDrop">おとす！</button>
@@ -128,7 +185,7 @@
   <script>
     // ---- URLにバージョンクエリを付与 ----
     (function() {
-      const VERSION = '0.3.0';
+      const VERSION = '0.3.1';
       const url = new URL(location.href);
       if (url.searchParams.get('v') !== VERSION) {
         url.searchParams.set('v', VERSION);
@@ -137,7 +194,7 @@
     })();
 
     // ---- 定数 ----
-    const VERSION_LABEL = 'v0.3.0';
+    const VERSION_LABEL = 'v0.3.1';
     const GRAVITY = 0.3;
     const PUDDING_RADIUS = 30;
     const CANVAS_W = 360;
@@ -156,24 +213,59 @@
     const MIN_X = 40;
     const MAX_X = 320;
 
-    // 崩れ判定：上プリンの中心が支えのフチを越えたら滑り落ちる
-    // お皿ケース: offset = dx / DISH_HALF_W → フチは 1.0
-    // プリン同士: offset = dx / (r1+r2) → 下プリンのフチは base.r/(r1+r2) = 0.5（同サイズ）
+    // 崩れ判定
     const SLIDE_THRESHOLD_DISH    = 1.0;
     const SLIDE_THRESHOLD_PUDDING = 0.5;
 
-    // ---- 状態 ----
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
+    // クリア判定：10個settled かつ 最上プリンがお皿上面から4r以上高いこと（縦積み保証）
+    const CLEAR_COUNT = 10;
+    const CLEAR_MIN_Y = DISH_Y - PUDDING_RADIUS * 4; // = 520 - 120 = 400
 
-    let puddings = [];         // 着地済みプリン
-    let fallingPudding = null; // 落下中プリン
-    let nextX = DISH_CX;      // 次のプリンを落とすX
-    let waitingDrop = true;    // trueのとき上部でプリンが待機中
-    let lastTime = 0;
+    // ---- DOM ----
+    const canvas  = document.getElementById('gameCanvas');
+    const ctx     = canvas.getContext('2d');
+    const overlay = document.getElementById('overlay');
+    const overlayMsg = document.getElementById('overlayMsg');
+
+    // ---- ゲーム状態 ----
+    // ① クリア判定・② GAME OVER判定・③ リスタートを束ねる1変数
+    let gameState = 'playing'; // 'playing' | 'clear' | 'gameover'
+
+    // ---- プリン配列 ----
+    let puddings = [];
+    let fallingPudding = null;
+    let nextX = DISH_CX;
+    let waitingDrop = true;
+
+    // ---- 状態変更ヘルパー ----
+    function setGameState(state) {
+      gameState = state;
+      if (state === 'clear') {
+        overlayMsg.textContent = '🎉 10こ つめたよ！\nすごい！';
+        overlayMsg.style.whiteSpace = 'pre-line';
+        overlay.style.display = 'flex';
+      } else if (state === 'gameover') {
+        overlayMsg.textContent = 'おしい！\nもう一回チャレンジしよう！';
+        overlayMsg.style.whiteSpace = 'pre-line';
+        overlay.style.display = 'flex';
+      } else {
+        overlay.style.display = 'none';
+      }
+    }
+
+    // ---- リスタート ③ ----
+    function restartGame() {
+      puddings = [];
+      fallingPudding = null;
+      nextX = DISH_CX;
+      waitingDrop = true;
+      setGameState('playing');
+      spawnPudding();
+    }
 
     // ---- プリン生成 ----
     function spawnPudding() {
+      if (gameState !== 'playing') return;
       fallingPudding = {
         x: nextX,
         y: SPAWN_Y,
@@ -195,12 +287,9 @@
       let offset;
 
       if (base === null) {
-        // お皿への着地
-        // offset: -1〜+1、中心からの相対位置
         offset = (pudding.x - DISH_CX) / DISH_HALF_W;
         offset = Math.max(-1.5, Math.min(1.5, offset));
       } else {
-        // 別プリンへの着地
         const totalR = pudding.radius + base.radius;
         offset = (pudding.x - base.x) / totalR;
         offset = Math.max(-1.5, Math.min(1.5, offset));
@@ -212,20 +301,16 @@
         pudding.settled = false;
         pudding.sliding = true;
         pudding.vx = offset * 3.5;
-        // vyはそのまま引き継ぐ（落下速度を維持）。上向きの場合のみ補正
         if (pudding.vy <= 0) pudding.vy = 0.5;
-        // 着地済み配列には入れない
         fallingPudding = null;
-        puddings.push(pudding); // sliding状態で配列に入れて画面外で消す
+        puddings.push(pudding);
         setTimeout(spawnPudding, 700);
       } else {
         // 正常着地
         pudding.settled = true;
         pudding.sliding = false;
-        // 傾き目標を設定（イージングで近づける）
         const baseAngle = (base === null) ? 0 : base.angle;
         pudding.targetAngle = baseAngle + offset * 0.45;
-        // angleはそのまま（update()でイージング）
         pudding.vy = 0;
         pudding.vx = 0;
         pudding.bounceScale = 1.2;
@@ -237,6 +322,8 @@
 
     // ---- 物理更新 ----
     function update() {
+      if (gameState !== 'playing') return;
+
       // 落下中プリンの更新
       if (fallingPudding && !waitingDrop) {
         const p = fallingPudding;
@@ -246,16 +333,15 @@
 
         // お皿との衝突判定
         if (p.y + p.radius >= DISH_Y) {
-          // お皿の横幅内かチェック
           if (Math.abs(p.x - DISH_CX) < DISH_HALF_W + p.radius * 0.5) {
             p.y = DISH_Y - p.radius;
             settle(p, null);
             return;
           } else {
-            // お皿の外に落ちた → 床扱いで消える
+            // ② お皿の外に外れて落下 → GAME OVER
             if (p.y > CANVAS_H + 60) {
+              setGameState('gameover');
               fallingPudding = null;
-              setTimeout(spawnPudding, 500);
               return;
             }
           }
@@ -270,17 +356,17 @@
           const dist = Math.sqrt(dx * dx + dy * dy);
           const minDist = p.radius + q.radius;
           if (dist < minDist && dy < 0) {
-            // めり込み修正
             p.y = q.y - minDist;
             settle(p, q);
             return;
           }
         }
 
-        // 画面外に消えた（お皿の外に外れた）
+        // ② 画面外に消えた（完全に落下）→ GAME OVER
         if (p.y > CANVAS_H + 60) {
+          setGameState('gameover');
           fallingPudding = null;
-          setTimeout(spawnPudding, 500);
+          return;
         }
       }
 
@@ -299,7 +385,7 @@
           p.vy *= -0.3;
         }
 
-        // settled済みプリンとの衝突（sliding同士はスキップ）
+        // settled済みプリンとの衝突
         for (let j = puddings.length - 1; j >= 0; j--) {
           if (i === j) continue;
           const q = puddings[j];
@@ -327,23 +413,37 @@
         p.bounceScale += (1.0 - p.bounceScale) * 0.2;
       }
 
-      // 画面外に出たプリンを除去
-      puddings = puddings.filter(p => p.y < CANVAS_H + 80);
+      // ② 画面外に出たプリンを除去：slidingが消えたらGAME OVER
+      puddings = puddings.filter(p => {
+        if (p.y >= CANVAS_H + 80) {
+          if (p.sliding && gameState === 'playing') setGameState('gameover');
+          return false;
+        }
+        return true;
+      });
+
+      // ① クリア判定：settled10個以上かつ縦積みあり
+      if (gameState === 'playing') {
+        const settled = puddings.filter(p => p.settled);
+        if (settled.length >= CLEAR_COUNT) {
+          const minY = Math.min(...settled.map(p => p.y));
+          if (minY < CLEAR_MIN_Y) {
+            setGameState('clear');
+          }
+        }
+      }
     }
 
     // ---- 描画ヘルパー ----
     function drawDish() {
-      // お皿（白い楕円＋縁取り）
       ctx.save();
       ctx.translate(DISH_CX, DISH_Y + DISH_VISUAL_RY * 0.3);
 
-      // 影
       ctx.beginPath();
       ctx.ellipse(0, 8, DISH_VISUAL_RX, DISH_VISUAL_RY, 0, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(0,0,0,0.08)';
       ctx.fill();
 
-      // 本体
       ctx.beginPath();
       ctx.ellipse(0, 0, DISH_VISUAL_RX, DISH_VISUAL_RY, 0, 0, Math.PI * 2);
       ctx.fillStyle = '#FFFFFF';
@@ -365,7 +465,6 @@
 
       const r = p.radius;
 
-      // 影（着地済みのみ）
       if (p.settled) {
         ctx.beginPath();
         ctx.ellipse(3, r * 0.6, r * 0.85, r * 0.22, 0, 0, Math.PI * 2);
@@ -373,7 +472,6 @@
         ctx.fill();
       }
 
-      // プリン本体（円）
       ctx.beginPath();
       ctx.arc(0, 0, r, 0, Math.PI * 2);
       ctx.fillStyle = '#F5C518';
@@ -382,7 +480,6 @@
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      // カラメル（上部の茶色いアーチ）
       ctx.beginPath();
       ctx.arc(0, -r * 0.15, r * 0.72, Math.PI * 1.1, Math.PI * 1.9, false);
       ctx.strokeStyle = 'rgba(120, 60, 10, 0.55)';
@@ -390,20 +487,17 @@
       ctx.lineCap = 'round';
       ctx.stroke();
 
-      // カラメルのハイライト
       ctx.beginPath();
       ctx.arc(0, -r * 0.15, r * 0.72, Math.PI * 1.15, Math.PI * 1.45, false);
       ctx.strokeStyle = 'rgba(200, 120, 30, 0.35)';
       ctx.lineWidth = 3;
       ctx.stroke();
 
-      // プリンのてっぺん（少しとがった感じ）
       ctx.beginPath();
       ctx.arc(0, -r * 0.6, r * 0.32, 0, Math.PI * 2);
       ctx.fillStyle = '#F0B800';
       ctx.fill();
 
-      // ハイライト
       ctx.beginPath();
       ctx.arc(-r * 0.25, -r * 0.3, r * 0.18, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(255,255,255,0.35)';
@@ -416,7 +510,6 @@
       if (!fallingPudding || !waitingDrop) return;
       const p = fallingPudding;
 
-      // ガイド線（点線）
       ctx.save();
       ctx.setLineDash([4, 6]);
       ctx.strokeStyle = 'rgba(180,140,60,0.35)';
@@ -444,18 +537,15 @@
     function draw() {
       ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
-      // 背景
       ctx.fillStyle = '#FFF8E7';
       ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
       drawDish();
 
-      // 着地済み（sliding含む）プリン
       for (const p of puddings) {
         drawPudding(p);
       }
 
-      // 待機中または落下中
       if (fallingPudding) {
         if (waitingDrop) {
           drawWaitingPudding();
@@ -466,7 +556,7 @@
 
       drawVersionLabel();
 
-      // 積み数カウント表示
+      // 「◯こ のった！」常時表示（回帰維持）
       const settledCount = puddings.filter(p => p.settled).length;
       ctx.save();
       ctx.font = 'bold 20px sans-serif';
@@ -476,7 +566,7 @@
       ctx.restore();
     }
 
-    function gameLoop(ts) {
+    function gameLoop() {
       update();
       draw();
       requestAnimationFrame(gameLoop);
@@ -484,6 +574,7 @@
 
     // ---- ボタン操作 ----
     function moveLeft() {
+      if (gameState !== 'playing') return;
       nextX = Math.max(MIN_X, nextX - MOVE_STEP);
       if (fallingPudding && waitingDrop) {
         fallingPudding.x = nextX;
@@ -491,6 +582,7 @@
     }
 
     function moveRight() {
+      if (gameState !== 'playing') return;
       nextX = Math.min(MAX_X, nextX + MOVE_STEP);
       if (fallingPudding && waitingDrop) {
         fallingPudding.x = nextX;
@@ -498,13 +590,13 @@
     }
 
     function doDrop() {
+      if (gameState !== 'playing') return;
       if (fallingPudding && waitingDrop) {
         waitingDrop = false;
         fallingPudding.vy = 2;
       }
     }
 
-    // ボタンのビジュアルフィードバック
     function flashBtn(el) {
       el.classList.add('pressed');
       setTimeout(() => el.classList.remove('pressed'), 120);
@@ -513,19 +605,16 @@
     const btnLeft  = document.getElementById('btnLeft');
     const btnRight = document.getElementById('btnRight');
     const btnDrop  = document.getElementById('btnDrop');
+    const btnRestart = document.getElementById('btnRestart');
 
     btnLeft.addEventListener('click', () => { flashBtn(btnLeft); moveLeft(); });
     btnRight.addEventListener('click', () => { flashBtn(btnRight); moveRight(); });
     btnDrop.addEventListener('click', () => { flashBtn(btnDrop); doDrop(); });
+    btnRestart.addEventListener('click', restartGame);
 
     // タッチ長押し対応（左右ボタン）
     let leftInterval = null;
     let rightInterval = null;
-
-    function startHold(fn) {
-      fn();
-      return setInterval(fn, 120);
-    }
 
     btnLeft.addEventListener('touchstart', (e) => {
       e.preventDefault();
@@ -552,6 +641,7 @@
       if (e.key === 'ArrowLeft'  || e.key === 'a' || e.key === 'A') { moveLeft(); }
       if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') { moveRight(); }
       if (e.key === ' ') { e.preventDefault(); doDrop(); }
+      if (e.key === 'Enter' && gameState !== 'playing') { restartGame(); }
     });
 
     // ---- 起動 ----
