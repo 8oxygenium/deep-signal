@@ -1,64 +1,510 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
-  <head>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-SHZ3P81R05"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-SHZ3P81R05');
-    </script>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>のせのせプリン v0.2.4 - HAPOMU</title>
-    <link rel="stylesheet" href="style.css?v=0.2.4">
-  </head>
-  <body>
-    <main class="game-shell" aria-label="のせのせプリン v0.2.4">
-      <header class="hero">
-        <p class="eyebrow">HAPOMU balance prototype</p>
-        <h1>のせのせプリン <span>v0.2.4</span></h1>
-        <p class="sub-title">Pudding Stack</p>
-        <p class="visible-hotfix">v0.2.4 / お皿の上ならどこでもセーフ！</p>
-        <p>自動でゆっくり落ちてくる大きさ違いのプリンを、接触を見ながら積み上げよう。</p>
-      </header>
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-SHZ3P81R05"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-SHZ3P81R05');
+  </script>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>のせのせプリン v0.3.0 - HAPOMU</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-      <section class="play-area">
-        <div class="canvas-frame">
-          <canvas id="gameCanvas" width="720" height="480" aria-label="のせのせプリン game canvas"></canvas>
-        </div>
+    body {
+      background: #FFF8E7;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      font-family: 'Hiragino Maru Gothic ProN', 'Hiragino Maru Gothic Pro', 'BIZ UDPGothic', 'Meiryo', sans-serif;
+      padding: 8px 0 16px;
+    }
 
-        <aside class="hud" aria-label="game status">
-          <div><span>LEVEL</span><strong id="levelValue">1</strong></div>
-          <div><span>STACK</span><strong id="stackValue">0</strong></div>
-          <div><span>GOAL</span><strong id="goalValue">10</strong></div>
-          <div><span>STATUS</span><strong id="statusValue">READY</strong></div>
-        </aside>
+    h1 {
+      font-size: 1.1rem;
+      color: #8B5E3C;
+      margin-bottom: 4px;
+      letter-spacing: 0.05em;
+    }
 
-        <div class="message-panel">
-          <p id="messageText">放っておくとプリンがゆっくり落ちるよ。少しでも乗っていればすぐにはアウトになりません。</p>
-          <p>Levelは下がりません。Level 2以降、さくらんぼ、デコプリンはComing later。</p>
-        </div>
+    #gameCanvas {
+      display: block;
+      border: 2px solid #D4A96A;
+      border-radius: 8px;
+      background: #FFF8E7;
+      touch-action: none;
+    }
 
-        <div class="controls" aria-label="game controls">
-          <button id="leftButton" type="button">LEFT</button>
-          <button id="rightButton" type="button">RIGHT</button>
-          <button id="dropButton" type="button">DROP</button>
-          <button id="resetButton" type="button">RESET</button>
-        </div>
+    #controls {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+      align-items: center;
+    }
 
-        <p class="help">スマホ: 左/右タッチで移動、中央下スワイプでDROP。完全に外れたらアウト、端に乗るとぐらぐら。 キーボード: ← / → or A / D: 移動　Space: DROP　R: RESET</p>
-      </section>
+    #controls button {
+      width: 90px;
+      height: 56px;
+      font-size: 1.1rem;
+      font-family: inherit;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: bold;
+      letter-spacing: 0.05em;
+      transition: transform 0.08s, box-shadow 0.08s, background 0.08s;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.18);
+      user-select: none;
+      -webkit-user-select: none;
+    }
 
-      <nav class="links" aria-label="page links">
-        <a href="../nosenose-pudding.html">Back to Concept</a>
-        <a href="../index.html">Back to Games</a>
-        <a href="../../index.html">Back to Top</a>
-      </nav>
-    </main>
+    #btnLeft, #btnRight {
+      background: #F5C518;
+      color: #5C3D11;
+    }
 
-    <script src="game.js?v=0.2.4"></script>
-  </body>
+    #btnDrop {
+      background: #E8734A;
+      color: #fff;
+      width: 110px;
+    }
+
+    #controls button:active,
+    #controls button.pressed {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 rgba(0,0,0,0.18);
+      background: #d4a800;
+    }
+
+    #btnDrop:active,
+    #btnDrop.pressed {
+      background: #c45a30;
+    }
+
+    #navLinks {
+      margin-top: 14px;
+      display: flex;
+      gap: 16px;
+      font-size: 0.78rem;
+    }
+
+    #navLinks a {
+      color: #8B5E3C;
+      text-decoration: none;
+      opacity: 0.7;
+    }
+
+    #navLinks a:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <h1>のせのせプリン</h1>
+  <canvas id="gameCanvas" width="360" height="580"></canvas>
+  <div id="controls">
+    <button id="btnLeft">&#9664; 左</button>
+    <button id="btnDrop">DROP</button>
+    <button id="btnRight">右 &#9654;</button>
+  </div>
+  <nav id="navLinks">
+    <a href="../nosenose-pudding.html">Back to Concept</a>
+    <a href="../index.html">Back to Games</a>
+    <a href="../../index.html">Back to Top</a>
+  </nav>
+
+  <script>
+    // ---- URLにバージョンクエリを付与 ----
+    (function() {
+      const VERSION = '0.3.0';
+      const url = new URL(location.href);
+      if (url.searchParams.get('v') !== VERSION) {
+        url.searchParams.set('v', VERSION);
+        history.replaceState(null, '', url.toString());
+      }
+    })();
+
+    // ---- 定数 ----
+    const VERSION_LABEL = 'v0.3.0';
+    const GRAVITY = 0.3;
+    const PUDDING_RADIUS = 30;
+    const CANVAS_W = 360;
+    const CANVAS_H = 580;
+
+    // お皿
+    const DISH_Y = 520;           // お皿上面のY座標
+    const DISH_CX = 180;          // お皿中心X
+    const DISH_HALF_W = 100;      // お皿の有効乗れる半幅（円の中心が乗れる範囲）
+    const DISH_VISUAL_RX = 110;   // お皿の見た目横幅（半径）
+    const DISH_VISUAL_RY = 16;    // お皿の見た目縦幅（楕円の縦半径）
+
+    // 落下開始位置
+    const SPAWN_Y = 50;
+    const MOVE_STEP = 18;
+    const MIN_X = 40;
+    const MAX_X = 320;
+
+    // 崩れ判定：はみ出し率がこれを超えたら滑り落ちる
+    const SLIDE_THRESHOLD = 0.58;
+
+    // ---- 状態 ----
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let puddings = [];         // 着地済みプリン
+    let fallingPudding = null; // 落下中プリン
+    let nextX = DISH_CX;      // 次のプリンを落とすX
+    let waitingDrop = true;    // trueのとき上部でプリンが待機中
+    let lastTime = 0;
+
+    // ---- プリン生成 ----
+    function spawnPudding() {
+      fallingPudding = {
+        x: nextX,
+        y: SPAWN_Y,
+        angle: 0,
+        vy: 0,
+        vAngle: 0,
+        vx: 0,
+        settled: false,
+        sliding: false,
+        radius: PUDDING_RADIUS
+      };
+      waitingDrop = true;
+    }
+
+    // ---- 着地処理 ----
+    function settle(pudding, base) {
+      let offset;
+
+      if (base === null) {
+        // お皿への着地
+        // offset: -1〜+1、中心からの相対位置
+        offset = (pudding.x - DISH_CX) / DISH_HALF_W;
+        offset = Math.max(-1.5, Math.min(1.5, offset));
+      } else {
+        // 別プリンへの着地
+        const totalR = pudding.radius + base.radius;
+        offset = (pudding.x - base.x) / totalR;
+        offset = Math.max(-1.5, Math.min(1.5, offset));
+      }
+
+      if (Math.abs(offset) > SLIDE_THRESHOLD) {
+        // はみ出し過ぎ → 滑り落ちる
+        pudding.settled = false;
+        pudding.sliding = true;
+        pudding.vx = offset * 3.5;
+        pudding.vy = 0.5;
+        // 着地済み配列には入れない
+        fallingPudding = null;
+        puddings.push(pudding); // sliding状態で配列に入れて画面外で消す
+        setTimeout(spawnPudding, 700);
+      } else {
+        // 正常着地
+        pudding.settled = true;
+        pudding.sliding = false;
+        // 傾きを計算（下の土台の傾き＋オフセット分）
+        const baseAngle = (base === null) ? 0 : base.angle;
+        pudding.angle = baseAngle + offset * 0.45;
+        pudding.vy = 0;
+        pudding.vx = 0;
+        puddings.push(pudding);
+        fallingPudding = null;
+        setTimeout(spawnPudding, 500);
+      }
+    }
+
+    // ---- 物理更新 ----
+    function update() {
+      // 落下中プリンの更新
+      if (fallingPudding && !waitingDrop) {
+        const p = fallingPudding;
+        p.vy += GRAVITY;
+        p.y += p.vy;
+        p.x += p.vx;
+
+        // お皿との衝突判定
+        if (p.y + p.radius >= DISH_Y) {
+          // お皿の横幅内かチェック
+          if (Math.abs(p.x - DISH_CX) < DISH_HALF_W + p.radius * 0.5) {
+            p.y = DISH_Y - p.radius;
+            p.vy = 0;
+            settle(p, null);
+            return;
+          } else {
+            // お皿の外に落ちた → 床扱いで消える
+            if (p.y > CANVAS_H + 60) {
+              fallingPudding = null;
+              setTimeout(spawnPudding, 500);
+              return;
+            }
+          }
+        }
+
+        // 着地済みプリンとの衝突判定（上から乗る場合のみ）
+        for (let i = puddings.length - 1; i >= 0; i--) {
+          const q = puddings[i];
+          if (!q.settled) continue;
+          const dx = p.x - q.x;
+          const dy = p.y - q.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const minDist = p.radius + q.radius;
+          if (dist < minDist && dy < 0) {
+            // めり込み修正
+            p.y = q.y - minDist;
+            p.vy = 0;
+            settle(p, q);
+            return;
+          }
+        }
+
+        // 画面外に消えた（お皿の外に外れた）
+        if (p.y > CANVAS_H + 60) {
+          fallingPudding = null;
+          setTimeout(spawnPudding, 500);
+        }
+      }
+
+      // slidingプリンの更新（滑り落ち）
+      for (let i = puddings.length - 1; i >= 0; i--) {
+        const p = puddings[i];
+        if (!p.sliding) continue;
+        p.vy += GRAVITY;
+        p.y += p.vy;
+        p.x += p.vx;
+        p.angle += p.vAngle + (p.vx > 0 ? 0.04 : -0.04);
+      }
+
+      // 画面外に出たプリンを除去
+      puddings = puddings.filter(p => p.y < CANVAS_H + 80);
+    }
+
+    // ---- 描画ヘルパー ----
+    function drawDish() {
+      // お皿（白い楕円＋縁取り）
+      ctx.save();
+      ctx.translate(DISH_CX, DISH_Y + DISH_VISUAL_RY * 0.3);
+
+      // 影
+      ctx.beginPath();
+      ctx.ellipse(0, 8, DISH_VISUAL_RX, DISH_VISUAL_RY, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.08)';
+      ctx.fill();
+
+      // 本体
+      ctx.beginPath();
+      ctx.ellipse(0, 0, DISH_VISUAL_RX, DISH_VISUAL_RY, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.strokeStyle = '#C8A87C';
+      ctx.lineWidth = 2.5;
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawPudding(p) {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.angle);
+
+      const r = p.radius;
+
+      // 影（着地済みのみ）
+      if (p.settled) {
+        ctx.beginPath();
+        ctx.ellipse(3, r * 0.6, r * 0.85, r * 0.22, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.10)';
+        ctx.fill();
+      }
+
+      // プリン本体（円）
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fillStyle = '#F5C518';
+      ctx.fill();
+      ctx.strokeStyle = '#D4A000';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // カラメル（上部の茶色いアーチ）
+      ctx.beginPath();
+      ctx.arc(0, -r * 0.15, r * 0.72, Math.PI * 1.1, Math.PI * 1.9, false);
+      ctx.strokeStyle = 'rgba(120, 60, 10, 0.55)';
+      ctx.lineWidth = 6;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      // カラメルのハイライト
+      ctx.beginPath();
+      ctx.arc(0, -r * 0.15, r * 0.72, Math.PI * 1.15, Math.PI * 1.45, false);
+      ctx.strokeStyle = 'rgba(200, 120, 30, 0.35)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // プリンのてっぺん（少しとがった感じ）
+      ctx.beginPath();
+      ctx.arc(0, -r * 0.6, r * 0.32, 0, Math.PI * 2);
+      ctx.fillStyle = '#F0B800';
+      ctx.fill();
+
+      // ハイライト
+      ctx.beginPath();
+      ctx.arc(-r * 0.25, -r * 0.3, r * 0.18, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawWaitingPudding() {
+      if (!fallingPudding || !waitingDrop) return;
+      const p = fallingPudding;
+
+      // ガイド線（点線）
+      ctx.save();
+      ctx.setLineDash([4, 6]);
+      ctx.strokeStyle = 'rgba(180,140,60,0.35)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y + PUDDING_RADIUS);
+      ctx.lineTo(p.x, DISH_Y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      drawPudding(p);
+    }
+
+    function drawVersionLabel() {
+      ctx.save();
+      ctx.font = '11px monospace';
+      ctx.fillStyle = 'rgba(140, 90, 40, 0.5)';
+      ctx.textAlign = 'right';
+      ctx.fillText(VERSION_LABEL, CANVAS_W - 8, CANVAS_H - 8);
+      ctx.restore();
+    }
+
+    // ---- メインループ ----
+    function draw() {
+      ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+      // 背景
+      ctx.fillStyle = '#FFF8E7';
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+      drawDish();
+
+      // 着地済み（sliding含む）プリン
+      for (const p of puddings) {
+        drawPudding(p);
+      }
+
+      // 待機中または落下中
+      if (fallingPudding) {
+        if (waitingDrop) {
+          drawWaitingPudding();
+        } else {
+          drawPudding(fallingPudding);
+        }
+      }
+
+      drawVersionLabel();
+    }
+
+    function gameLoop(ts) {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // ---- ボタン操作 ----
+    function moveLeft() {
+      nextX = Math.max(MIN_X, nextX - MOVE_STEP);
+      if (fallingPudding && waitingDrop) {
+        fallingPudding.x = nextX;
+      }
+    }
+
+    function moveRight() {
+      nextX = Math.min(MAX_X, nextX + MOVE_STEP);
+      if (fallingPudding && waitingDrop) {
+        fallingPudding.x = nextX;
+      }
+    }
+
+    function doDrop() {
+      if (fallingPudding && waitingDrop) {
+        waitingDrop = false;
+        fallingPudding.vy = 2;
+      }
+    }
+
+    // ボタンのビジュアルフィードバック
+    function flashBtn(el) {
+      el.classList.add('pressed');
+      setTimeout(() => el.classList.remove('pressed'), 120);
+    }
+
+    const btnLeft  = document.getElementById('btnLeft');
+    const btnRight = document.getElementById('btnRight');
+    const btnDrop  = document.getElementById('btnDrop');
+
+    btnLeft.addEventListener('click', () => { flashBtn(btnLeft); moveLeft(); });
+    btnRight.addEventListener('click', () => { flashBtn(btnRight); moveRight(); });
+    btnDrop.addEventListener('click', () => { flashBtn(btnDrop); doDrop(); });
+
+    // タッチ長押し対応（左右ボタン）
+    let leftInterval = null;
+    let rightInterval = null;
+
+    function startHold(fn) {
+      fn();
+      return setInterval(fn, 120);
+    }
+
+    btnLeft.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      flashBtn(btnLeft);
+      moveLeft();
+      leftInterval = setInterval(moveLeft, 130);
+    });
+    btnLeft.addEventListener('touchend', () => {
+      clearInterval(leftInterval);
+    });
+
+    btnRight.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      flashBtn(btnRight);
+      moveRight();
+      rightInterval = setInterval(moveRight, 130);
+    });
+    btnRight.addEventListener('touchend', () => {
+      clearInterval(rightInterval);
+    });
+
+    // キーボード対応
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft'  || e.key === 'a' || e.key === 'A') { moveLeft(); }
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') { moveRight(); }
+      if (e.key === ' ') { e.preventDefault(); doDrop(); }
+    });
+
+    // ---- 起動 ----
+    spawnPudding();
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
 </html>
