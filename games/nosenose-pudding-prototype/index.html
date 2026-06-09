@@ -355,7 +355,10 @@
         }
 
         // 着地済みプリンとの衝突判定（上から乗る場合のみ）
-        for (let i = puddings.length - 1; i >= 0; i--) {
+        // Fix C: 皿Y以下かつ皿X外に外れた落下中プリンは衝突判定をスキップ（settled混入防止）
+        const missedDish = p.y + p.radius >= DISH_Y &&
+          Math.abs(p.x - DISH_CX) >= DISH_HALF_W + p.radius * 0.5;
+        for (let i = puddings.length - 1; !missedDish && i >= 0; i--) {
           const q = puddings[i];
           if (!q.settled) continue;
           const dx = p.x - q.x;
