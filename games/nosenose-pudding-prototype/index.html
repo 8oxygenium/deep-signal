@@ -256,8 +256,12 @@
 
     // ---- リスタート ③ ----
     function restartGame() {
-      clearTimeout(spawnTimer);  // Fix A: 残りsetTimeoutをキャンセル
+      clearTimeout(spawnTimer);    // Fix A: 残りsetTimeoutをキャンセル
       spawnTimer = null;
+      clearInterval(leftInterval);  // Fix B: 長押し連射残りをキャンセル
+      clearInterval(rightInterval);
+      leftInterval = null;
+      rightInterval = null;
       puddings = [];
       fallingPudding = null;
       nextX = DISH_CX;
