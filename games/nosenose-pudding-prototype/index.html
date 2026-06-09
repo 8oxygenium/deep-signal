@@ -156,8 +156,11 @@
     const MIN_X = 40;
     const MAX_X = 320;
 
-    // 崩れ判定：はみ出し率がこれを超えたら滑り落ちる
-    const SLIDE_THRESHOLD = 0.58;
+    // 崩れ判定：上プリンの中心が支えのフチを越えたら滑り落ちる
+    // お皿ケース: offset = dx / DISH_HALF_W → フチは 1.0
+    // プリン同士: offset = dx / (r1+r2) → 下プリンのフチは base.r/(r1+r2) = 0.5（同サイズ）
+    const SLIDE_THRESHOLD_DISH    = 1.0;
+    const SLIDE_THRESHOLD_PUDDING = 0.5;
 
     // ---- 状態 ----
     const canvas = document.getElementById('gameCanvas');
@@ -201,7 +204,8 @@
         offset = Math.max(-1.5, Math.min(1.5, offset));
       }
 
-      if (Math.abs(offset) > SLIDE_THRESHOLD) {
+      const slideThreshold = (base === null) ? SLIDE_THRESHOLD_DISH : SLIDE_THRESHOLD_PUDDING;
+      if (Math.abs(offset) > slideThreshold) {
         // はみ出し過ぎ → 滑り落ちる
         pudding.settled = false;
         pudding.sliding = true;
