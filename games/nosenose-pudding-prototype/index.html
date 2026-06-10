@@ -12,7 +12,7 @@
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>のせのせプリン v0.3.2 - HAPOMU</title>
+  <title>のせのせプリン v0.3.2.1 - HAPOMU</title>
   <style>
     * {
       box-sizing: border-box;
@@ -185,7 +185,7 @@
   <script>
     // ---- URLにバージョンクエリを付与 ----
     (function() {
-      const VERSION = '0.3.2';
+      const VERSION = '0.3.2.1';
       const url = new URL(location.href);
       if (url.searchParams.get('v') !== VERSION) {
         url.searchParams.set('v', VERSION);
@@ -194,7 +194,7 @@
     })();
 
     // ---- 定数 ----
-    const VERSION_LABEL = 'v0.3.2';
+    const VERSION_LABEL = 'v0.3.2.1';
     const GRAVITY = 0.3;
     const PUDDING_RADIUS = 30;
     const CANVAS_W = 360;
@@ -216,6 +216,12 @@
     // 崩れ判定
     const SLIDE_THRESHOLD_DISH    = 1.0;
     const SLIDE_THRESHOLD_PUDDING = 0.5;
+
+    // v0.3.2.1: sliding→settled の出口（谷間で止まったプリンをカウントに乗せる）
+    // 速度ではなく「位置補正後の純移動量」で静止を判定する。
+    // 実測（sim_valley.js）: 谷底の定常状態は純移動量0.0000px、残留|vy|は最大0.44のため速度判定は不適。
+    const SETTLE_MOVE_EPS = 0.1;  // 1フレームの純移動量がこれ未満なら「静止」(px)
+    const SETTLE_FRAMES   = 30;   // 静止が30フレーム（約0.5秒）続いたら着地確定
 
     // クリア判定：10個settled かつ 最上プリンがお皿上面から4r以上高いこと（縦積み保証）
     const CLEAR_COUNT = 10;
@@ -283,6 +289,7 @@
         vx: 0,
         settled: false,
         sliding: false,
+        stillFrames: 0,
         radius: PUDDING_RADIUS,
         bounceScale: 1.0
       };
@@ -384,10 +391,11 @@
       for (let i = puddings.length - 1; i >= 0; i--) {
         const p = puddings[i];
         if (!p.sliding) continue;
+        const prevX = p.x, prevY = p.y; // v0.3.2.1: 純移動量の計測用
         p.vy += GRAVITY;
         p.y += p.vy;
         p.x += p.vx;
-        p.angle += p.vAngle + (p.vx > 0 ? 0.04 : -0.04);
+        p.angle += p.vAngle + p.vx * 0.04; // v0.3.2.1: 固定±0.04→速度比例（止まれば回転も止まる）
 
         // お皿との衝突（滑り中）
         if (p.y + p.radius >= DISH_Y) {
@@ -413,6 +421,22 @@
             p.vx -= dot * nx * 0.6;
             p.vy -= dot * ny * 0.6;
           }
+        }
+
+        // v0.3.2.1: 位置補正後の純移動量で静止を検出し、sliding→settledへ
+        const moved = Math.abs(p.x - prevX) + Math.abs(p.y - prevY);
+        if (moved < SETTLE_MOVE_EPS) {
+          p.stillFrames++;
+          if (p.stillFrames >= SETTLE_FRAMES) {
+            p.sliding = false;
+            p.settled = true;
+            p.vx = 0;
+            p.vy = 0;
+            p.targetAngle = p.angle; // 今の姿勢のまま固定（傾き計算は触らない）
+            p.bounceScale = 1.2;     // 既存の着地ぷるん演出と同じ
+          }
+        } else {
+          p.stillFrames = 0;
         }
       }
 
