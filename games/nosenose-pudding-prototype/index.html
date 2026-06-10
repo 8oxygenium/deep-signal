@@ -223,6 +223,11 @@
     const SETTLE_MOVE_EPS = 0.1;  // 1フレームの純移動量がこれ未満なら「静止」(px)
     const SETTLE_FRAMES   = 30;   // 静止が30フレーム（約0.5秒）続いたら着地確定
 
+    // Lv2 落下待ち横揺れ（RNG撤廃・タイミングスキル化）
+    // 振幅・周期は実機で娘さんの反応を見て微調整するための定数
+    const LV2_SWAY_AMP    = 30;   // 横揺れ振幅（px）：プリン直径60の半分
+    const LV2_SWAY_PERIOD = 90;   // 1周期（フレーム）≒1.5秒@60fps
+
     // クリア判定：10個settled かつ 最上プリンがお皿上面から4r以上高いこと（縦積み保証）
     const CLEAR_COUNT = 10;
     const CLEAR_MIN_Y = DISH_Y - PUDDING_RADIUS * 4; // = 520 - 120 = 400
@@ -261,6 +266,7 @@
     let nextX = DISH_CX;
     let waitingDrop = true;
     let spawnTimer = null; // Fix A: clearTimeout管理用
+    let swayT = 0;        // Lv2横揺れ用フレームカウンタ
 
     // ---- ベスト記録の保存ヘルパー（STEP3）----
     function saveBest() {
@@ -311,6 +317,7 @@
       fallingPudding = null;
       nextX = DISH_CX;
       waitingDrop = true;
+      swayT = 0;
       // STEP1: レベルが下がらない（到達済みの最高レベルに戻す）
       currentLevel = bestLevel;
       setGameState('playing');
@@ -321,25 +328,18 @@
     function spawnPudding() {
       if (gameState !== 'playing') return;
 
-      // STEP1: Lv2以上は落下位置ズレ（±40px）と初期横揺らぎを付与
-      // 物理定数は触らず、spawnX と初期vxのみで表現する
-      let spawnX = nextX;
-      let initVx = 0;
-      if (currentLevel >= 2) {
-        const offsetX = (Math.random() * 2 - 1) * 40; // ±40px
-        spawnX = Math.max(MIN_X, Math.min(MAX_X, nextX + offsetX));
-        // 揺らぎ：落下直後に小さなランダム横速度（物理コア外の初期条件）
-        initVx = (Math.random() * 2 - 1) * 1.2; // ±1.2px/frame
-      }
+      // Lv2以上の難易度は spawnX/initVx ではなく waitingDrop 中の横揺れで表現する。
+      // RNG による補正不能ドリフトを撤廃し、プレイヤーが揺れを読んで投下するスキルに変換。
+      swayT = 0; // 新しいプリンごとにカウンタをリセット
 
       fallingPudding = {
-        x: spawnX,
+        x: nextX,
         y: SPAWN_Y,
         angle: 0,
         targetAngle: 0,
         vy: 0,
         vAngle: 0,
-        vx: initVx,
+        vx: 0,
         settled: false,
         sliding: false,
         stillFrames: 0,
@@ -390,6 +390,15 @@
     // ---- 物理更新 ----
     function update() {
       if (gameState !== 'playing') return;
+
+      // Lv2以上：落下待ち中の横揺れ（タイミングスキル化）
+      // fallingPudding.x = nextX + サイン揺れ。moveLeft/Right は nextX を動かすので
+      // 揺れの中心がリアルタイムに追従する。投下時は揺れ込みの x をそのまま使う。
+      if (fallingPudding && waitingDrop && currentLevel >= 2) {
+        const sway = LV2_SWAY_AMP * Math.sin(swayT / LV2_SWAY_PERIOD * 2 * Math.PI);
+        fallingPudding.x = Math.max(MIN_X, Math.min(MAX_X, nextX + sway));
+        swayT++;
+      }
 
       // 落下中プリンの更新
       if (fallingPudding && !waitingDrop) {
