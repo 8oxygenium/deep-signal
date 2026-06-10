@@ -242,12 +242,33 @@
     let currentLevel = 1;
     let bestLevel    = 1;
 
+    // ---- ベスト記録（STEP3: localStorage永続化）----
+    const LS_KEY_LV    = 'nosenose_best_level';
+    const LS_KEY_COUNT = 'nosenose_best_count';
+    let bestCount = 0;
+    (function loadBest() {
+      try {
+        const lv = parseInt(localStorage.getItem(LS_KEY_LV),  10);
+        const ct = parseInt(localStorage.getItem(LS_KEY_COUNT), 10);
+        if (!isNaN(lv) && lv >= 1) { bestLevel = lv; currentLevel = lv; }
+        if (!isNaN(ct) && ct >= 0) bestCount = ct;
+      } catch(e) { /* プライベートブラウズ等では無視 */ }
+    })();
+
     // ---- プリン配列 ----
     let puddings = [];
     let fallingPudding = null;
     let nextX = DISH_CX;
     let waitingDrop = true;
     let spawnTimer = null; // Fix A: clearTimeout管理用
+
+    // ---- ベスト記録の保存ヘルパー（STEP3）----
+    function saveBest() {
+      try {
+        localStorage.setItem(LS_KEY_LV,    String(bestLevel));
+        localStorage.setItem(LS_KEY_COUNT, String(bestCount));
+      } catch(e) { /* プライベートブラウズ等では無視 */ }
+    }
 
     // ---- 状態変更ヘルパー ----
     function setGameState(state) {
@@ -257,11 +278,19 @@
         currentLevel++;
         if (currentLevel > bestLevel) bestLevel = currentLevel;
         const nextLv = currentLevel;
+        // STEP3: クリア時のsettled数でbestCountを更新・保存
+        const cnt = puddings.filter(p => p.settled).length;
+        if (cnt > bestCount) bestCount = cnt;
+        saveBest();
         overlayMsg.textContent = `Lv${nextLv - 1} クリア！\nLv${nextLv} へ すすむよ！\n10こ つめたら クリア！`;
         overlayMsg.style.whiteSpace = 'pre-line';
         overlay.style.display = 'flex';
       } else if (state === 'gameover') {
-        const lvText = currentLevel > 1 ? `Lv${currentLevel}` : '';
+        // STEP3: GAMEOVER時のsettled数でbestCountを更新・保存
+        const cnt = puddings.filter(p => p.settled).length;
+        if (cnt > bestCount) bestCount = cnt;
+        saveBest();
+        const lvText = currentLevel > 1 ? ` Lv${currentLevel}` : '';
         overlayMsg.textContent = `おしい！${lvText}\nもう一回チャレンジしよう！`;
         overlayMsg.style.whiteSpace = 'pre-line';
         overlay.style.display = 'flex';
@@ -644,6 +673,16 @@
       ctx.textAlign = 'right';
       ctx.fillText(`Lv${currentLevel}`, CANVAS_W - 8, 24);
       ctx.restore();
+
+      // STEP3: ベスト記録表示（右下・VERSION_LABELの上）
+      if (bestLevel > 1 || bestCount > 0) {
+        ctx.save();
+        ctx.font = '11px monospace';
+        ctx.fillStyle = 'rgba(140, 90, 40, 0.5)';
+        ctx.textAlign = 'right';
+        ctx.fillText(`さいこう Lv${bestLevel} / ${bestCount}こ`, CANVAS_W - 8, CANVAS_H - 22);
+        ctx.restore();
+      }
     }
 
     function gameLoop() {
