@@ -75,6 +75,8 @@
       text-align: center;
       line-height: 1.5;
       padding: 0 16px;
+      max-height: 60%;
+      overflow-y: auto;
     }
 
     #btnRestart {
@@ -334,7 +336,7 @@
 
       // Lv2以上の難易度は spawnX/initVx ではなく waitingDrop 中の横揺れで表現する。
       // RNG による補正不能ドリフトを撤廃し、プレイヤーが揺れを読んで投下するスキルに変換。
-      swayT = 0; // 新しいプリンごとにカウンタをリセット
+      swayT = Math.floor(Math.random() * LV2_SWAY_PERIOD); // 初期位相をランダム化（バグ3修正）
 
       fallingPudding = {
         x: nextX,
@@ -708,16 +710,24 @@
     // ---- ボタン操作 ----
     function moveLeft() {
       if (gameState !== 'playing') return;
-      nextX = Math.max(MIN_X, nextX - MOVE_STEP);
-      if (fallingPudding && waitingDrop) {
+      // バグ2修正: Lv2以上はnextX（揺れの中心）をAMPマージン分だけ内側に制限し、
+      // 揺れ全体が常に画面内に収まって左右対称を保つ。Lv1は従来のMIN_Xまで。
+      const clampMin = (currentLevel >= 2) ? MIN_X + LV2_SWAY_AMP : MIN_X;
+      nextX = Math.max(clampMin, nextX - MOVE_STEP);
+      // バグ1修正: Lv2以上はupdate()のサイン計算に一任し直書きしない。
+      // Lv1はfallingPudding.xをnextXに即追従させる（揺れなし）。
+      if (fallingPudding && waitingDrop && currentLevel < 2) {
         fallingPudding.x = nextX;
       }
     }
 
     function moveRight() {
       if (gameState !== 'playing') return;
-      nextX = Math.min(MAX_X, nextX + MOVE_STEP);
-      if (fallingPudding && waitingDrop) {
+      // バグ2修正: Lv2以上はAMPマージン分だけ内側に制限。Lv1は従来のMAX_Xまで。
+      const clampMax = (currentLevel >= 2) ? MAX_X - LV2_SWAY_AMP : MAX_X;
+      nextX = Math.min(clampMax, nextX + MOVE_STEP);
+      // バグ1修正: Lv2以上は直書きしない。
+      if (fallingPudding && waitingDrop && currentLevel < 2) {
         fallingPudding.x = nextX;
       }
     }
