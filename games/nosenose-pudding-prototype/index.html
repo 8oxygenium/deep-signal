@@ -626,6 +626,17 @@
       ctx.fillText(`${settledCount}こ のった！`, 10, 30);
       ctx.restore();
 
+      // STEP2: 「あと◯こ！」カウントダウン表示
+      const remaining = Math.max(0, CLEAR_COUNT - settledCount);
+      ctx.save();
+      ctx.font = remaining <= 3
+        ? 'bold 18px sans-serif'
+        : '16px sans-serif';
+      ctx.fillStyle = remaining <= 3 ? '#D94020' : '#A07850';
+      ctx.textAlign = 'left';
+      ctx.fillText(`あと${remaining}こ！`, 10, 54);
+      ctx.restore();
+
       // STEP1: レベル表示（右上）
       ctx.save();
       ctx.font = 'bold 16px sans-serif';
