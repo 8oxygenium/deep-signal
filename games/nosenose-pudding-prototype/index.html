@@ -288,7 +288,11 @@
         const cnt = puddings.filter(p => p.settled).length;
         if (cnt > bestCount) bestCount = cnt;
         saveBest();
-        overlayMsg.textContent = `Lv${nextLv - 1} クリア！\nLv${nextLv} へ すすむよ！\n10こ つめたら クリア！`;
+        // Lv1→Lv2 のときだけ横揺れの予告一言を出す（「バグ？」誤解の解消）
+        const swayHint = (nextLv === 2)
+          ? '\nプリンが ゆれるよ！\nよく見て おとそう！'
+          : '';
+        overlayMsg.textContent = `Lv${nextLv - 1} クリア！\nLv${nextLv} へ すすむよ！\n10こ つめたら クリア！${swayHint}`;
         overlayMsg.style.whiteSpace = 'pre-line';
         overlay.style.display = 'flex';
       } else if (state === 'gameover') {
@@ -684,12 +688,13 @@
       ctx.restore();
 
       // STEP3: ベスト記録表示（右下・VERSION_LABELの上）
+      // alpha 0.5→0.8、Y を -22→-34 に上げて VERSION_LABEL と重ならないようにする
       if (bestLevel > 1 || bestCount > 0) {
         ctx.save();
         ctx.font = '11px monospace';
-        ctx.fillStyle = 'rgba(140, 90, 40, 0.5)';
+        ctx.fillStyle = 'rgba(140, 90, 40, 0.8)';
         ctx.textAlign = 'right';
-        ctx.fillText(`さいこう Lv${bestLevel} / ${bestCount}こ`, CANVAS_W - 8, CANVAS_H - 22);
+        ctx.fillText(`さいこう Lv${bestLevel} / ${bestCount}こ`, CANVAS_W - 8, CANVAS_H - 34);
         ctx.restore();
       }
     }
@@ -753,6 +758,10 @@
     btnLeft.addEventListener('touchend', () => {
       clearInterval(leftInterval);
     });
+    // 着信等で指が離れた場合も連射を止める
+    btnLeft.addEventListener('touchcancel', () => {
+      clearInterval(leftInterval);
+    });
 
     btnRight.addEventListener('touchstart', (e) => {
       e.preventDefault();
@@ -761,6 +770,9 @@
       rightInterval = setInterval(moveRight, 130);
     });
     btnRight.addEventListener('touchend', () => {
+      clearInterval(rightInterval);
+    });
+    btnRight.addEventListener('touchcancel', () => {
       clearInterval(rightInterval);
     });
 
