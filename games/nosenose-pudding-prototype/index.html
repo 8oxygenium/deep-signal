@@ -398,7 +398,10 @@
         p.angle += p.vAngle + p.vx * 0.04; // v0.3.2.1: 固定±0.04→速度比例（止まれば回転も止まる）
 
         // お皿との衝突（滑り中）
-        if (p.y + p.radius >= DISH_Y) {
+        // STEP0 fix: 皿X範囲外のslidingプリンには床サポートを与えない
+        // → 皿外に出たら重力で落下し、既存の画面外除去→GAMEOVER経路に乗る
+        if (p.y + p.radius >= DISH_Y &&
+            Math.abs(p.x - DISH_CX) < DISH_HALF_W + p.radius * 0.5) {
           p.y = DISH_Y - p.radius;
           p.vy *= -0.3;
         }
