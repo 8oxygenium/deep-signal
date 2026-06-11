@@ -12,7 +12,7 @@
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>のせのせプリン v0.3.3 - HAPOMU</title>
+  <title>のせのせプリン v0.3.4 - HAPOMU</title>
   <style>
     * {
       box-sizing: border-box;
@@ -187,7 +187,7 @@
   <script>
     // ---- URLにバージョンクエリを付与 ----
     (function() {
-      const VERSION = '0.3.3';
+      const VERSION = '0.3.4';
       const url = new URL(location.href);
       if (url.searchParams.get('v') !== VERSION) {
         url.searchParams.set('v', VERSION);
@@ -196,7 +196,7 @@
     })();
 
     // ---- 定数 ----
-    const VERSION_LABEL = 'v0.3.3';
+    const VERSION_LABEL = 'v0.3.4';
     const GRAVITY = 0.3;
     const PUDDING_RADIUS = 30;
     const CANVAS_W = 360;
@@ -217,7 +217,8 @@
 
     // 崩れ判定
     const SLIDE_THRESHOLD_DISH    = 1.0;
-    const SLIDE_THRESHOLD_PUDDING = 0.5;
+    // v0.3.4: 0.5→0.62（横ズレ許容 30→37px・のって耐えやすく／proto2実証値）
+    const SLIDE_THRESHOLD_PUDDING = 0.62;
 
     // v0.3.2.1: sliding→settled の出口（谷間で止まったプリンをカウントに乗せる）
     // 速度ではなく「位置補正後の純移動量」で静止を判定する。
@@ -233,6 +234,23 @@
     // クリア判定：10個settled かつ 最上プリンがお皿上面から4r以上高いこと（縦積み保証）
     const CLEAR_COUNT = 10;
     const CLEAR_MIN_Y = DISH_Y - PUDDING_RADIUS * 4; // = 520 - 120 = 400
+
+    // v0.3.4: 重心はみ出し転倒判定（バナナ積み＝各継ぎ目は許容内でも塔全体が傾けば倒す）
+    // 各継ぎ目で「その上の全プリンの重心X」が下プリン中心から TOPPLE_LIMIT 超ズレたら崩す。
+    // 実機チューンノブ：倒れすぎ→45〜50、立ちすぎ→35。proto2実機では40が合格（実証値）。
+    const TOPPLE_LIMIT = 40;
+
+    // v0.3.4: 色違いプリン4種（見た目のみ・物理は完全同一）。spawn時にランダム割当。
+    const FLAVORS = [
+      // カスタード（従来色）
+      { body: '#F5C518', stroke: '#D4A000', cap: '#F0B800', sauce: 'rgba(120, 60, 10, 0.55)', shine: 'rgba(255,255,255,0.35)' },
+      // チョコ
+      { body: '#A05A2C', stroke: '#6E3A18', cap: '#7C4420', sauce: 'rgba(50, 25, 8, 0.55)',   shine: 'rgba(255,235,210,0.30)' },
+      // いちご
+      { body: '#F4A6C0', stroke: '#D86A8C', cap: '#EF8AAC', sauce: 'rgba(150, 40, 75, 0.50)', shine: 'rgba(255,255,255,0.40)' },
+      // 抹茶
+      { body: '#A8C66C', stroke: '#6E8B2E', cap: '#94B84E', sauce: 'rgba(70, 90, 20, 0.50)',  shine: 'rgba(255,255,255,0.35)' },
+    ];
 
     // ---- DOM ----
     const canvas  = document.getElementById('gameCanvas');
@@ -269,6 +287,8 @@
     let waitingDrop = true;
     let spawnTimer = null; // Fix A: clearTimeout管理用
     let swayT = 0;        // Lv2横揺れ用フレームカウンタ
+    let toppleDirty = false; // v0.3.4: 着地イベントで立て、update()末尾で1回だけ重心転倒を消化
+    let puddingSeq = 0;   // v0.3.4: プリンの安定ID採番（baseId参照用・配列indexは除去で動くため使わない）
 
     // ---- ベスト記録の保存ヘルパー（STEP3）----
     function saveBest() {
@@ -324,6 +344,8 @@
       nextX = DISH_CX;
       waitingDrop = true;
       swayT = 0;
+      toppleDirty = false;
+      puddingSeq = 0;
       // STEP1: レベルが下がらない（到達済みの最高レベルに戻す）
       currentLevel = bestLevel;
       setGameState('playing');
@@ -350,7 +372,10 @@
         sliding: false,
         stillFrames: 0,
         radius: PUDDING_RADIUS,
-        bounceScale: 1.0
+        bounceScale: 1.0,
+        id: puddingSeq++, // v0.3.4: 安定ID
+        flavor: FLAVORS[Math.floor(Math.random() * FLAVORS.length)], // v0.3.4: 色違い（見た目のみ）
+        baseId: -1 // v0.3.4: 着地時に確定（-1=皿直置き／それ以外は支持プリンのid）
       };
       waitingDrop = true;
     }
@@ -373,10 +398,11 @@
         // はみ出し過ぎ → 滑り落ちる
         pudding.settled = false;
         pudding.sliding = true;
-        pudding.vx = offset * 3.5;
+        pudding.vx = offset * 2.5; // v0.3.4: 3.5→2.5（皿上で飛んでいく緩和・proto2実証値）
         if (pudding.vy <= 0) pudding.vy = 0.5;
         fallingPudding = null;
         puddings.push(pudding);
+        // 注: slidingはsettledでないため重心転倒の対象外。ここではtoppleDirtyを立てない（G4）。
         spawnTimer = setTimeout(spawnPudding, 700); // Fix A
       } else {
         // 正常着地
@@ -387,8 +413,11 @@
         pudding.vy = 0;
         pudding.vx = 0;
         pudding.bounceScale = 1.2;
+        // v0.3.4: 親子リンク（重心転倒の塔再構築用）。配列indexは除去で動くため安定idで持つ。
+        pudding.baseId = (base === null) ? -1 : base.id;
         puddings.push(pudding);
         fallingPudding = null;
+        toppleDirty = true; // v0.3.4: 着地イベント → update()末尾で重心転倒を1回消化
         spawnTimer = setTimeout(spawnPudding, 500); // Fix A
       }
     }
@@ -505,6 +534,9 @@
             p.vy = 0;
             p.targetAngle = p.angle; // 今の姿勢のまま固定（傾き計算は触らない）
             p.bounceScale = 1.2;     // 既存の着地ぷるん演出と同じ
+            // v0.3.4: 親子リンクを再構築（谷間着地等）。ただし toppleDirty は立てない＝
+            // 物理収束の結果による再転倒チェックを遮断し、連鎖ループ（G2）を構造的に防ぐ。
+            p.baseId = findBaseId(p);
           }
         } else {
           p.stillFrames = 0;
@@ -527,6 +559,10 @@
         return true;
       });
 
+      // v0.3.4: 重心はみ出し転倒（着地イベント時のみ・クリア判定の前に1回消化）
+      // → 倒れる途中の塔を「クリア扱い」にしないため、必ずクリア判定の前で実行する。
+      if (toppleDirty) checkStackTopple();
+
       // ① クリア判定：settled10個以上かつ縦積みあり
       if (gameState === 'playing') {
         const settled = puddings.filter(p => p.settled);
@@ -536,6 +572,82 @@
             setGameState('clear');
           }
         }
+      }
+    }
+
+    // ---- v0.3.4: 重心はみ出し転倒（バナナ積み崩し）----
+    // 設計: puddings[]はフラット配列のため、各settledプリンが着地時に記録した baseId
+    //   （真下の支持プリンの安定id／-1=皿）で親子ツリーを再構築する。単純なY座標ソートだと
+    //   谷間ハマり・横並び（同じ親に乗った兄弟）で親子を誤認する（G1）ため、
+    //   塔を1本にフラット化せず「各プリンとその上に乗る部分木」の継ぎ目単位で評価する。
+
+    // sliding→settled で止まったプリンの支持（真下で接触している最上の settled）を探す。
+    function findBaseId(p) {
+      let best = null;
+      let supports = 0;
+      for (const q of puddings) {
+        if (q === p || !q.settled) continue;
+        if (q.y <= p.y) continue; // 支持は自分より下＝Yが大きい
+        const dx = p.x - q.x, dy = p.y - q.y;
+        if (Math.sqrt(dx * dx + dy * dy) > (p.radius + q.radius) * 1.15) continue;
+        supports++;
+        if (best === null || q.y < best.y) best = q; // 最も高い支持
+      }
+      // 谷間ハマり（支持2個以上）は両側に挟まれて安定＝片親の重心計算に入れると
+      // 誤爆転倒する（G1）ため、自己ルート扱いにして塔の継ぎ目評価から切り離す。
+      if (supports >= 2) return -1;
+      // 支持プリンが無ければ皿直置きとみなす（自分を根とする＝他の塔を誤爆しない）
+      return best ? best.id : -1;
+    }
+
+    // p の上に乗っている全プリン（baseId リンクの部分木・p自身は含まない）を集める。
+    function getDescendants(p) {
+      const result = [];
+      function collect(parentId) {
+        for (const q of puddings) {
+          if (!q.settled) continue;
+          if (q.baseId === parentId) {
+            result.push(q);
+            collect(q.id);
+          }
+        }
+      }
+      collect(p.id);
+      return result;
+    }
+
+    function checkStackTopple() {
+      toppleDirty = false; // 消化は1フレーム1回（先にクリアして再入を防ぐ）
+
+      // 全settledプリンを「継ぎ目の下側」として評価し、
+      // 上に乗る部分木の重心Xが TOPPLE_LIMIT 超ズレた継ぎ目のうち最も下（yが大きい）を1つ崩す。
+      let worst = null; // { lower, desc, dir }
+      for (const lower of puddings) {
+        if (!lower.settled) continue;
+        const desc = getDescendants(lower);
+        if (desc.length === 0) continue;
+        let sx = 0;
+        for (const d of desc) sx += d.x;
+        const diff = sx / desc.length - lower.x; // 上の塊の重心X − 下プリン中心X
+        if (Math.abs(diff) > TOPPLE_LIMIT) {
+          if (worst === null || lower.y > worst.lower.y) {
+            worst = { lower, desc, dir: diff > 0 ? 1 : -1 };
+          }
+        }
+      }
+
+      if (worst) {
+        for (const p of worst.desc) {
+          if (p.sliding) continue;             // 既slidingは二重作用回避（G4）
+          p.settled = false;
+          p.sliding = true;
+          p.vx = worst.dir * 2.0;              // 崩れ方向は重心側
+          if (p.vy <= 0) p.vy = 0.5;
+          p.stillFrames = 0;
+          p.baseId = undefined;                // 親子リンクを切る（G2）
+        }
+        // 1フレーム1崩し：崩した瞬間の不確定位置で他の継ぎ目を評価しない（G2/G3）。
+        // 再settle時は findBaseId で再リンクされ、次の着地イベントで再評価される。
       }
     }
 
@@ -569,43 +681,60 @@
       }
 
       const r = p.radius;
+      const f = p.flavor || FLAVORS[0];
 
+      // v0.3.4: 台形（プリン形）。寸法は底辺60／上辺≒41／高さ≒57（proto2実証値）。
+      const halfBot = r;          // 底辺の半幅 = 30 → 底辺60（平らに耐える見た目）
+      const halfTop = r * 0.68;   // 上辺の半幅 ≒ 20.4 → 上辺≒41
+      const yBot = r;             // 底辺Y = +30
+      const yTop = -r * 0.9;      // 上辺Y = -27 → 高さ57（積層時の浮き隙間を解消）
+      const cr = r * 0.16;        // 四隅の角丸 ≒ 4.8
+
+      // 接地影（settledのみ）
       if (p.settled) {
         ctx.beginPath();
-        ctx.ellipse(3, r * 0.6, r * 0.85, r * 0.22, 0, 0, Math.PI * 2);
+        ctx.ellipse(3, yBot + 2, halfBot * 0.92, r * 0.18, 0, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(0,0,0,0.10)';
         ctx.fill();
       }
 
+      // 台形本体（四隅を軽く丸める）
       ctx.beginPath();
-      ctx.arc(0, 0, r, 0, Math.PI * 2);
-      ctx.fillStyle = '#F5C518';
+      ctx.moveTo(0, yTop);
+      ctx.arcTo( halfTop, yTop,  halfBot, yBot, cr); // 右上
+      ctx.arcTo( halfBot, yBot, -halfBot, yBot, cr); // 右下
+      ctx.arcTo(-halfBot, yBot, -halfTop, yTop, cr); // 左下
+      ctx.arcTo(-halfTop, yTop,  halfTop, yTop, cr); // 左上
+      ctx.closePath();
+      ctx.fillStyle = f.body;
       ctx.fill();
-      ctx.strokeStyle = '#D4A000';
+      ctx.strokeStyle = f.stroke;
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
+      // 上面のソース帽子（カラメル）
       ctx.beginPath();
-      ctx.arc(0, -r * 0.15, r * 0.72, Math.PI * 1.1, Math.PI * 1.9, false);
-      ctx.strokeStyle = 'rgba(120, 60, 10, 0.55)';
-      ctx.lineWidth = 6;
+      ctx.ellipse(0, yTop + 1, halfTop * 0.94, r * 0.17, 0, 0, Math.PI * 2);
+      ctx.fillStyle = f.cap;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(0, yTop, halfTop * 0.94, r * 0.15, 0, 0, Math.PI * 2);
+      ctx.fillStyle = f.sauce;
+      ctx.fill();
+
+      // 前面に1本たれるソース
+      ctx.beginPath();
+      ctx.moveTo(-halfTop * 0.3, yTop + 2);
+      ctx.quadraticCurveTo(-halfTop * 0.05, yTop + r * 0.75, halfTop * 0.2, yTop + r * 0.6);
+      ctx.strokeStyle = f.sauce;
+      ctx.lineWidth = 5;
       ctx.lineCap = 'round';
       ctx.stroke();
 
+      // 本体ハイライト（つや・左上）
       ctx.beginPath();
-      ctx.arc(0, -r * 0.15, r * 0.72, Math.PI * 1.15, Math.PI * 1.45, false);
-      ctx.strokeStyle = 'rgba(200, 120, 30, 0.35)';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.arc(0, -r * 0.6, r * 0.32, 0, Math.PI * 2);
-      ctx.fillStyle = '#F0B800';
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.arc(-r * 0.25, -r * 0.3, r * 0.18, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.ellipse(-halfTop * 0.55, yTop + r * 0.55, r * 0.14, r * 0.30, -0.25, 0, Math.PI * 2);
+      ctx.fillStyle = f.shine;
       ctx.fill();
 
       ctx.restore();
