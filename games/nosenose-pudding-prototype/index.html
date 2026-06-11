@@ -288,6 +288,7 @@
     let spawnTimer = null; // Fix A: clearTimeout管理用
     let swayT = 0;        // Lv2横揺れ用フレームカウンタ
     let toppleDirty = false; // v0.3.4: 着地イベントで立て、update()末尾で1回だけ重心転倒を消化
+    let gameoverByTopple = false; // v0.3.4: GAMEOVERの原因が重心転倒か（文言分岐用・playtester収束指摘）
     let puddingSeq = 0;   // v0.3.4: プリンの安定ID採番（baseId参照用・配列indexは除去で動くため使わない）
 
     // ---- ベスト記録の保存ヘルパー（STEP3）----
@@ -323,7 +324,11 @@
         if (cnt > bestCount) bestCount = cnt;
         saveBest();
         const lvText = currentLevel > 1 ? ` Lv${currentLevel}` : '';
-        overlayMsg.textContent = `おしい！${lvText}\nもう一回チャレンジしよう！`;
+        // v0.3.4: 転倒由来なら理由を一言（playtester 3名収束「なんで崩れたか分からない＝バグと誤認」対策）
+        const toppleText = gameoverByTopple
+          ? '\nななめに つみすぎて\nぐらっと くずれちゃった！'
+          : '';
+        overlayMsg.textContent = `おしい！${lvText}${toppleText}\nもう一回チャレンジしよう！`;
         overlayMsg.style.whiteSpace = 'pre-line';
         overlay.style.display = 'flex';
       } else {
@@ -345,6 +350,7 @@
       waitingDrop = true;
       swayT = 0;
       toppleDirty = false;
+      gameoverByTopple = false;
       puddingSeq = 0;
       // STEP1: レベルが下がらない（到達済みの最高レベルに戻す）
       currentLevel = bestLevel;
@@ -375,7 +381,8 @@
         bounceScale: 1.0,
         id: puddingSeq++, // v0.3.4: 安定ID
         flavor: FLAVORS[Math.floor(Math.random() * FLAVORS.length)], // v0.3.4: 色違い（見た目のみ）
-        baseId: -1 // v0.3.4: 着地時に確定（-1=皿直置き／それ以外は支持プリンのid）
+        baseId: -1, // v0.3.4: 着地時に確定（-1=皿直置き／それ以外は支持プリンのid）
+        toppled: false // v0.3.4: 重心転倒で崩れたマーク（GAMEOVER文言分岐用）
       };
       waitingDrop = true;
     }
@@ -451,6 +458,7 @@
           } else {
             // ② お皿の外に外れて落下 → GAME OVER
             if (p.y > CANVAS_H + 60) {
+              gameoverByTopple = false;
               setGameState('gameover');
               fallingPudding = null;
               return;
@@ -478,6 +486,7 @@
 
         // ② 画面外に消えた（完全に落下）→ GAME OVER
         if (p.y > CANVAS_H + 60) {
+          gameoverByTopple = false;
           setGameState('gameover');
           fallingPudding = null;
           return;
@@ -537,6 +546,7 @@
             // v0.3.4: 親子リンクを再構築（谷間着地等）。ただし toppleDirty は立てない＝
             // 物理収束の結果による再転倒チェックを遮断し、連鎖ループ（G2）を構造的に防ぐ。
             p.baseId = findBaseId(p);
+            p.toppled = false; // 生き残った＝転倒死マークを解除
           }
         } else {
           p.stillFrames = 0;
@@ -553,7 +563,10 @@
       // ② 画面外に出たプリンを除去：slidingが消えたらGAME OVER
       puddings = puddings.filter(p => {
         if (p.y >= CANVAS_H + 80) {
-          if (p.sliding && gameState === 'playing') setGameState('gameover');
+          if (p.sliding && gameState === 'playing') {
+            gameoverByTopple = !!p.toppled; // 重心転倒で崩れたプリンなら文言を変える
+            setGameState('gameover');
+          }
           return false;
         }
         return true;
@@ -644,7 +657,8 @@
           p.vx = worst.dir * 2.0;              // 崩れ方向は重心側
           if (p.vy <= 0) p.vy = 0.5;
           p.stillFrames = 0;
-          p.baseId = undefined;                // 親子リンクを切る（G2）
+          p.baseId = -2;                       // 親子リンクを切る（G2。-1=皿と区別する番兵値）
+          p.toppled = true;                    // GAMEOVER文言分岐用（転倒由来マーク）
         }
         // 1フレーム1崩し：崩した瞬間の不確定位置で他の継ぎ目を評価しない（G2/G3）。
         // 再settle時は findBaseId で再リンクされ、次の着地イベントで再評価される。
