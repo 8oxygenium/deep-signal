@@ -12,7 +12,7 @@
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>のせのせプリン v0.3.4.2 - HAPOMU</title>
+  <title>のせのせプリン v0.3.5 - HAPOMU</title>
   <style>
     * {
       box-sizing: border-box;
@@ -210,7 +210,7 @@
   <script>
     // ---- URLにバージョンクエリを付与 ----
     (function() {
-      const VERSION = '0.3.4.2';
+      const VERSION = '0.3.5';
       const url = new URL(location.href);
       if (url.searchParams.get('v') !== VERSION) {
         url.searchParams.set('v', VERSION);
@@ -219,7 +219,7 @@
     })();
 
     // ---- 定数 ----
-    const VERSION_LABEL = 'v0.3.4.2';
+    const VERSION_LABEL = 'v0.3.5';
     const GRAVITY = 0.3;
     const PUDDING_RADIUS = 30;
     const CANVAS_W = 360;
@@ -257,6 +257,10 @@
     // クリア判定：10個settled かつ 最上プリンがお皿上面から4r以上高いこと（縦積み保証）
     const CLEAR_COUNT = 10;
     const CLEAR_MIN_Y = DISH_Y - PUDDING_RADIUS * 4; // = 520 - 120 = 400
+
+    // v0.3.5: Lv3「最後のさくらんぼ」。プリンより小さい＝てっぺんに乗せにくい＝難しい。
+    // 実機ノブ：易しく→16、難しく→12。
+    const CHERRY_RADIUS = 14;
 
     // v0.3.4: 重心はみ出し転倒判定（バナナ積み＝各継ぎ目は許容内でも塔全体が傾けば倒す）
     // 各継ぎ目で「その上の全プリンの重心X」が下プリン中心から TOPPLE_LIMIT 超ズレたら崩す。
@@ -312,6 +316,7 @@
     let swayT = 0;        // Lv2横揺れ用フレームカウンタ
     let toppleDirty = false; // v0.3.4: 着地イベントで立て、update()末尾で1回だけ重心転倒を消化
     let gameoverByTopple = false; // v0.3.4: GAMEOVERの原因が重心転倒か（文言分岐用・playtester収束指摘）
+    let gameoverByCherry = false; // v0.3.5: GAMEOVERの原因がさくらんぼ落下か（文言分岐用・転倒文言と区別）
     let puddingSeq = 0;   // v0.3.4: プリンの安定ID採番（baseId参照用・配列indexは除去で動くため使わない）
 
     // ---- ベスト記録の保存ヘルパー（STEP3）----
@@ -331,7 +336,8 @@
         if (currentLevel > bestLevel) bestLevel = currentLevel;
         const nextLv = currentLevel;
         // STEP3: クリア時のsettled数でbestCountを更新・保存
-        const cnt = puddings.filter(p => p.settled).length;
+        // v0.3.5: さくらんぼは「◯こ」に数えない（Lv3クリアで11こにならないように）
+        const cnt = puddings.filter(p => p.settled && !p.isCherry).length;
         if (cnt > bestCount) bestCount = cnt;
         saveBest();
         // Lv1→Lv2 のときだけ横揺れの予告一言を出す（「バグ？」誤解の解消）
@@ -343,14 +349,16 @@
         overlay.style.display = 'flex';
       } else if (state === 'gameover') {
         // STEP3: GAMEOVER時のsettled数でbestCountを更新・保存
-        const cnt = puddings.filter(p => p.settled).length;
+        // v0.3.5: さくらんぼは「◯こ」に数えない（HUD・ベスト記録ともプリンの数で統一）
+        const cnt = puddings.filter(p => p.settled && !p.isCherry).length;
         if (cnt > bestCount) bestCount = cnt;
         saveBest();
         const lvText = currentLevel > 1 ? ` Lv${currentLevel}` : '';
         // v0.3.4: 転倒由来なら理由を一言（playtester 3名収束「なんで崩れたか分からない＝バグと誤認」対策）
+        // v0.3.5: さくらんぼ乗せ損ね由来なら専用文言（転倒と区別・発注書§2.5）
         const toppleText = gameoverByTopple
           ? '\nななめに つみすぎて\nぐらっと くずれちゃった！'
-          : '';
+          : (gameoverByCherry ? '\nさくらんぼ おっこちちゃった！' : '');
         overlayMsg.textContent = `おしい！${lvText}${toppleText}\nもう一回チャレンジしよう！`;
         overlayMsg.style.whiteSpace = 'pre-line';
         overlay.style.display = 'flex';
@@ -374,6 +382,7 @@
       swayT = 0;
       toppleDirty = false;
       gameoverByTopple = false;
+      gameoverByCherry = false;
       puddingSeq = 0;
       // STEP1: レベルが下がらない（到達済みの最高レベルに戻す）
       currentLevel = bestLevel;
@@ -406,6 +415,13 @@
       // RNG による補正不能ドリフトを撤廃し、プレイヤーが揺れを読んで投下するスキルに変換。
       swayT = Math.floor(Math.random() * LV2_SWAY_PERIOD); // 初期位相をランダム化（バグ3修正）
 
+      // v0.3.5: Lv3以上でプリン10個を積み切ったら、最後の1個はさくらんぼ（1個だけ）。
+      // 横揺れ(sway)はそのまま乗る＝揺れの中で小さい的を狙う、が Lv3 の難度。
+      const stackedPuddings = puddings.filter(p => p.settled && !p.isCherry).length;
+      const spawnCherry = (currentLevel >= 3) &&
+                          (stackedPuddings >= CLEAR_COUNT) &&
+                          !puddings.some(p => p.isCherry);
+
       fallingPudding = {
         x: nextX,
         y: SPAWN_Y,
@@ -417,12 +433,13 @@
         settled: false,
         sliding: false,
         stillFrames: 0,
-        radius: PUDDING_RADIUS,
+        radius: spawnCherry ? CHERRY_RADIUS : PUDDING_RADIUS, // v0.3.5: さくらんぼは小半径（物理は同一）
         bounceScale: 1.0,
         id: puddingSeq++, // v0.3.4: 安定ID
-        flavor: FLAVORS[Math.floor(Math.random() * FLAVORS.length)], // v0.3.4: 色違い（見た目のみ）
+        flavor: FLAVORS[Math.floor(Math.random() * FLAVORS.length)], // v0.3.4: 色違い（見た目のみ・さくらんぼでは未使用）
         baseId: -1, // v0.3.4: 着地時に確定（-1=皿直置き／それ以外は支持プリンのid）
-        toppled: false // v0.3.4: 重心転倒で崩れたマーク（GAMEOVER文言分岐用）
+        toppled: false, // v0.3.4: 重心転倒で崩れたマーク（GAMEOVER文言分岐用）
+        isCherry: spawnCherry // v0.3.5: ピース種別（描画・クリア判定・HUDで分岐）
       };
       waitingDrop = true;
     }
@@ -499,6 +516,7 @@
             // ② お皿の外に外れて落下 → GAME OVER
             if (p.y > CANVAS_H + 60) {
               gameoverByTopple = false;
+              gameoverByCherry = !!p.isCherry; // v0.3.5: さくらんぼ乗せ損ね文言用
               setGameState('gameover');
               fallingPudding = null;
               return;
@@ -527,6 +545,7 @@
         // ② 画面外に消えた（完全に落下）→ GAME OVER
         if (p.y > CANVAS_H + 60) {
           gameoverByTopple = false;
+          gameoverByCherry = !!p.isCherry; // v0.3.5: さくらんぼ乗せ損ね文言用
           setGameState('gameover');
           fallingPudding = null;
           return;
@@ -672,6 +691,7 @@
         if (p.y >= CANVAS_H + 80) {
           if (p.sliding && gameState === 'playing') {
             gameoverByTopple = !!p.toppled; // 重心転倒で崩れたプリンなら文言を変える
+            gameoverByCherry = !!p.isCherry && !p.toppled; // v0.3.5: 転倒由来でなければさくらんぼ文言
             setGameState('gameover');
           }
           return false;
@@ -683,13 +703,23 @@
       // → 倒れる途中の塔を「クリア扱い」にしないため、必ずクリア判定の前で実行する。
       if (toppleDirty) checkStackTopple();
 
-      // ① クリア判定：settled10個以上かつ縦積みあり
+      // ① クリア判定
       if (gameState === 'playing') {
         const settled = puddings.filter(p => p.settled);
-        if (settled.length >= CLEAR_COUNT) {
-          const minY = Math.min(...settled.map(p => p.y));
-          if (minY < CLEAR_MIN_Y) {
-            setGameState('clear');
+        if (currentLevel >= 3) {
+          // v0.3.5 Lv3：さくらんぼを乗せ切ったらクリア（プリン10個は spawn 分岐で担保済み）
+          const cherryOn = settled.some(p => p.isCherry);
+          if (cherryOn) {
+            const minY = Math.min(...settled.map(p => p.y));
+            if (minY < CLEAR_MIN_Y) setGameState('clear');
+          }
+        } else {
+          // Lv1/Lv2：従来どおり settled10個以上かつ縦積みあり（無変更）
+          if (settled.length >= CLEAR_COUNT) {
+            const minY = Math.min(...settled.map(p => p.y));
+            if (minY < CLEAR_MIN_Y) {
+              setGameState('clear');
+            }
           }
         }
       }
@@ -799,6 +829,41 @@
       ctx.rotate(p.angle);
       if (p.bounceScale && p.bounceScale !== 1.0) {
         ctx.scale(p.bounceScale, p.bounceScale);
+      }
+
+      // v0.3.5: さくらんぼ（小さい円＋茎＋つや）。台形プリン描画には触らない。
+      if (p.isCherry) {
+        const cr = p.radius; // = CHERRY_RADIUS
+        // 接地影（settledのみ・既存と同様）
+        if (p.settled) {
+          ctx.beginPath();
+          ctx.ellipse(2, cr + 1, cr * 0.9, cr * 0.3, 0, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(0,0,0,0.10)';
+          ctx.fill();
+        }
+        // 実
+        ctx.beginPath();
+        ctx.arc(0, 0, cr, 0, Math.PI * 2);
+        ctx.fillStyle = '#D2333A';
+        ctx.fill();
+        ctx.strokeStyle = '#9E1F26';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        // 茎
+        ctx.beginPath();
+        ctx.moveTo(0, -cr * 0.7);
+        ctx.quadraticCurveTo(cr * 0.5, -cr * 1.6, cr * 0.2, -cr * 2.1);
+        ctx.strokeStyle = '#6B4A2A';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+        // つや
+        ctx.beginPath();
+        ctx.ellipse(-cr * 0.35, -cr * 0.35, cr * 0.22, cr * 0.32, -0.4, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        ctx.fill();
+        ctx.restore();
+        return;
       }
 
       const r = p.radius;
@@ -912,7 +977,8 @@
       drawVersionLabel();
 
       // 「◯こ のった！」常時表示（回帰維持）
-      const settledCount = puddings.filter(p => p.settled).length;
+      // v0.3.5: さくらんぼは「◯こ」に数えない（プリンの数で統一）
+      const settledCount = puddings.filter(p => p.settled && !p.isCherry).length;
       ctx.save();
       ctx.font = 'bold 20px sans-serif';
       ctx.fillStyle = '#6B3A2A';
@@ -923,12 +989,20 @@
       // STEP2: 「あと◯こ！」カウントダウン表示
       const remaining = Math.max(0, CLEAR_COUNT - settledCount);
       ctx.save();
-      ctx.font = remaining <= 3
-        ? 'bold 18px sans-serif'
-        : '16px sans-serif';
-      ctx.fillStyle = remaining <= 3 ? '#D94020' : '#A07850';
-      ctx.textAlign = 'left';
-      ctx.fillText(`あと${remaining}こ！`, 10, 54);
+      if (currentLevel >= 3 && remaining === 0) {
+        // v0.3.5: Lv3でプリンを積み切ったら「あと0こ！」でなく仕上げの案内（発注書§2.5）
+        ctx.font = 'bold 18px sans-serif';
+        ctx.fillStyle = '#D2333A';
+        ctx.textAlign = 'left';
+        ctx.fillText('さいごに さくらんぼ！', 10, 54);
+      } else {
+        ctx.font = remaining <= 3
+          ? 'bold 18px sans-serif'
+          : '16px sans-serif';
+        ctx.fillStyle = remaining <= 3 ? '#D94020' : '#A07850';
+        ctx.textAlign = 'left';
+        ctx.fillText(`あと${remaining}こ！`, 10, 54);
+      }
       ctx.restore();
 
       // STEP1: レベル表示（右上）
