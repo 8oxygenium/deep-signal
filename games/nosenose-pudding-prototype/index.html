@@ -12,7 +12,7 @@
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>のせのせプリン v0.3.4 - HAPOMU</title>
+  <title>のせのせプリン v0.3.4.1 - HAPOMU</title>
   <style>
     * {
       box-sizing: border-box;
@@ -187,7 +187,7 @@
   <script>
     // ---- URLにバージョンクエリを付与 ----
     (function() {
-      const VERSION = '0.3.4';
+      const VERSION = '0.3.4.1';
       const url = new URL(location.href);
       if (url.searchParams.get('v') !== VERSION) {
         url.searchParams.set('v', VERSION);
@@ -196,7 +196,7 @@
     })();
 
     // ---- 定数 ----
-    const VERSION_LABEL = 'v0.3.4';
+    const VERSION_LABEL = 'v0.3.4.1';
     const GRAVITY = 0.3;
     const PUDDING_RADIUS = 30;
     const CANVAS_W = 360;
@@ -498,6 +498,7 @@
         const p = puddings[i];
         if (!p.sliding) continue;
         const prevX = p.x, prevY = p.y; // v0.3.2.1: 純移動量の計測用
+        let slidingPushX = 0, slidingPushY = 0; // v0.3.4.1: 動体衝突の押し出し量（静止判定から除外する）
         p.vy += GRAVITY;
         p.y += p.vy;
         p.x += p.vx;
@@ -532,8 +533,74 @@
           }
         }
 
+        // v0.3.4.1: 動体（sliding）同士の衝突。転倒で同時sliding化したプリンが互いを
+        // すり抜けて「急に現れて落ちる」実機バグの修正。j<i のペアのみ＝1ペア1回解決。
+        for (let j = i - 1; j >= 0; j--) {
+          const q = puddings[j];
+          if (!q.sliding) continue;
+          const dx = p.x - q.x;
+          const dy = p.y - q.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const minDist = p.radius + q.radius;
+          if (dist >= minDist || dist <= 0) continue;
+
+          const nx = dx / dist, ny = dy / dist;
+          const half = (minDist - dist) * 0.5; // 押し出しは折半
+
+          // 皿に支持されているプリンは「皿の外へ押し出さない・外向き速度を与えない」
+          // （防波堤を吹き飛ばして操作と無関係なGAMEOVERを生まない・DG4）。
+          // 配列順でp/qどちらの役にもなり得るため、ガードは両側対称に掛ける。
+          const pOnDish = p.y + p.radius >= DISH_Y - 1 &&
+            Math.abs(p.x - DISH_CX) < DISH_HALF_W + p.radius * 0.5;
+          const qOnDish = q.y + q.radius >= DISH_Y - 1 &&
+            Math.abs(q.x - DISH_CX) < DISH_HALF_W + q.radius * 0.5;
+
+          // p側の押し出し（適用量を記録して静止判定から除外＝valley静止(v0.3.2.1)を壊さない）
+          let px = p.x + nx * half;
+          let py = p.y + ny * half;
+          if (pOnDish) {
+            px = Math.max(DISH_CX - DISH_HALF_W, Math.min(DISH_CX + DISH_HALF_W, px));
+            py = Math.min(DISH_Y - p.radius, py); // 皿面より下へ沈めない
+          }
+          slidingPushX += px - p.x;
+          slidingPushY += py - p.y;
+          p.x = px;
+          p.y = py;
+
+          // q側の押し出し（皿外で落下中ならクランプしない）
+          let qx = q.x - nx * half;
+          let qy = q.y - ny * half;
+          if (qOnDish) {
+            qx = Math.max(DISH_CX - DISH_HALF_W, Math.min(DISH_CX + DISH_HALF_W, qx));
+            qy = Math.min(DISH_Y - q.radius, qy);
+          }
+          q.x = qx;
+          q.y = qy;
+
+          // 速度応答：相対速度の法線成分（接近時のみ）に既存と同じ係数0.6を折半で両者へ。
+          // 接近ガードが無いと離反中の2体に引力が付く（吸い合い）ので必須。
+          const relDot = (p.vx - q.vx) * nx + (p.vy - q.vy) * ny;
+          if (relDot < 0) {
+            const imp = relDot * 0.6;
+            const pdvx = -imp * nx * 0.5;
+            // 皿上のプリンに「皿の外向き」水平速度は伝えない（位置クランプだけだと
+            // 摩擦ゼロで自走して皿外落下→GAMEOVERまで漏れる）
+            if (!pOnDish || (p.x - DISH_CX) * pdvx <= 0) {
+              p.vx += pdvx;
+            }
+            p.vy -= imp * ny * 0.5;
+            const qdvx = imp * nx * 0.5;
+            if (!qOnDish || (q.x - DISH_CX) * qdvx <= 0) {
+              q.vx += qdvx;
+            }
+            q.vy += imp * ny * 0.5;
+          }
+        }
+
         // v0.3.2.1: 位置補正後の純移動量で静止を検出し、sliding→settledへ
-        const moved = Math.abs(p.x - prevX) + Math.abs(p.y - prevY);
+        // v0.3.4.1: 動体衝突の押し出し量は除外して測る（押し合いで stillFrames が
+        // リセットされ続け永遠にsettleしない事故を防ぐ）
+        const moved = Math.abs(p.x - prevX - slidingPushX) + Math.abs(p.y - prevY - slidingPushY);
         if (moved < SETTLE_MOVE_EPS) {
           p.stillFrames++;
           if (p.stillFrames >= SETTLE_FRAMES) {
