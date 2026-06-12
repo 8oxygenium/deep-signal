@@ -12,7 +12,7 @@
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>のせのせプリン v0.3.4.1 - HAPOMU</title>
+  <title>のせのせプリン v0.3.4.2 - HAPOMU</title>
   <style>
     * {
       box-sizing: border-box;
@@ -162,6 +162,26 @@
       opacity: 1;
       text-decoration: underline;
     }
+
+    /* v0.3.4.2: 進捗リセット。もう一回！(明るいボタン)と明確に区別する控えめ表示。
+       navLinksより下＝物理的に離して誤タップ対策。 */
+    #resetRow {
+      margin-top: 10px;
+    }
+    #btnReset {
+      background: none;
+      border: none;
+      color: #B0A89C;
+      font-family: inherit;
+      font-size: 0.72rem;
+      opacity: 0.6;
+      cursor: pointer;
+      padding: 4px 6px;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    #btnReset:hover { opacity: 0.9; color: #8B5E3C; }
+    #btnReset:active { opacity: 1; }
   </style>
 </head>
 <body>
@@ -183,11 +203,14 @@
     <a href="../index.html">Back to Games</a>
     <a href="../../index.html">Back to Top</a>
   </nav>
+  <div id="resetRow">
+    <button id="btnReset" type="button">きろくを けして さいしょから</button>
+  </div>
 
   <script>
     // ---- URLにバージョンクエリを付与 ----
     (function() {
-      const VERSION = '0.3.4.1';
+      const VERSION = '0.3.4.2';
       const url = new URL(location.href);
       if (url.searchParams.get('v') !== VERSION) {
         url.searchParams.set('v', VERSION);
@@ -196,7 +219,7 @@
     })();
 
     // ---- 定数 ----
-    const VERSION_LABEL = 'v0.3.4.1';
+    const VERSION_LABEL = 'v0.3.4.2';
     const GRAVITY = 0.3;
     const PUDDING_RADIUS = 30;
     const CANVAS_W = 360;
@@ -356,6 +379,23 @@
       currentLevel = bestLevel;
       setGameState('playing');
       spawnPudding();
+    }
+
+    // ---- 進捗リセット（v0.3.4.2）----
+    // 「リスタートでレベルが下がらない」(STEP1)を壊さない“明示的な別ボタン”。
+    // 誤タップ対策：①navLinks下の控えめ表示で隔離 ②confirmでワンクッション。
+    function resetProgress() {
+      const ok = window.confirm('さいこうレベルの きろくを けして、\nさいしょ（Lv1）から あそびますか？');
+      if (!ok) return;
+      try {
+        localStorage.removeItem(LS_KEY_LV);
+        localStorage.removeItem(LS_KEY_COUNT);
+      } catch(e) { /* プライベートブラウズ等では無視 */ }
+      bestLevel = 1;
+      bestCount = 0;
+      // restartGame() 冒頭で currentLevel = bestLevel するので、先に bestLevel=1 に
+      // しておけば currentLevel も 1 に戻る（STEP1 と整合・レベルは“下げる”のでなく記録消去）。
+      restartGame();
     }
 
     // ---- プリン生成 ----
@@ -964,6 +1004,10 @@
     btnRight.addEventListener('click', () => { flashBtn(btnRight); moveRight(); });
     btnDrop.addEventListener('click', () => { flashBtn(btnDrop); doDrop(); });
     btnRestart.addEventListener('click', restartGame);
+
+    // v0.3.4.2: 進捗リセット（confirm内蔵・誤タップ対策）
+    const btnReset = document.getElementById('btnReset');
+    btnReset.addEventListener('click', resetProgress);
 
     // タッチ長押し対応（左右ボタン）
     let leftInterval = null;
