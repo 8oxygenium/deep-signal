@@ -12,7 +12,7 @@
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>のせのせプリン v0.3.6 - HAPOMU</title>
+  <title>のせのせプリン v0.3.6.1 - HAPOMU</title>
   <style>
     * {
       box-sizing: border-box;
@@ -210,7 +210,7 @@
   <script>
     // ---- URLにバージョンクエリを付与 ----
     (function() {
-      const VERSION = '0.3.6';
+      const VERSION = '0.3.6.1';
       const url = new URL(location.href);
       if (url.searchParams.get('v') !== VERSION) {
         url.searchParams.set('v', VERSION);
@@ -219,7 +219,7 @@
     })();
 
     // ---- 定数 ----
-    const VERSION_LABEL = 'v0.3.6';
+    const VERSION_LABEL = 'v0.3.6.1';
     const GRAVITY = 0.3;
     const PUDDING_RADIUS = 30;
     const CANVAS_W = 360;
@@ -273,6 +273,11 @@
     const DECO_COM_OFFSET = 12;   // 重心の横ズレ量(px)・水平固定（G2: cos項なし）
     // デコの出現率（Lv5以上のプリン spawn 時）。G6確定値。多すぎ→0.25、物足りない→0.45。
     const DECO_RATE = 0.35;
+
+    // v0.3.6.1: 接触限定タンジェント摩擦。防波堤(settled)に当たり続けて永久回転するプリンを止める。
+    // settled に接触したフレームだけ vx を減衰させる＝自由滑走(無接触)は減速しない＝皿外落下GAMEOVERを保つ。
+    // 実機ノブ：まだ回り続ける→0.70、止まりすぎ/GAMEOVERが減りすぎ→0.90。
+    const FRICTION_CONTACT = 0.80;
 
     // v0.3.4: 色違いプリン4種（見た目のみ・物理は完全同一）。spawn時にランダム割当。
     const FLAVORS = [
@@ -577,6 +582,7 @@
         if (!p.sliding) continue;
         const prevX = p.x, prevY = p.y; // v0.3.2.1: 純移動量の計測用
         let slidingPushX = 0, slidingPushY = 0; // v0.3.4.1: 動体衝突の押し出し量（静止判定から除外する）
+        let hadContact = false; // v0.3.6.1: このフレームに settled へ接触したか（タンジェント摩擦の発火条件）
         p.vy += GRAVITY;
         p.y += p.vy;
         p.x += p.vx;
@@ -601,6 +607,7 @@
           const dist = Math.sqrt(dx * dx + dy * dy);
           const minDist = p.radius + q.radius;
           if (dist < minDist && dist > 0) {
+            hadContact = true; // v0.3.6.1: 防波堤(settled)に接触＝このフレームは摩擦を効かせる
             const nx = dx / dist, ny = dy / dist;
             const overlap = minDist - dist;
             p.x += nx * overlap;
@@ -696,6 +703,11 @@
         } else {
           p.stillFrames = 0;
         }
+
+        // v0.3.6.1: 接触したフレームだけ水平摩擦で vx を減衰（タンジェント摩擦＝氷上の石の解）。
+        // 自由滑走（無接触）は減速させない＝皿端から外向きに滑り出したプリンの皿外落下GAMEOVERを保つ。
+        // 回転は vx 比例（行583）なので vx が落ちれば永久回転も止まる。vy には触らない（縦は既存挙動）。
+        if (hadContact) p.vx *= FRICTION_CONTACT;
       }
 
       // settledプリンのangle・bounceScale イージング
