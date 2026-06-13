@@ -12,7 +12,7 @@
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>のせのせプリン v0.3.5 - HAPOMU</title>
+  <title>のせのせプリン v0.3.6 - HAPOMU</title>
   <style>
     * {
       box-sizing: border-box;
@@ -210,7 +210,7 @@
   <script>
     // ---- URLにバージョンクエリを付与 ----
     (function() {
-      const VERSION = '0.3.5';
+      const VERSION = '0.3.6';
       const url = new URL(location.href);
       if (url.searchParams.get('v') !== VERSION) {
         url.searchParams.set('v', VERSION);
@@ -219,7 +219,7 @@
     })();
 
     // ---- 定数 ----
-    const VERSION_LABEL = 'v0.3.5';
+    const VERSION_LABEL = 'v0.3.6';
     const GRAVITY = 0.3;
     const PUDDING_RADIUS = 30;
     const CANVAS_W = 360;
@@ -266,6 +266,13 @@
     // 各継ぎ目で「その上の全プリンの重心X」が下プリン中心から TOPPLE_LIMIT 超ズレたら崩す。
     // 実機チューンノブ：倒れすぎ→45〜50、立ちすぎ→35。proto2実機では40が合格（実証値）。
     const TOPPLE_LIMIT = 40;
+
+    // v0.3.6: Lv5「デコプリン（重心ズレ）」。トッピングが片側に寄る＝実効重心が comDir 側へズレる。
+    // 重心X計算（checkStackTopple）の入力だけに効かせる＝形が転倒に効く（settle/閾値は不可触・案B）。
+    // 実機ノブ：難しすぎ（崩れすぎ・理不尽寄り）→ 8、簡単すぎ→ 16。
+    const DECO_COM_OFFSET = 12;   // 重心の横ズレ量(px)・水平固定（G2: cos項なし）
+    // デコの出現率（Lv5以上のプリン spawn 時）。G6確定値。多すぎ→0.25、物足りない→0.45。
+    const DECO_RATE = 0.35;
 
     // v0.3.4: 色違いプリン4種（見た目のみ・物理は完全同一）。spawn時にランダム割当。
     const FLAVORS = [
@@ -344,7 +351,11 @@
         const swayHint = (nextLv === 2)
           ? '\nプリンが ゆれるよ！\nよく見て おとそう！'
           : '';
-        overlayMsg.textContent = `Lv${nextLv - 1} クリア！\nLv${nextLv} へ すすむよ！\n10こ つめたら クリア！${swayHint}`;
+        // v0.3.6: Lv4→Lv5 はデコプリン（重心ズレ）導入の予告。「急に崩れる＝バグ」誤解の地雷消し。
+        const decoHint = (nextLv === 5)
+          ? '\nおもい トッピングに きをつけて！\nおもいほうを まんなかに！'
+          : '';
+        overlayMsg.textContent = `Lv${nextLv - 1} クリア！\nLv${nextLv} へ すすむよ！\n10こ つめたら クリア！${swayHint}${decoHint}`;
         overlayMsg.style.whiteSpace = 'pre-line';
         overlay.style.display = 'flex';
       } else if (state === 'gameover') {
@@ -422,6 +433,12 @@
                           (stackedPuddings >= CLEAR_COUNT) &&
                           !puddings.some(p => p.isCherry);
 
+      // v0.3.5: Lv3以上でプリン10個を積み切ったら、最後の1個はさくらんぼ（1個だけ）。
+      // v0.3.6: Lv5以上・さくらんぼ以外は確率 DECO_RATE で「デコプリン」（重心ズレ）。
+      // 出現と向きは spawn 時に確定＝投下前に見えて構えられる（補正不能RNGの復活ではない・G5）。
+      const isDeco = !spawnCherry && (currentLevel >= 5) && (Math.random() < DECO_RATE);
+      const comDir = isDeco ? (Math.random() < 0.5 ? -1 : 1) : 0; // トッピングが寄る向き（±1・非デコは0）
+
       fallingPudding = {
         x: nextX,
         y: SPAWN_Y,
@@ -439,7 +456,9 @@
         flavor: FLAVORS[Math.floor(Math.random() * FLAVORS.length)], // v0.3.4: 色違い（見た目のみ・さくらんぼでは未使用）
         baseId: -1, // v0.3.4: 着地時に確定（-1=皿直置き／それ以外は支持プリンのid）
         toppled: false, // v0.3.4: 重心転倒で崩れたマーク（GAMEOVER文言分岐用）
-        isCherry: spawnCherry // v0.3.5: ピース種別（描画・クリア判定・HUDで分岐）
+        isCherry: spawnCherry, // v0.3.5: ピース種別（描画・クリア判定・HUDで分岐）
+        isDeco: isDeco, // v0.3.6: デコプリン（重心ズレ）。さくらんぼ・Lv5未満は常にfalse（G4: undefined依存を排除）
+        comDir: comDir  // v0.3.6: トッピングが寄る向き（±1・非デコは0）
       };
       waitingDrop = true;
     }
@@ -766,6 +785,14 @@
       return result;
     }
 
+    // v0.3.6: プリンの実効重心X。デコは comDir 側へ DECO_COM_OFFSET ズレる（水平固定・G2）。
+    // cos(angle)は掛けない：トッピングの縦オフセット(約27px)由来のsin項を落とす中途半端を避け、
+    // 誤差を「理不尽転倒が出ない側（過小評価）」に倒す。イージング中の未収束angleにも依存しない。
+    function comX(p) {
+      if (!p.isDeco) return p.x; // 非デコは p.x と完全一致＝v0.3.5挙動をビット保存（G4）
+      return p.x + p.comDir * DECO_COM_OFFSET;
+    }
+
     function checkStackTopple() {
       toppleDirty = false; // 消化は1フレーム1回（先にクリアして再入を防ぐ）
 
@@ -777,8 +804,8 @@
         const desc = getDescendants(lower);
         if (desc.length === 0) continue;
         let sx = 0;
-        for (const d of desc) sx += d.x;
-        const diff = sx / desc.length - lower.x; // 上の塊の重心X − 下プリン中心X
+        for (const d of desc) sx += comX(d);
+        const diff = sx / desc.length - comX(lower); // 上の塊の重心X − 下プリン中心X（デコは comX で重心ズレ）
         if (Math.abs(diff) > TOPPLE_LIMIT) {
           if (worst === null || lower.y > worst.lower.y) {
             worst = { lower, desc, dir: diff > 0 ? 1 : -1 };
@@ -907,6 +934,31 @@
       ctx.ellipse(0, yTop, halfTop * 0.94, r * 0.15, 0, 0, Math.PI * 2);
       ctx.fillStyle = f.sauce;
       ctx.fill();
+
+      // v0.3.6: デコプリンのトッピング（いちご）。寄せる向き dx は必ず comDir と一致させる
+      // ＝描画の重い側＝物理 comX のズレ側＝倒れる側（「右に寄ってるのに左に倒れる」の理不尽を絶対に作らない）。
+      if (p.isDeco) {
+        const dx = p.comDir * halfTop * 0.7;   // 重い側へ寄せる（comDir と同符号）
+        const ty = yTop - r * 0.08;
+        // 実（いちご）
+        ctx.beginPath();
+        ctx.arc(dx, ty, r * 0.30, 0, Math.PI * 2);
+        ctx.fillStyle = '#E8516B';
+        ctx.fill();
+        ctx.strokeStyle = '#C23A52';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+        // ヘタ（緑・小）＝「いちご」と一目で分かる手がかり
+        ctx.beginPath();
+        ctx.ellipse(dx, ty - r * 0.27, r * 0.13, r * 0.06, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#5CA02C';
+        ctx.fill();
+        // つや
+        ctx.beginPath();
+        ctx.arc(dx - r * 0.10, ty - r * 0.10, r * 0.07, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.fill();
+      }
 
       // 前面に1本たれるソース
       ctx.beginPath();
