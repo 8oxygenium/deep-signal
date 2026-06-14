@@ -12,7 +12,7 @@
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>のせのせプリン v0.3.6.1 - HAPOMU</title>
+  <title>のせのせプリン v0.3.6.2 - HAPOMU</title>
   <style>
     * {
       box-sizing: border-box;
@@ -210,7 +210,7 @@
   <script>
     // ---- URLにバージョンクエリを付与 ----
     (function() {
-      const VERSION = '0.3.6.1';
+      const VERSION = '0.3.6.2';
       const url = new URL(location.href);
       if (url.searchParams.get('v') !== VERSION) {
         url.searchParams.set('v', VERSION);
@@ -219,7 +219,7 @@
     })();
 
     // ---- 定数 ----
-    const VERSION_LABEL = 'v0.3.6.1';
+    const VERSION_LABEL = 'v0.3.6.2';
     const GRAVITY = 0.3;
     const PUDDING_RADIUS = 30;
     const CANVAS_W = 360;
@@ -999,7 +999,7 @@
       ctx.strokeStyle = 'rgba(180,140,60,0.35)';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(p.x, p.y + PUDDING_RADIUS);
+      ctx.moveTo(p.x, p.y + p.radius); // v0.3.6.2: さくらんぼ(CHERRY_RADIUS)でもガイド終点が実半径に一致するよう p.radius に
       ctx.lineTo(p.x, DISH_Y);
       ctx.stroke();
       ctx.setLineDash([]);
