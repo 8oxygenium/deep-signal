@@ -12,7 +12,7 @@
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>のせのせプリン v0.3.6.2 - HAPOMU</title>
+  <title>のせのせプリン v0.3.6.3 - HAPOMU</title>
   <style>
     * {
       box-sizing: border-box;
@@ -210,7 +210,7 @@
   <script>
     // ---- URLにバージョンクエリを付与 ----
     (function() {
-      const VERSION = '0.3.6.2';
+      const VERSION = '0.3.6.3';
       const url = new URL(location.href);
       if (url.searchParams.get('v') !== VERSION) {
         url.searchParams.set('v', VERSION);
@@ -219,7 +219,7 @@
     })();
 
     // ---- 定数 ----
-    const VERSION_LABEL = 'v0.3.6.2';
+    const VERSION_LABEL = 'v0.3.6.3';
     const GRAVITY = 0.3;
     const PUDDING_RADIUS = 30;
     const CANVAS_W = 360;
@@ -278,6 +278,7 @@
     // settled に接触したフレームだけ vx を減衰させる＝自由滑走(無接触)は減速しない＝皿外落下GAMEOVERを保つ。
     // 実機ノブ：まだ回り続ける→0.70、止まりすぎ/GAMEOVERが減りすぎ→0.90。
     const FRICTION_CONTACT = 0.80;
+    const FRICTION_DISH    = 0.95;   // v0.3.6.3: 皿面接触時の水平摩擦（dish bounce 毎に乗算・多体パイルの永久回転防止）
 
     // v0.3.4: 色違いプリン4種（見た目のみ・物理は完全同一）。spawn時にランダム割当。
     const FLAVORS = [
@@ -595,6 +596,7 @@
             Math.abs(p.x - DISH_CX) < DISH_HALF_W + p.radius * 0.5) {
           p.y = DISH_Y - p.radius;
           p.vy *= -0.3;
+          p.vx *= FRICTION_DISH; // v0.3.6.3: 皿面の転がり摩擦。残留vxを消して塊の永久回転を止める（皿外へ出たプリンは此処に入らず摩擦ゼロ＝落下GAMEOVER維持）
         }
 
         // settled済みプリンとの衝突
