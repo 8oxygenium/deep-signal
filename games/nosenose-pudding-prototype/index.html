@@ -12,7 +12,7 @@
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>のせのせプリン v0.3.6.5 - HAPOMU</title>
+  <title>のせのせプリン v0.3.6.6 - HAPOMU</title>
   <style>
     * {
       box-sizing: border-box;
@@ -210,7 +210,7 @@
   <script>
     // ---- URLにバージョンクエリを付与 ----
     (function() {
-      const VERSION = '0.3.6.5';
+      const VERSION = '0.3.6.6';
       const url = new URL(location.href);
       if (url.searchParams.get('v') !== VERSION) {
         url.searchParams.set('v', VERSION);
@@ -219,7 +219,7 @@
     })();
 
     // ---- 定数 ----
-    const VERSION_LABEL = 'v0.3.6.5';
+    const VERSION_LABEL = 'v0.3.6.6';
     const GRAVITY = 0.3;
     const PUDDING_RADIUS = 30;
     const CANVAS_W = 360;
@@ -229,7 +229,7 @@
     const DISH_Y = 520;           // お皿上面のY座標
     const DISH_CX = 180;          // お皿中心X
     const DISH_HALF_W = 120;      // お皿の有効乗れる半幅（円の中心が乗れる範囲）/ v0.3.6.5: 100→120 横4個・詰まり緩和
-    const DISH_VISUAL_RX = 130;   // お皿の見た目横幅（半径）/ v0.3.6.5: 110→130 支え範囲(120)に合わせ拡張
+    const DISH_VISUAL_RX = 132;   // お皿の見た目横幅（半径）/ v0.3.6.5: 110→130 支え範囲(120)に合わせ拡張 / v0.3.6.6: 130→132 着地判定外縁(135)との5pxズレ緩和。見た目圧迫を避けるため135でなく132（実機ノブ：まだはみ出す→135まで上限。135超は見た目>着地判定135で「乗れそうに見えて落ちる」逆の嘘になるため不可）
     const DISH_VISUAL_RY = 16;    // お皿の見た目縦幅（楕円の縦半径）
 
     // 落下開始位置
