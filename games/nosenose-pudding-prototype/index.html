@@ -12,7 +12,7 @@
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>のせのせプリン v0.3.6.6 - HAPOMU</title>
+  <title>のせのせプリン v0.3.6.7 - HAPOMU</title>
   <style>
     * {
       box-sizing: border-box;
@@ -210,7 +210,7 @@
   <script>
     // ---- URLにバージョンクエリを付与 ----
     (function() {
-      const VERSION = '0.3.6.6';
+      const VERSION = '0.3.6.7';
       const url = new URL(location.href);
       if (url.searchParams.get('v') !== VERSION) {
         url.searchParams.set('v', VERSION);
@@ -219,7 +219,7 @@
     })();
 
     // ---- 定数 ----
-    const VERSION_LABEL = 'v0.3.6.6';
+    const VERSION_LABEL = 'v0.3.6.7';
     const GRAVITY = 0.3;
     const PUDDING_RADIUS = 30;
     const CANVAS_W = 360;
@@ -964,25 +964,26 @@
 
       // v0.3.6: デコプリンのトッピング（いちご）。寄せる向き dx は必ず comDir と一致させる
       // ＝描画の重い側＝物理 comX のズレ側＝倒れる側（「右に寄ってるのに左に倒れる」の理不尽を絶対に作らない）。
+      // v0.3.6.7: 1粒集約・r*0.34・係数0.64内寄せ（playtester指摘の2粒潰れ・はみ出し解消）。
       if (p.isDeco) {
-        const dx = p.comDir * halfTop * 0.7;   // 重い側へ寄せる（comDir と同符号）
+        const dx = p.comDir * halfTop * 0.64;  // 重い側へ寄せる（comDir と同符号）。X係数0.64=中心13.1px
         const ty = yTop - r * 0.08;
-        // 実（いちご）
+        // 実（いちご）1粒・半径r*0.34(10.2px)＝外端23.3px・はみ出し2.9px以内
         ctx.beginPath();
-        ctx.arc(dx, ty, r * 0.30, 0, Math.PI * 2);
+        ctx.arc(dx, ty, r * 0.34, 0, Math.PI * 2);
         ctx.fillStyle = '#E8516B';
         ctx.fill();
         ctx.strokeStyle = '#C23A52';
         ctx.lineWidth = 1.2;
         ctx.stroke();
-        // ヘタ（緑・小）＝「いちご」と一目で分かる手がかり
+        // ヘタ（緑・小）
         ctx.beginPath();
-        ctx.ellipse(dx, ty - r * 0.27, r * 0.13, r * 0.06, 0, 0, Math.PI * 2);
+        ctx.ellipse(dx, ty - r * 0.31, r * 0.13, r * 0.06, 0, 0, Math.PI * 2);
         ctx.fillStyle = '#5CA02C';
         ctx.fill();
         // つや
         ctx.beginPath();
-        ctx.arc(dx - r * 0.10, ty - r * 0.10, r * 0.07, 0, Math.PI * 2);
+        ctx.arc(dx - r * 0.11, ty - r * 0.11, r * 0.08, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255,255,255,0.6)';
         ctx.fill();
       }
