@@ -12,7 +12,7 @@
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>のせのせプリン v0.3.6.4 - HAPOMU</title>
+  <title>のせのせプリン v0.3.6.5 - HAPOMU</title>
   <style>
     * {
       box-sizing: border-box;
@@ -210,7 +210,7 @@
   <script>
     // ---- URLにバージョンクエリを付与 ----
     (function() {
-      const VERSION = '0.3.6.4';
+      const VERSION = '0.3.6.5';
       const url = new URL(location.href);
       if (url.searchParams.get('v') !== VERSION) {
         url.searchParams.set('v', VERSION);
@@ -219,7 +219,7 @@
     })();
 
     // ---- 定数 ----
-    const VERSION_LABEL = 'v0.3.6.4';
+    const VERSION_LABEL = 'v0.3.6.5';
     const GRAVITY = 0.3;
     const PUDDING_RADIUS = 30;
     const CANVAS_W = 360;
@@ -228,8 +228,8 @@
     // お皿
     const DISH_Y = 520;           // お皿上面のY座標
     const DISH_CX = 180;          // お皿中心X
-    const DISH_HALF_W = 100;      // お皿の有効乗れる半幅（円の中心が乗れる範囲）
-    const DISH_VISUAL_RX = 110;   // お皿の見た目横幅（半径）
+    const DISH_HALF_W = 120;      // お皿の有効乗れる半幅（円の中心が乗れる範囲）/ v0.3.6.5: 100→120 横4個・詰まり緩和
+    const DISH_VISUAL_RX = 130;   // お皿の見た目横幅（半径）/ v0.3.6.5: 110→130 支え範囲(120)に合わせ拡張
     const DISH_VISUAL_RY = 16;    // お皿の見た目縦幅（楕円の縦半径）
 
     // 落下開始位置
@@ -239,7 +239,7 @@
     const MAX_X = 320;
 
     // 崩れ判定
-    const SLIDE_THRESHOLD_DISH    = 1.0;
+    const SLIDE_THRESHOLD_DISH    = 0.88; // v0.3.6.5: 1.0→0.88。皿有効幅拡張(100→120)で皿端が完全安置ゾーン化したため、端は滑り落ちるよう戻す。実機ノブ：端を甘く→0.95、辛く→0.80
     // v0.3.4: 0.5→0.62（横ズレ許容 30→37px・のって耐えやすく／proto2実証値）
     const SLIDE_THRESHOLD_PUDDING = 0.62;
 
@@ -256,7 +256,7 @@
 
     // クリア判定：10個settled かつ 最上プリンがお皿上面から4r以上高いこと（縦積み保証）
     const CLEAR_COUNT = 10;
-    const CLEAR_MIN_Y = DISH_Y - PUDDING_RADIUS * 4; // = 520 - 120 = 400
+    const CLEAR_MIN_Y = DISH_Y - PUDDING_RADIUS * 4.5; // = 520 - 135 = 385 / v0.3.6.5: 皿拡張(120)と*5(=370)の矛盾（横並びでクリア不能化）を回避し*4.5へ緩和。実機ノブ：難しく→*5(=370)、簡単→*4(=400)
 
     // v0.3.5: Lv3「最後のさくらんぼ」。プリンより小さい＝てっぺんに乗せにくい＝難しい。
     // 実機ノブ：易しく→16、難しく→12。
@@ -297,6 +297,8 @@
     const ctx     = canvas.getContext('2d');
     const overlay = document.getElementById('overlay');
     const overlayMsg = document.getElementById('overlayMsg');
+    const navLinksEl = document.getElementById('navLinks');
+    const resetRowEl = document.getElementById('resetRow');
 
     // ---- ゲーム状態 ----
     // ① クリア判定・② GAME OVER判定・③ リスタートを束ねる1変数
@@ -340,9 +342,20 @@
       } catch(e) { /* プライベートブラウズ等では無視 */ }
     }
 
+    // v0.3.6.5: ゲームクロム（画面下の英語nav＋進捗リセット行）の表示切替を1箇所に集約。
+    // playing中は隠して誤タップ離脱・confirmパニックを防ぐ。display:none ではなく visibility で
+    // レイアウト枠を保持し、gameover/clear での再表示時に縦丈がガタつくのを防ぐ。
+    function setChromeVisible(visible) {
+      const v = visible ? 'visible' : 'hidden';
+      if (navLinksEl) navLinksEl.style.visibility = v;
+      if (resetRowEl) resetRowEl.style.visibility = v;
+    }
+
     // ---- 状態変更ヘルパー ----
     function setGameState(state) {
       gameState = state;
+      // v0.3.6.5: playing中はゲームクロムを隠す（誤タップ離脱・confirmパニック対策）。gameover/clearで再表示。
+      setChromeVisible(state !== 'playing');
       if (state === 'clear') {
         // STEP1: レベルアップ処理（クリアしたら次のレベルへ）
         currentLevel++;
@@ -1200,6 +1213,8 @@
     });
 
     // ---- 起動 ----
+    // v0.3.6.5: 初回起動は setGameState('playing') を通らないため、ここでゲームクロムを初期非表示にする
+    setChromeVisible(false);
     spawnPudding();
     requestAnimationFrame(gameLoop);
   </script>
