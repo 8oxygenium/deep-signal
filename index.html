@@ -24,452 +24,436 @@
     <meta name="twitter:title" content="HAPOMU - Happy Omurice Games">
     <meta name="twitter:description" content="Small browser games from a tiny omurice universe.">
     <meta name="twitter:image" content="assets/img/ogp-hapomu.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
     <style>
       :root {
         --cream: #fff1bf;
+        --paper: #fff9df;
         --egg: #ffd85c;
         --ketchup: #d83b2d;
-        --ketchup-dark: #8e251d;
-        --brown: #43261c;
-        --toast: #f0b65c;
-        --paper: #fff9df;
-        --green: #4c7a46;
-        --ink: #241814;
-        --shadow: rgba(67, 38, 28, 0.24);
-        --deep: #102c22;
+        --ketchup-dark: #b5311f;
+        --brown: #5a3320;
+        --ink: #43261c;
+        --green: #3f8a4e;
+        --shadow: rgba(90, 51, 32, 0.28);
       }
 
-      * {
-        box-sizing: border-box;
-      }
+      * { box-sizing: border-box; }
 
-      html {
-        background: var(--cream);
-      }
+      html { background: var(--cream); }
 
       body {
         min-height: 100vh;
         margin: 0;
         color: var(--ink);
-        font-family: "Courier New", "MS Gothic", monospace;
-        line-height: 1.65;
-        background:
-          radial-gradient(circle at 12% 8%, rgba(216, 59, 45, 0.18), transparent 18%),
-          radial-gradient(circle at 88% 0%, rgba(255, 216, 92, 0.72), transparent 24%),
-          linear-gradient(rgba(67, 38, 28, 0.04) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(67, 38, 28, 0.035) 1px, transparent 1px),
-          var(--cream);
-        background-size: 100% 100%, 100% 100%, 14px 14px, 14px 14px, auto;
+        font-family: "Zen Maru Gothic", "Mochiy Pop One", "MS Gothic", sans-serif;
+        font-weight: 500;
+        line-height: 1.7;
+        background-color: var(--cream);
+        background-image: radial-gradient(#e9c96a 1.7px, transparent 1.7px);
+        background-size: 22px 22px;
       }
 
-      a {
-        color: inherit;
-      }
+      a { color: inherit; }
 
-      .archive {
-        width: min(1160px, calc(100% - 32px));
+      .wrap {
+        width: min(1080px, calc(100% - 32px));
         margin: 0 auto;
-        padding: 34px 0 56px;
+        padding: 30px 0 64px;
       }
 
-      .hero {
-        position: relative;
-        overflow: hidden;
-        padding: 34px;
-        border: 4px solid var(--brown);
-        border-radius: 18px;
-        background:
-          linear-gradient(135deg, rgba(255, 216, 92, 0.88), rgba(255, 249, 223, 0.94)),
-          var(--egg);
-        box-shadow: 10px 10px 0 var(--shadow);
+      /* ---- header ---- */
+      .top {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        flex-wrap: wrap;
+        text-align: center;
+        margin-bottom: 8px;
       }
-
-      .hero::after {
-        position: absolute;
-        right: -34px;
-        bottom: -46px;
-        width: 210px;
-        height: 150px;
-        border: 5px solid var(--brown);
-        border-radius: 50%;
-        background: var(--paper);
-        content: "";
-        transform: rotate(-8deg);
+      .mascot {
+        width: 96px;
+        height: 96px;
+        flex: none;
+        animation: bob 3.2s ease-in-out infinite;
       }
-
-      .eyebrow {
-        margin: 0 0 8px;
-        color: var(--ketchup-dark);
-        font-size: 13px;
-        font-weight: 700;
-        text-transform: uppercase;
+      @keyframes bob {
+        0%, 100% { transform: translateY(0) rotate(-3deg); }
+        50% { transform: translateY(-7px) rotate(3deg); }
       }
-
-      h1 {
-        position: relative;
-        z-index: 1;
+      .brand h1 {
+        font-family: "Mochiy Pop One", sans-serif;
         margin: 0;
-        color: var(--brown);
-        font-size: clamp(48px, 10vw, 104px);
-        line-height: 0.9;
-        text-transform: uppercase;
-        text-shadow: 5px 5px 0 rgba(216, 59, 45, 0.28);
-      }
-
-      .brand-sub {
-        margin: 8px 0 0;
+        font-size: clamp(40px, 9vw, 72px);
+        line-height: 1;
         color: var(--ketchup);
-        font-size: clamp(20px, 4vw, 36px);
+        text-shadow: 3px 3px 0 #fff, 6px 6px 0 var(--ketchup-dark);
+      }
+      .brand p {
+        margin: 10px 0 0;
         font-weight: 700;
-        text-transform: uppercase;
-      }
-
-      .subtitle {
-        position: relative;
-        z-index: 1;
-        max-width: 760px;
-        margin: 16px 0 0;
+        font-size: clamp(12px, 2.4vw, 15px);
+        letter-spacing: 1px;
         color: var(--brown);
-        font-size: clamp(15px, 2vw, 20px);
+      }
+      .lead {
+        max-width: 640px;
+        margin: 14px auto 0;
+        text-align: center;
+        color: var(--brown);
+        font-size: clamp(14px, 2.4vw, 16px);
       }
 
-      .site-links,
-      .hero-actions,
-      .game-actions {
+      .site-links {
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
-        margin-top: 18px;
+        justify-content: center;
+        margin: 22px 0 6px;
       }
-
-      .site-links a,
-      .play-button,
-      .secondary-button,
-      .version-card a {
-        display: inline-block;
-        padding: 10px 13px;
-        border: 3px solid var(--brown);
-        border-radius: 10px;
-        color: var(--paper);
-        font-weight: 700;
+      .chip {
+        font-family: "Mochiy Pop One", sans-serif;
+        font-size: 13px;
         text-decoration: none;
-        text-transform: uppercase;
-        background: var(--ketchup);
-        box-shadow: 4px 4px 0 var(--shadow);
+        color: var(--paper);
+        background: var(--green);
+        border: 3px solid var(--ink);
+        border-radius: 999px;
+        padding: 7px 16px;
+        box-shadow: 3px 3px 0 var(--shadow);
+        transition: transform .08s ease, box-shadow .08s ease;
       }
-
-      .site-links a:hover,
-      .site-links a:focus-visible,
-      .play-button:hover,
-      .play-button:focus-visible,
-      .secondary-button:hover,
-      .secondary-button:focus-visible,
-      .version-card a:hover,
-      .version-card a:focus-visible {
+      .chip:hover, .chip:focus-visible {
         outline: none;
-        background: var(--green);
         transform: translate(2px, 2px);
-        box-shadow: 2px 2px 0 var(--shadow);
+        box-shadow: 1px 1px 0 var(--shadow);
       }
 
-      .section-title {
-        margin: 36px 0 0;
-        color: var(--brown);
-        font-size: clamp(24px, 4vw, 42px);
-        line-height: 1.1;
-        text-transform: uppercase;
-      }
-
-      .section-lead {
-        max-width: 820px;
-        margin: 10px 0 0;
-        color: var(--brown);
-      }
-
-      .games-grid {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 16px;
-        margin-top: 18px;
-      }
-
-      .game-card,
-      .devlog-card,
-      .current-card,
-      .version-card,
-      .about {
-        padding: 18px;
-        border: 3px solid var(--brown);
-        border-radius: 16px;
-        background: rgba(255, 249, 223, 0.92);
-        box-shadow: 7px 7px 0 var(--shadow);
-      }
-
-      .current-card {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: 16px;
+      /* ---- section heading ---- */
+      .head {
+        font-family: "Mochiy Pop One", sans-serif;
+        display: flex;
         align-items: center;
+        gap: 12px;
+        margin: 40px 0 4px;
+        color: var(--ink);
+        font-size: clamp(20px, 4vw, 28px);
       }
-
-      .game-card {
-        display: flex;
-        min-height: 280px;
-        flex-direction: column;
+      .head::after {
+        content: "";
+        flex: 1;
+        height: 4px;
+        border-radius: 4px;
+        background: repeating-linear-gradient(90deg, var(--egg) 0 14px, transparent 14px 22px);
       }
+      .sub { margin: 4px 0 0; color: var(--brown); font-size: 14px; }
 
-      .game-card.deep {
-        color: #d8f7a7;
-        background:
-          linear-gradient(rgba(16, 44, 34, 0.94), rgba(8, 24, 32, 0.94)),
-          var(--deep);
-      }
-
-      .game-card h3,
-      .devlog-card h3,
-      .current-card h2,
-      .version-card h3,
-      .about h2 {
-        margin: 0;
-        line-height: 1.2;
-        text-transform: uppercase;
-      }
-
-      .game-card p,
-      .version-card p,
-      .about p,
-      .notes {
-        margin: 12px 0 0;
-      }
-
-      .tag {
-        display: inline-block;
-        width: fit-content;
-        margin: 0 0 10px;
-        padding: 4px 8px;
-        border: 2px solid var(--brown);
-        border-radius: 999px;
-        color: var(--paper);
-        font-size: 12px;
-        font-weight: 700;
-        text-transform: uppercase;
-        background: var(--green);
-      }
-
-      .build-label {
-        display: inline-block;
-        width: fit-content;
-        margin-top: 8px;
-        padding: 4px 8px;
-        border: 2px solid var(--brown);
-        border-radius: 999px;
-        color: var(--paper);
-        font-size: 12px;
-        font-weight: 700;
-        text-transform: uppercase;
-        background: var(--ketchup);
-      }
-
-      .game-card.deep .tag {
-        border-color: #d8f7a7;
-        color: #081820;
-        background: #9bbc0f;
-      }
-
-      .game-card.deep .secondary-button {
-        border-color: #d8f7a7;
-        color: #081820;
-        background: #d8f7a7;
-      }
-
-      .game-actions {
-        margin-top: auto;
-      }
-
-      .devlog-card ul,
-      .notes {
-        margin: 12px 0 0;
-        padding-left: 18px;
-      }
-
-      .versions {
+      /* ---- sticker grid ---- */
+      .grid {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 16px;
-        margin-top: 18px;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 22px 20px;
+        margin-top: 24px;
       }
-
-      .archive-intro {
-        margin-top: 28px;
-        color: var(--brown);
-      }
-
-      .version-card {
+      .card {
+        position: relative;
         display: flex;
-        min-height: 230px;
         flex-direction: column;
+        background: #fff;
+        border: 3px solid var(--ink);
+        border-radius: 20px;
+        padding: 14px;
+        box-shadow: 4px 5px 0 var(--shadow);
+        transition: transform .12s ease, box-shadow .12s ease;
+      }
+      .card:nth-child(3n+1) { transform: rotate(-1.6deg); }
+      .card:nth-child(3n+2) { transform: rotate(1.2deg); }
+      .card:nth-child(3n+3) { transform: rotate(-0.6deg); }
+      .card:hover, .card:focus-within {
+        transform: rotate(0deg) translateY(-4px);
+        box-shadow: 6px 8px 0 var(--shadow);
+      }
+      .thumb {
+        width: 100%;
+        height: 116px;
+        border: 3px solid var(--ink);
+        border-radius: 14px;
+        overflow: hidden;
+        display: block;
+      }
+      .thumb svg { width: 100%; height: 100%; display: block; }
+      .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; image-rendering: pixelated; }
+      .pill {
+        position: absolute;
+        top: 22px;
+        right: 22px;
+        font-family: "Mochiy Pop One", sans-serif;
+        font-size: 11px;
+        color: #fff;
+        background: var(--green);
+        border: 2px solid var(--ink);
+        border-radius: 999px;
+        padding: 2px 10px;
+      }
+      .pill.proto { background: var(--ketchup); }
+      .name {
+        font-family: "Mochiy Pop One", sans-serif;
+        margin: 12px 2px 2px;
+        font-size: 17px;
+        line-height: 1.25;
+        color: var(--ink);
+      }
+      .en { margin: 0 2px; color: var(--brown); font-size: 12px; font-weight: 700; letter-spacing: .5px; }
+      .desc { margin: 8px 2px 0; font-size: 13px; color: var(--brown); flex: 1; }
+      .actions { display: flex; gap: 8px; margin-top: 14px; }
+      .btn {
+        font-family: "Mochiy Pop One", sans-serif;
+        flex: 1;
+        text-align: center;
+        text-decoration: none;
+        font-size: 13px;
+        padding: 9px 6px;
+        border: 3px solid var(--ink);
+        border-radius: 12px;
+        box-shadow: 2px 2px 0 var(--shadow);
+        transition: transform .08s ease, box-shadow .08s ease;
+      }
+      .btn.play { color: var(--paper); background: var(--ketchup); }
+      .btn.detail { color: var(--ink); background: var(--egg); }
+      .btn:hover, .btn:focus-visible {
+        outline: none;
+        transform: translate(2px, 2px);
+        box-shadow: 0 0 0 var(--shadow);
       }
 
-      .version-card a {
-        width: fit-content;
-        margin-top: auto;
+      /* ---- devlog + archive notes ---- */
+      .note {
+        margin-top: 22px;
+        background: var(--paper);
+        border: 3px solid var(--ink);
+        border-radius: 20px;
+        padding: 20px 22px;
+        box-shadow: 4px 5px 0 var(--shadow);
       }
-
-      .about {
-        margin-top: 30px;
+      .note h3 {
+        font-family: "Mochiy Pop One", sans-serif;
+        margin: 0 0 10px;
+        font-size: 18px;
+        color: var(--ink);
       }
-
-      @media (max-width: 980px) {
-        .games-grid {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
+      .note ul { margin: 0; padding-left: 20px; color: var(--brown); font-size: 14px; }
+      .note ul li { margin: 2px 0; }
+      .note .chip { display: inline-block; margin-top: 14px; }
+      .archive {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
       }
+      .archive p { margin: 6px 0 0; color: var(--brown); font-size: 14px; max-width: 620px; }
 
-      @media (max-width: 680px) {
-        .archive {
-          width: min(100% - 20px, 560px);
-          padding: 18px 0 34px;
-        }
+      footer {
+        margin-top: 40px;
+        text-align: center;
+        color: var(--brown);
+        font-size: 13px;
+        font-weight: 700;
+      }
+      footer a { text-decoration: none; }
+      footer a:hover { color: var(--ketchup); }
 
-        .hero,
-        .game-card,
-        .devlog-card,
-        .current-card,
-        .version-card,
-        .about {
-          padding: 16px;
-          border-radius: 12px;
-        }
-
-        .games-grid,
-        .current-card,
-        .versions {
-          grid-template-columns: 1fr;
-        }
+      @media (max-width: 620px) {
+        .wrap { width: min(100% - 20px, 560px); padding: 22px 0 44px; }
+        .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 12px; }
+        .name { font-size: 15px; }
+        .actions { flex-direction: column; }
+      }
+      @media (max-width: 380px) {
+        .grid { grid-template-columns: 1fr; }
       }
     </style>
   </head>
   <body>
-    <main class="archive">
-      <section class="hero" aria-labelledby="page-title">
-        <p class="eyebrow">Happy Omurice Games</p>
-        <h1 id="page-title">HAPOMU</h1>
-        <p class="brand-sub">Happy Omurice Games</p>
-        <p class="subtitle">家族のアイディアとAI相談から生まれる、ちいさなブラウザゲーム置き場。</p>
-        <p class="subtitle">Small browser games from a tiny omurice universe.</p>
-        <nav class="site-links" aria-label="サイト情報">
-          <a href="about.html">About</a>
-          <a href="privacy.html">Privacy</a>
-          <a href="games/index.html">Games</a>
-          <a href="devlog/">Devlog</a>
-        </nav>
+    <main class="wrap">
+      <header class="top">
+        <svg class="mascot" viewBox="0 0 100 100" role="img" aria-label="ハッピーオムライスのマスコット">
+          <ellipse cx="50" cy="56" rx="40" ry="31" fill="#ffd85c" stroke="#43261c" stroke-width="5"/>
+          <path d="M20 50C38 30 60 44 82 44" stroke="#d83b2d" stroke-width="6" fill="none" stroke-linecap="round"/>
+          <path d="M24 62C40 50 60 52 78 58" stroke="#d83b2d" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <circle cx="40" cy="56" r="4.5" fill="#43261c"/>
+          <circle cx="62" cy="56" r="4.5" fill="#43261c"/>
+          <path d="M43 70C48 75 56 75 60 69" stroke="#43261c" stroke-width="4" fill="none" stroke-linecap="round"/>
+        </svg>
+        <div class="brand">
+          <h1>HAPOMU</h1>
+          <p>HAPPY OMURICE GAMES</p>
+        </div>
+      </header>
+      <p class="lead">家族のアイディアとAI相談から生まれる、ちいさなブラウザゲーム置き場。<br>Small browser games from a tiny omurice universe.</p>
+
+      <nav class="site-links" aria-label="サイト情報">
+        <a class="chip" href="games/index.html">ゲーム一覧</a>
+        <a class="chip" href="about.html">About</a>
+        <a class="chip" href="devlog/">Devlog</a>
+        <a class="chip" href="privacy.html">Privacy</a>
+      </nav>
+
+      <h2 class="head">あそべるゲーム</h2>
+      <p class="sub">HAPOMUでいま遊べるブラウザゲームとプロトタイプです。タイルをえらんであそんでね。</p>
+
+      <section class="grid" aria-label="あそべるゲーム">
+
+        <article class="card">
+          <span class="pill">v0.5.4</span>
+          <span class="thumb">
+            <img src="assets/img/thumb-deep-signal.jpg" alt="DEEP SIGNAL のゲーム画面" width="440" height="232" loading="lazy">
+          </span>
+          <h3 class="name">DEEP SIGNAL</h3>
+          <p class="en">Retro deep-sea shooter</p>
+          <p class="desc">深海・空中・宇宙へすすむHAPOMU第1作。v0.5.4でスマホ用ソナーボタンを追加。</p>
+          <div class="actions">
+            <a class="btn play" href="current/index.html">あそぶ</a>
+            <a class="btn detail" href="games/deep-signal.html">くわしく</a>
+          </div>
+        </article>
+
+        <article class="card">
+          <span class="pill proto">prototype</span>
+          <span class="thumb">
+            <svg viewBox="0 0 220 116" role="img" aria-label="ハッピーオムライス のサムネイル">
+              <rect width="220" height="116" fill="#ffe14d"/>
+              <ellipse cx="110" cy="66" rx="58" ry="30" fill="#ffce3a" stroke="#43261c" stroke-width="3"/>
+              <path d="M64 60C90 40 130 56 158 52" stroke="#d8402b" stroke-width="8" fill="none" stroke-linecap="round"/>
+              <path d="M70 74C96 62 128 64 152 72" stroke="#d8402b" stroke-width="6" fill="none" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <h3 class="name">ハッピーオムライス</h3>
+          <p class="en">Happy Omurice</p>
+          <p class="desc">オムライスにケチャップを描いて完成させる、明るいお絵かきミニゲーム。</p>
+          <div class="actions">
+            <a class="btn play" href="games/happy-omurice-prototype/index.html">あそぶ</a>
+            <a class="btn detail" href="games/happy-omurice.html">くわしく</a>
+          </div>
+        </article>
+
+        <article class="card">
+          <span class="pill">clear</span>
+          <span class="thumb">
+            <svg viewBox="0 0 220 116" role="img" aria-label="じゃんけんキッチン のサムネイル">
+              <rect width="220" height="116" fill="#3a2c6e"/>
+              <circle cx="66" cy="58" r="20" fill="#ff3db0" stroke="#43261c" stroke-width="3"/>
+              <circle cx="110" cy="58" r="20" fill="#8fe000" stroke="#43261c" stroke-width="3"/>
+              <circle cx="154" cy="58" r="20" fill="#ffd21f" stroke="#43261c" stroke-width="3"/>
+              <circle cx="66" cy="58" r="7" fill="#fff" opacity=".6"/>
+              <circle cx="110" cy="58" r="7" fill="#fff" opacity=".6"/>
+              <circle cx="154" cy="58" r="7" fill="#fff" opacity=".6"/>
+            </svg>
+          </span>
+          <h3 class="name">じゃんけんキッチン</h3>
+          <p class="en">Janken Kitchen</p>
+          <p class="desc">駄菓子屋筐体風の3ボタンじゃんけんでOMU COINを集めるゲーム。</p>
+          <div class="actions">
+            <a class="btn play" href="games/janken-kitchen-prototype/index.html">あそぶ</a>
+            <a class="btn detail" href="games/janken-kitchen.html">くわしく</a>
+          </div>
+        </article>
+
+        <article class="card">
+          <span class="pill">clear</span>
+          <span class="thumb">
+            <svg viewBox="0 0 220 116" role="img" aria-label="カップラーメンくん のサムネイル">
+              <rect width="220" height="116" fill="#e9402e"/>
+              <path d="M82 44H138L132 96H88Z" fill="#fff" stroke="#43261c" stroke-width="3"/>
+              <rect x="78" y="38" width="64" height="10" rx="4" fill="#ffd21f" stroke="#43261c" stroke-width="3"/>
+              <circle cx="100" cy="64" r="3" fill="#43261c"/>
+              <circle cx="120" cy="64" r="3" fill="#43261c"/>
+              <path d="M103 76C108 80 114 80 118 75" stroke="#43261c" stroke-width="3" fill="none" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <h3 class="name">カップラーメンくん</h3>
+          <p class="en">Cup Ramen Kun</p>
+          <p class="desc">30秒間フタを押さえて、カップラーメンくんの完成を守るゲーム。</p>
+          <div class="actions">
+            <a class="btn play" href="games/cup-ramen-kun-prototype/index.html">あそぶ</a>
+            <a class="btn detail" href="games/cup-ramen-kun.html">くわしく</a>
+          </div>
+        </article>
+
+        <article class="card">
+          <span class="pill proto">prototype</span>
+          <span class="thumb">
+            <svg viewBox="0 0 220 116" role="img" aria-label="プリンピンボール のサムネイル">
+              <rect width="220" height="116" fill="#f7b733"/>
+              <path d="M86 44H134L126 84H94Z" fill="#7a3b12" stroke="#43261c" stroke-width="3"/>
+              <ellipse cx="110" cy="44" rx="24" ry="7" fill="#9a5520" stroke="#43261c" stroke-width="3"/>
+              <circle cx="110" cy="34" r="6" fill="#fff" stroke="#43261c" stroke-width="2"/>
+              <circle cx="162" cy="78" r="9" fill="#fff" stroke="#43261c" stroke-width="3"/>
+            </svg>
+          </span>
+          <h3 class="name">プリンピンボール</h3>
+          <p class="en">Pudding Pinball</p>
+          <p class="desc">カラメル玉をスプーンフリッパーではじく、左右タップのピンボール風。</p>
+          <div class="actions">
+            <a class="btn play" href="games/pudding-pinball-prototype/index.html">あそぶ</a>
+            <a class="btn detail" href="games/pudding-pinball.html">くわしく</a>
+          </div>
+        </article>
+
+        <article class="card">
+          <span class="pill proto">prototype</span>
+          <span class="thumb">
+            <svg viewBox="0 0 220 116" role="img" aria-label="のせのせプリン のサムネイル">
+              <rect width="220" height="116" fill="#1f6f4a"/>
+              <path d="M84 70H136L130 92H90Z" fill="#f7b733" stroke="#43261c" stroke-width="3"/>
+              <path d="M92 52H128L124 70H96Z" fill="#ffce5a" stroke="#43261c" stroke-width="3"/>
+              <path d="M100 38H120L117 52H103Z" fill="#ffe08a" stroke="#43261c" stroke-width="3"/>
+              <ellipse cx="110" cy="96" rx="46" ry="8" fill="#e7eef0" stroke="#43261c" stroke-width="3"/>
+            </svg>
+          </span>
+          <h3 class="name">のせのせプリン</h3>
+          <p class="en">Pudding Stack</p>
+          <p class="desc">ぷるぷるプリンをお皿にどんどん積み上げる、バランス落ち物ゲーム。</p>
+          <div class="actions">
+            <a class="btn play" href="games/nosenose-pudding-prototype/index.html">あそぶ</a>
+            <a class="btn detail" href="games/nosenose-pudding.html">くわしく</a>
+          </div>
+        </article>
+
       </section>
 
-      <h2 class="section-title">PLAYABLE GAMES</h2>
-      <p class="section-lead">HAPOMUでいま遊べるブラウザゲームとプロトタイプです。</p>
-      <section class="games-grid" aria-label="Playable games">
-        <article class="game-card deep">
-          <span class="tag">v0.5.4 Mobile Sonar</span>
-          <h3>DEEP SIGNAL</h3>
-          <p>Retro deep-sea shooter</p>
-          <p>深海探索、空中迎撃、宇宙エンドレスへ進むHAPOMU第1作。v0.5.4でスマホ用ソナーボタンを追加。</p>
-          <div class="game-actions">
-            <a class="play-button" href="current/index.html">PLAY</a>
-            <a class="secondary-button" href="games/deep-signal.html">DETAIL / ARCHIVE</a>
-          </div>
-        </article>
-
-        <article class="game-card">
-          <span class="tag">v0.1 prototype</span>
-          <h3>ハッピーオムライス</h3>
-          <p>Happy Omurice</p>
-          <p>Draw ketchup on omurice</p>
-          <p>オムライスにケチャップを描いて完成させる、明るいミニゲーム。</p>
-          <div class="game-actions">
-            <a class="play-button" href="games/happy-omurice-prototype/index.html">PLAY</a>
-            <a class="secondary-button" href="games/happy-omurice.html">DETAIL</a>
-          </div>
-        </article>
-
-        <article class="game-card">
-          <span class="tag">v0.1.2 prototype</span>
-          <h3>じゃんけんキッチン</h3>
-          <p>JANKEN KITCHEN</p>
-          <p>Arcade janken machine</p>
-          <p>駄菓子屋筐体風の3ボタンジャンケンでOMU COINを集めるゲーム。v0.1.2で選んだ手表示とCPUルーレット時間を調整。</p>
-          <div class="game-actions">
-            <a class="play-button" href="games/janken-kitchen-prototype/index.html">PLAY</a>
-            <a class="secondary-button" href="games/janken-kitchen.html">DETAIL</a>
-          </div>
-        </article>
-
-        <article class="game-card">
-          <span class="tag">v0.1.2 prototype</span>
-          <h3>カップラーメンくん</h3>
-          <p>Cup Ramen Kun</p>
-          <p>30 sec lid survival</p>
-          <p>30秒間フタを押さえて、カップラーメンくんの完成を守るゲーム。v0.1.2でGAME OVER時に必ずフタが飛ぶ見た目へ修正。</p>
-          <div class="game-actions">
-            <a class="play-button" href="games/cup-ramen-kun-prototype/index.html">PLAY</a>
-            <a class="secondary-button" href="games/cup-ramen-kun.html">DETAIL</a>
-          </div>
-        </article>
-      </section>
-
-      <h2 class="section-title">MORE PLAYABLE PROTOTYPES</h2>
-      <p class="section-lead">これから育てていく、HAPOMUの追加プロトタイプです。</p>
-      <section class="games-grid" aria-label="More playable prototypes">
-        <article class="game-card">
-          <span class="tag">v0.1.2 prototype</span>
-          <h3>プリンピンボール</h3>
-          <p>Pudding Pinball</p>
-          <p>カラメル玉をスプーンフリッパーではじく、左右タップだけのピンボール風ミニゲーム。v0.1.2で横の隙間をふさぎ、落ちるのは中央だけに。</p>
-          <div class="game-actions">
-            <a class="play-button" href="games/pudding-pinball-prototype/index.html">あそぶ</a>
-            <a class="secondary-button" href="games/pudding-pinball.html">くわしく</a>
-          </div>
-        </article>
-
-        <article class="game-card">
-          <span class="tag">v0.2.3 prototype</span>
-          <h3>のせのせプリン</h3>
-          <p>Pudding Stack</p>
-          <p>ぷるぷるプリンをお皿にどんどん積み上げる、バランス落ち物ゲーム。v0.2.3でお皿の上ならどこでもセーフ（横並びOK）に変更。</p>
-          <div class="game-actions">
-            <a class="play-button" href="games/nosenose-pudding-prototype/index.html">あそぶ</a>
-            <a class="secondary-button" href="games/nosenose-pudding.html">くわしく</a>
-          </div>
-        </article>
-      </section>
-
-      <section class="devlog-card" aria-labelledby="devlog-title">
-        <p class="eyebrow">DEVLOG</p>
-        <h3 id="devlog-title">Recent Updates</h3>
+      <h2 class="head">さいきんの更新</h2>
+      <section class="note" aria-label="Devlog">
+        <h3>Recent updates</h3>
         <ul>
           <li>DEEP SIGNAL v0.5.4 mobile sonar button + stage-clear fix</li>
-          <li>HAPOMU existing game polish</li>
-          <li>HAPOMU kids fairness tuning</li>
-          <li>HAPOMU mobile control and balance tuning</li>
-          <li>プリンピンボール (Pudding Pinball) v0.1.2 miss balance tuning</li>
-          <li>HAPOMU kids test variety tuning</li>
-          <li>のせのせプリン (Pudding Stack) v0.2.1 plate contact tuning</li>
-          <li>カップラーメンくん (Cup Ramen Kun) v0.1.2 lid fly game-over fix</li>
-          <li>じゃんけんキッチン (JANKEN KITCHEN) v0.1.2 arcade timing tuning</li>
-          <li>ハッピーオムライス (Happy Omurice) v0.1 prototype added</li>
-          <li>DEEP SIGNAL v0.5.3 virtual stick tuning</li>
+          <li>HAPOMU existing game polish / kids fairness tuning</li>
+          <li>プリンピンボール v0.1.2 miss balance tuning</li>
+          <li>のせのせプリン v0.2.3 plate-safe tuning</li>
+          <li>カップラーメンくん v0.1.2 lid-fly game-over fix</li>
+          <li>じゃんけんキッチン v0.1.2 arcade timing tuning</li>
+          <li>ハッピーオムライス v0.1 prototype added</li>
         </ul>
-        <p><a href="devlog/">Read full devlog</a></p>
+        <a class="chip" href="devlog/">Devlogを読む</a>
       </section>
 
-      <section id="archive" class="current-card" aria-labelledby="current-title">
+      <section class="note archive" id="archive" aria-label="DEEP SIGNAL archive">
         <div>
-          <h2 id="current-title">DEEP SIGNAL ARCHIVE</h2>
-          <span class="build-label">Development History</span>
-          <p>DEEP SIGNALの過去バージョンを保存している開発アーカイブ。詳細な説明と全リンクは専用ページに整理しました。</p>
+          <h3>DEEP SIGNAL ARCHIVE</h3>
+          <p>DEEP SIGNALの過去バージョンを保存している開発アーカイブ。詳細な説明と全リンクは専用ページにまとめています。</p>
         </div>
-        <a class="secondary-button" href="games/deep-signal.html">Detail / Archive</a>
+        <a class="chip" href="games/deep-signal.html">アーカイブを見る</a>
       </section>
 
+      <footer>
+        <p>© HAPOMU / Happy Omurice Games &nbsp;·&nbsp;
+          <a href="about.html">About</a> &nbsp;·&nbsp;
+          <a href="privacy.html">Privacy</a>
+        </p>
+      </footer>
     </main>
   </body>
 </html>
