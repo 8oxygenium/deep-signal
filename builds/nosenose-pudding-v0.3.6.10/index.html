@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-SHZ3P81R05"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-SHZ3P81R05');
+  </script>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>のせのせプリン v0.3.6.10 - HAPOMU</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: #FFF8E7;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      font-family: 'Hiragino Maru Gothic ProN', 'Hiragino Maru Gothic Pro', 'BIZ UDPGothic', 'Meiryo', sans-serif;
+      padding: 8px 0 16px;
+    }
+
+    h1 {
+      font-size: 1.1rem;
+      color: #8B5E3C;
+      margin-bottom: 4px;
+      letter-spacing: 0.05em;
+    }
+
+    #canvasWrap {
+      position: relative;
+      display: inline-block;
+    }
+
+    #gameCanvas {
+      display: block;
+      border: 2px solid #D4A96A;
+      border-radius: 8px;
+      background: #FFF8E7;
+      touch-action: none;
+    }
+
+    /* ---- オーバーレイ（クリア / GAME OVER） ---- */
+    #overlay {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 248, 231, 0.88);
+      border-radius: 8px;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      z-index: 10;
+    }
+
+    #overlayMsg {
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: #6B3A2A;
+      text-align: center;
+      line-height: 1.5;
+      padding: 0 16px;
+      max-height: 60%;
+      overflow-y: auto;
+    }
+
+    #btnRestart {
+      padding: 14px 36px;
+      font-size: 1.2rem;
+      font-family: inherit;
+      font-weight: bold;
+      background: #E8734A;
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.18);
+      letter-spacing: 0.05em;
+      transition: transform 0.08s, box-shadow 0.08s;
+    }
+
+    #btnRestart:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 rgba(0,0,0,0.18);
+    }
+
+    #controls {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+      align-items: center;
+    }
+
+    #controls button {
+      width: 90px;
+      height: 56px;
+      font-size: 1.1rem;
+      font-family: inherit;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: bold;
+      letter-spacing: 0.05em;
+      transition: transform 0.08s, box-shadow 0.08s, background 0.08s;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.18);
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #btnLeft, #btnRight {
+      background: #F5C518;
+      color: #5C3D11;
+    }
+
+    #btnDrop {
+      background: #E8734A;
+      color: #fff;
+      width: 110px;
+    }
+
+    #controls button:active,
+    #controls button.pressed {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 rgba(0,0,0,0.18);
+      background: #d4a800;
+    }
+
+    #btnDrop:active,
+    #btnDrop.pressed {
+      background: #c45a30;
+    }
+
+    #navLinks {
+      margin-top: 14px;
+      display: flex;
+      gap: 16px;
+      font-size: 0.78rem;
+    }
+
+    #navLinks a {
+      color: #8B5E3C;
+      text-decoration: none;
+      opacity: 0.7;
+    }
+
+    #navLinks a:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+
+    /* v0.3.4.2: 進捗リセット。もう一回！(明るいボタン)と明確に区別する控えめ表示。
+       navLinksより下＝物理的に離して誤タップ対策。 */
+    #resetRow {
+      margin-top: 10px;
+    }
+    #btnReset {
+      background: none;
+      border: none;
+      color: #B0A89C;
+      font-family: inherit;
+      font-size: 0.72rem;
+      opacity: 0.6;
+      cursor: pointer;
+      padding: 4px 6px;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    #btnReset:hover { opacity: 0.9; color: #8B5E3C; }
+    #btnReset:active { opacity: 1; }
+  </style>
+</head>
+<body>
+  <h1>のせのせプリン</h1>
+  <div id="canvasWrap">
+    <canvas id="gameCanvas" width="360" height="580"></canvas>
+    <div id="overlay">
+      <div id="overlayMsg"></div>
+      <button id="btnRestart">もう一回！</button>
+    </div>
+  </div>
+  <div id="controls">
+    <button id="btnLeft">←</button>
+    <button id="btnDrop">おとす！</button>
+    <button id="btnRight">→</button>
+  </div>
+  <nav id="navLinks">
+    <a href="../nosenose-pudding.html">Back to Concept</a>
+    <a href="../index.html">Back to Games</a>
+    <a href="../../index.html">Back to Top</a>
+  </nav>
+  <div id="resetRow">
+    <button id="btnReset" type="button">きろくを けして さいしょから</button>
+  </div>
+
+  <script>
+    // ---- URLにバージョンクエリを付与 ----
+    (function() {
+      const VERSION = '0.3.6.10';
+      const url = new URL(location.href);
+      if (url.searchParams.get('v') !== VERSION) {
+        url.searchParams.set('v', VERSION);
+        history.replaceState(null, '', url.toString());
+      }
+    })();
+
+    // ---- 定数 ----
+    const VERSION_LABEL = 'v0.3.6.10';
+    const GRAVITY = 0.3;
+    const PUDDING_RADIUS = 30;
+    const CANVAS_W = 360;
+    const CANVAS_H = 580;
+
+    // お皿
+    const DISH_Y = 520;           // お皿上面のY座標
+    const DISH_CX = 180;          // お皿中心X
+    const DISH_HALF_W = 120;      // お皿の有効乗れる半幅（円の中心が乗れる範囲）/ v0.3.6.5: 100→120 横4個・詰まり緩和
+    const DISH_VISUAL_RX = 132;   // お皿の見た目横幅（半径）/ v0.3.6.5: 110→130 支え範囲(120)に合わせ拡張 / v0.3.6.6: 130→132 着地判定外縁(135)との5pxズレ緩和。見た目圧迫を避けるため135でなく132（実機ノブ：まだはみ出す→135まで上限。135超は見た目>着地判定135で「乗れそうに見えて落ちる」逆の嘘になるため不可）
+    const DISH_VISUAL_RY = 16;    // お皿の見た目縦幅（楕円の縦半径）
+
+    // 落下開始位置
+    const SPAWN_Y = 50;
+    const MOVE_STEP = 18;
+    const MIN_X = 40;
+    const MAX_X = 320;
+
+    // 崩れ判定
+    const SLIDE_THRESHOLD_DISH    = 0.88; // v0.3.6.5: 1.0→0.88。皿有効幅拡張(100→120)で皿端が完全安置ゾーン化したため、端は滑り落ちるよう戻す。実機ノブ：端を甘く→0.95、辛く→0.80
+    // v0.3.4: 0.5→0.62（横ズレ許容 30→37px・のって耐えやすく／proto2実証値）
+    const SLIDE_THRESHOLD_PUDDING = 0.62;
+
+    // v0.3.2.1: sliding→settled の出口（谷間で止まったプリンをカウントに乗せる）
+    // 速度ではなく「位置補正後の純移動量」で静止を判定する。
+    // 実測（sim_valley.js）: 谷底の定常状態は純移動量0.0000px、残留|vy|は最大0.44のため速度判定は不適。
+    const SETTLE_MOVE_EPS = 0.1;  // 1フレームの純移動量がこれ未満なら「静止」(px)
+    const SETTLE_FRAMES   = 30;   // 静止が30フレーム（約0.5秒）続いたら着地確定
+
+    // C′改(v0.3.6.9): その場で揺れ続けて settle しないプリン（2個の上のアーチ等）の強制決着。
+    // 「sliding中に訪れた座標の到達範囲(bounding box)が STUCK_RANGE 内に収まったまま STUCK_TIMEOUT 続いたら停滞」と判定。
+    // 去る/落ちるプリンは範囲を大きく外れて窓リセット＝対象外＝皿外落下GAMEOVERを維持。揺れ幅が大きいアーチも全振幅が範囲内なら捕捉。
+    const STUCK_RANGE   = 46;   // px: sliding中の到達範囲(span)がこれ以内なら「その場停滞」とみなす（debuggerシム実測＝実アーチspan最大42px+8%余裕。実機ノブ）
+    const STUCK_TIMEOUT = 60;   // frames(≈1s@60fps): 範囲内停滞がこれだけ続いたら強制settle
+    const STUCK_TIMEOUT_TOPPLED = 120; // frames(≈2s@60fps): 崩れ由来(toppled)プリンは長めに様子を見てから強制settle（落下途中の一時停滞を誤救命しない・通常は60f）
+
+    // Lv2 落下待ち横揺れ（RNG撤廃・タイミングスキル化）
+    // 振幅・周期は実機で娘さんの反応を見て微調整するための定数
+    const LV2_SWAY_AMP    = 30;   // 横揺れ振幅（px）：プリン直径60の半分
+    const LV2_SWAY_PERIOD = 90;   // 1周期（フレーム）≒1.5秒@60fps
+
+    // クリア判定：10個settled かつ 最上プリンがお皿上面から4r以上高いこと（縦積み保証）
+    const CLEAR_COUNT = 10;
+    const CLEAR_MIN_Y = DISH_Y - PUDDING_RADIUS * 4.5; // = 520 - 135 = 385 / v0.3.6.5: 皿拡張(120)と*5(=370)の矛盾（横並びでクリア不能化）を回避し*4.5へ緩和。実機ノブ：難しく→*5(=370)、簡単→*4(=400)
+
+    // v0.3.5: Lv3「最後のさくらんぼ」。プリンより小さい＝てっぺんに乗せにくい＝難しい。
+    // 実機ノブ：易しく→16、難しく→12。
+    const CHERRY_RADIUS = 14;
+
+    // v0.3.4: 重心はみ出し転倒判定（バナナ積み＝各継ぎ目は許容内でも塔全体が傾けば倒す）
+    // 各継ぎ目で「その上の全プリンの重心X」が下プリン中心から TOPPLE_LIMIT 超ズレたら崩す。
+    // 実機チューンノブ：倒れすぎ→45〜50、立ちすぎ→35。proto2実機では40が合格（実証値）。
+    const TOPPLE_LIMIT = 40;
+
+    // v0.3.6: Lv5「デコプリン（重心ズレ）」。トッピングが片側に寄る＝実効重心が comDir 側へズレる。
+    // 重心X計算（checkStackTopple）の入力だけに効かせる＝形が転倒に効く（settle/閾値は不可触・案B）。
+    // 実機ノブ：難しすぎ（崩れすぎ・理不尽寄り）→ 8、簡単すぎ→ 16。
+    const DECO_COM_OFFSET = 12;   // 重心の横ズレ量(px)・水平固定（G2: cos項なし）
+    // デコの出現率（Lv5以上のプリン spawn 時）。G6確定値。多すぎ→0.25、物足りない→0.45。
+    const DECO_RATE = 0.35;
+
+    // v0.3.6.1: 接触限定タンジェント摩擦。防波堤(settled)に当たり続けて永久回転するプリンを止める。
+    // settled に接触したフレームだけ vx を減衰させる＝自由滑走(無接触)は減速しない＝皿外落下GAMEOVERを保つ。
+    // 実機ノブ：まだ回り続ける→0.70、止まりすぎ/GAMEOVERが減りすぎ→0.90。
+    const FRICTION_CONTACT = 0.80;
+    const FRICTION_DISH    = 0.95;   // v0.3.6.3: 皿面接触時の水平摩擦（dish bounce 毎に乗算・多体パイルの永久回転防止）
+
+    // v0.3.4: 色違いプリン4種（見た目のみ・物理は完全同一）。spawn時にランダム割当。
+    const FLAVORS = [
+      // カスタード（従来色）
+      { body: '#F5C518', stroke: '#D4A000', cap: '#F0B800', sauce: 'rgba(120, 60, 10, 0.55)', shine: 'rgba(255,255,255,0.35)' },
+      // チョコ
+      { body: '#A05A2C', stroke: '#6E3A18', cap: '#7C4420', sauce: 'rgba(50, 25, 8, 0.55)',   shine: 'rgba(255,235,210,0.30)' },
+      // いちご
+      { body: '#F4A6C0', stroke: '#D86A8C', cap: '#EF8AAC', sauce: 'rgba(150, 40, 75, 0.50)', shine: 'rgba(255,255,255,0.40)' },
+      // 抹茶
+      { body: '#A8C66C', stroke: '#6E8B2E', cap: '#94B84E', sauce: 'rgba(70, 90, 20, 0.50)',  shine: 'rgba(255,255,255,0.35)' },
+    ];
+
+    // ---- DOM ----
+    const canvas  = document.getElementById('gameCanvas');
+    const ctx     = canvas.getContext('2d');
+    const overlay = document.getElementById('overlay');
+    const overlayMsg = document.getElementById('overlayMsg');
+    const navLinksEl = document.getElementById('navLinks');
+    const resetRowEl = document.getElementById('resetRow');
+
+    // ---- ゲーム状態 ----
+    // ① クリア判定・② GAME OVER判定・③ リスタートを束ねる1変数
+    let gameState = 'playing'; // 'playing' | 'clear' | 'gameover'
+
+    // ---- Level 状態（STEP1）----
+    // currentLevel はリスタート後も下がらない（bestLevel で復元）
+    let currentLevel = 1;
+    let bestLevel    = 1;
+
+    // ---- ベスト記録（STEP3: localStorage永続化）----
+    const LS_KEY_LV    = 'nosenose_best_level';
+    const LS_KEY_COUNT = 'nosenose_best_count';
+    let bestCount = 0;
+    (function loadBest() {
+      try {
+        const lv = parseInt(localStorage.getItem(LS_KEY_LV),  10);
+        const ct = parseInt(localStorage.getItem(LS_KEY_COUNT), 10);
+        if (!isNaN(lv) && lv >= 1) { bestLevel = lv; currentLevel = lv; }
+        if (!isNaN(ct) && ct >= 0) bestCount = ct;
+      } catch(e) { /* プライベートブラウズ等では無視 */ }
+    })();
+
+    // ---- プリン配列 ----
+    let puddings = [];
+    let fallingPudding = null;
+    let nextX = DISH_CX;
+    let waitingDrop = true;
+    let spawnTimer = null; // Fix A: clearTimeout管理用
+    let swayT = 0;        // Lv2横揺れ用フレームカウンタ
+    let toppleDirty = false; // v0.3.4: 着地イベントで立て、update()末尾で1回だけ重心転倒を消化
+    let gameoverByTopple = false; // v0.3.4: GAMEOVERの原因が重心転倒か（文言分岐用・playtester収束指摘）
+    let gameoverByCherry = false; // v0.3.5: GAMEOVERの原因がさくらんぼ落下か（文言分岐用・転倒文言と区別）
+    let puddingSeq = 0;   // v0.3.4: プリンの安定ID採番（baseId参照用・配列indexは除去で動くため使わない）
+
+    // ---- ベスト記録の保存ヘルパー（STEP3）----
+    function saveBest() {
+      try {
+        localStorage.setItem(LS_KEY_LV,    String(bestLevel));
+        localStorage.setItem(LS_KEY_COUNT, String(bestCount));
+      } catch(e) { /* プライベートブラウズ等では無視 */ }
+    }
+
+    // v0.3.6.5: ゲームクロム（画面下の英語nav＋進捗リセット行）の表示切替を1箇所に集約。
+    // playing中は隠して誤タップ離脱・confirmパニックを防ぐ。display:none ではなく visibility で
+    // レイアウト枠を保持し、gameover/clear での再表示時に縦丈がガタつくのを防ぐ。
+    function setChromeVisible(visible) {
+      const v = visible ? 'visible' : 'hidden';
+      if (navLinksEl) navLinksEl.style.visibility = v;
+      if (resetRowEl) resetRowEl.style.visibility = v;
+    }
+
+    // ---- 状態変更ヘルパー ----
+    function setGameState(state) {
+      gameState = state;
+      // v0.3.6.5: playing中はゲームクロムを隠す（誤タップ離脱・confirmパニック対策）。gameover/clearで再表示。
+      setChromeVisible(state !== 'playing');
+      if (state === 'clear') {
+        // STEP1: レベルアップ処理（クリアしたら次のレベルへ）
+        currentLevel++;
+        if (currentLevel > bestLevel) bestLevel = currentLevel;
+        const nextLv = currentLevel;
+        // STEP3: クリア時のsettled数でbestCountを更新・保存
+        // v0.3.5: さくらんぼは「◯こ」に数えない（Lv3クリアで11こにならないように）
+        const cnt = puddings.filter(p => p.settled && !p.isCherry).length;
+        if (cnt > bestCount) bestCount = cnt;
+        saveBest();
+        // Lv1→Lv2 のときだけ横揺れの予告一言を出す（「バグ？」誤解の解消）
+        const swayHint = (nextLv === 2)
+          ? '\nプリンが ゆれるよ！\nよく見て おとそう！'
+          : '';
+        // v0.3.6: Lv4→Lv5 はデコプリン（重心ズレ）導入の予告。「急に崩れる＝バグ」誤解の地雷消し。
+        const decoHint = (nextLv === 5)
+          ? '\nおもい トッピングに きをつけて！\nおもいほうを まんなかに！'
+          : '';
+        overlayMsg.textContent = `Lv${nextLv - 1} クリア！\nLv${nextLv} へ すすむよ！\n10こ つめたら クリア！${swayHint}${decoHint}`;
+        overlayMsg.style.whiteSpace = 'pre-line';
+        overlay.style.display = 'flex';
+      } else if (state === 'gameover') {
+        // STEP3: GAMEOVER時のsettled数でbestCountを更新・保存
+        // v0.3.5: さくらんぼは「◯こ」に数えない（HUD・ベスト記録ともプリンの数で統一）
+        const cnt = puddings.filter(p => p.settled && !p.isCherry).length;
+        if (cnt > bestCount) bestCount = cnt;
+        saveBest();
+        const lvText = currentLevel > 1 ? ` Lv${currentLevel}` : '';
+        // v0.3.4: 転倒由来なら理由を一言（playtester 3名収束「なんで崩れたか分からない＝バグと誤認」対策）
+        // v0.3.5: さくらんぼ乗せ損ね由来なら専用文言（転倒と区別・発注書§2.5）
+        const toppleText = gameoverByTopple
+          ? '\nななめに つみすぎて\nぐらっと くずれちゃった！'
+          : (gameoverByCherry ? '\nさくらんぼ おっこちちゃった！' : '');
+        overlayMsg.textContent = `おしい！${lvText}${toppleText}\nもう一回チャレンジしよう！`;
+        overlayMsg.style.whiteSpace = 'pre-line';
+        overlay.style.display = 'flex';
+      } else {
+        overlay.style.display = 'none';
+      }
+    }
+
+    // ---- リスタート ③ ----
+    function restartGame() {
+      clearTimeout(spawnTimer);    // Fix A: 残りsetTimeoutをキャンセル
+      spawnTimer = null;
+      clearInterval(leftInterval);  // Fix B: 長押し連射残りをキャンセル
+      clearInterval(rightInterval);
+      leftInterval = null;
+      rightInterval = null;
+      puddings = [];
+      fallingPudding = null;
+      nextX = DISH_CX;
+      waitingDrop = true;
+      swayT = 0;
+      toppleDirty = false;
+      gameoverByTopple = false;
+      gameoverByCherry = false;
+      puddingSeq = 0;
+      // STEP1: レベルが下がらない（到達済みの最高レベルに戻す）
+      currentLevel = bestLevel;
+      setGameState('playing');
+      spawnPudding();
+    }
+
+    // ---- 進捗リセット（v0.3.4.2）----
+    // 「リスタートでレベルが下がらない」(STEP1)を壊さない“明示的な別ボタン”。
+    // 誤タップ対策：①navLinks下の控えめ表示で隔離 ②confirmでワンクッション。
+    function resetProgress() {
+      const ok = window.confirm('さいこうレベルの きろくを けして、\nさいしょ（Lv1）から あそびますか？');
+      if (!ok) return;
+      try {
+        localStorage.removeItem(LS_KEY_LV);
+        localStorage.removeItem(LS_KEY_COUNT);
+      } catch(e) { /* プライベートブラウズ等では無視 */ }
+      bestLevel = 1;
+      bestCount = 0;
+      // restartGame() 冒頭で currentLevel = bestLevel するので、先に bestLevel=1 に
+      // しておけば currentLevel も 1 に戻る（STEP1 と整合・レベルは“下げる”のでなく記録消去）。
+      restartGame();
+    }
+
+    // ---- プリン生成 ----
+    function spawnPudding() {
+      if (gameState !== 'playing') return;
+
+      // Lv2以上の難易度は spawnX/initVx ではなく waitingDrop 中の横揺れで表現する。
+      // RNG による補正不能ドリフトを撤廃し、プレイヤーが揺れを読んで投下するスキルに変換。
+      swayT = Math.floor(Math.random() * LV2_SWAY_PERIOD); // 初期位相をランダム化（バグ3修正）
+
+      // v0.3.5: Lv3以上でプリン10個を積み切ったら、最後の1個はさくらんぼ（1個だけ）。
+      // 横揺れ(sway)はそのまま乗る＝揺れの中で小さい的を狙う、が Lv3 の難度。
+      const stackedPuddings = puddings.filter(p => p.settled && !p.isCherry).length;
+      const spawnCherry = (currentLevel >= 3) &&
+                          (stackedPuddings >= CLEAR_COUNT) &&
+                          !puddings.some(p => p.isCherry);
+
+      // v0.3.5: Lv3以上でプリン10個を積み切ったら、最後の1個はさくらんぼ（1個だけ）。
+      // v0.3.6: Lv5以上・さくらんぼ以外は確率 DECO_RATE で「デコプリン」（重心ズレ）。
+      // 出現と向きは spawn 時に確定＝投下前に見えて構えられる（補正不能RNGの復活ではない・G5）。
+      const isDeco = !spawnCherry && (currentLevel >= 5) && (Math.random() < DECO_RATE);
+      const comDir = isDeco ? (Math.random() < 0.5 ? -1 : 1) : 0; // トッピングが寄る向き（±1・非デコは0）
+
+      fallingPudding = {
+        x: nextX,
+        y: SPAWN_Y,
+        angle: 0,
+        targetAngle: 0,
+        vy: 0,
+        vAngle: 0,
+        vx: 0,
+        settled: false,
+        sliding: false,
+        stillFrames: 0,
+        radius: spawnCherry ? CHERRY_RADIUS : PUDDING_RADIUS, // v0.3.5: さくらんぼは小半径（物理は同一）
+        bounceScale: 1.0,
+        id: puddingSeq++, // v0.3.4: 安定ID
+        flavor: FLAVORS[Math.floor(Math.random() * FLAVORS.length)], // v0.3.4: 色違い（見た目のみ・さくらんぼでは未使用）
+        baseId: -1, // v0.3.4: 着地時に確定（-1=皿直置き／それ以外は支持プリンのid）
+        toppled: false, // v0.3.4: 重心転倒で崩れたマーク（GAMEOVER文言分岐用）
+        isCherry: spawnCherry, // v0.3.5: ピース種別（描画・クリア判定・HUDで分岐）
+        isDeco: isDeco, // v0.3.6: デコプリン（重心ズレ）。さくらんぼ・Lv5未満は常にfalse（G4: undefined依存を排除）
+        comDir: comDir, // v0.3.6: トッピングが寄る向き（±1・非デコは0）
+        winMinX: 0, winMaxX: 0,   // C′改(v0.3.6.9): sliding中の到達範囲(bounding box)
+        winMinY: 0, winMaxY: 0,
+        winFrames: 0              // 範囲内に収まったまま経過したフレーム数
+      };
+      waitingDrop = true;
+    }
+
+    // ---- 着地処理 ----
+    function settle(pudding, base) {
+      let offset;
+
+      if (base === null) {
+        offset = (pudding.x - DISH_CX) / DISH_HALF_W;
+        offset = Math.max(-1.5, Math.min(1.5, offset));
+      } else {
+        const totalR = pudding.radius + base.radius;
+        offset = (pudding.x - base.x) / totalR;
+        offset = Math.max(-1.5, Math.min(1.5, offset));
+      }
+
+      const slideThreshold = (base === null) ? SLIDE_THRESHOLD_DISH : SLIDE_THRESHOLD_PUDDING;
+      if (Math.abs(offset) > slideThreshold) {
+        // はみ出し過ぎ → 滑り落ちる
+        pudding.settled = false;
+        pudding.sliding = true;
+        pudding.vx = offset * 2.5; // v0.3.4: 3.5→2.5（皿上で飛んでいく緩和・proto2実証値）
+        if (pudding.vy <= 0) pudding.vy = 0.5;
+        pudding.winMinX = pudding.winMaxX = pudding.x;   // C′改(v0.3.6.9): bounding box窓を初期化
+        pudding.winMinY = pudding.winMaxY = pudding.y;
+        pudding.winFrames = 0;
+        fallingPudding = null;
+        puddings.push(pudding);
+        // 注: slidingはsettledでないため重心転倒の対象外。ここではtoppleDirtyを立てない（G4）。
+        spawnTimer = setTimeout(spawnPudding, 700); // Fix A
+      } else {
+        // 正常着地
+        pudding.settled = true;
+        pudding.sliding = false;
+        const baseAngle = (base === null) ? 0 : base.angle;
+        pudding.targetAngle = baseAngle + offset * 0.45;
+        pudding.vy = 0;
+        pudding.vx = 0;
+        pudding.bounceScale = 1.2;
+        // v0.3.4: 親子リンク（重心転倒の塔再構築用）。配列indexは除去で動くため安定idで持つ。
+        pudding.baseId = (base === null) ? -1 : base.id;
+        puddings.push(pudding);
+        fallingPudding = null;
+        toppleDirty = true; // v0.3.4: 着地イベント → update()末尾で重心転倒を1回消化
+        spawnTimer = setTimeout(spawnPudding, 500); // Fix A
+      }
+    }
+
+    // ---- 物理更新 ----
+    function update() {
+      if (gameState !== 'playing') return;
+
+      // Lv2以上：落下待ち中の横揺れ（タイミングスキル化）
+      // fallingPudding.x = nextX + サイン揺れ。moveLeft/Right は nextX を動かすので
+      // 揺れの中心がリアルタイムに追従する。投下時は揺れ込みの x をそのまま使う。
+      if (fallingPudding && waitingDrop && currentLevel >= 2) {
+        const sway = LV2_SWAY_AMP * Math.sin(swayT / LV2_SWAY_PERIOD * 2 * Math.PI);
+        fallingPudding.x = Math.max(MIN_X, Math.min(MAX_X, nextX + sway));
+        swayT++;
+      }
+
+      // 落下中プリンの更新
+      if (fallingPudding && !waitingDrop) {
+        const p = fallingPudding;
+        p.vy += GRAVITY;
+        p.y += p.vy;
+        p.x += p.vx;
+
+        // お皿との衝突判定
+        if (p.y + p.radius >= DISH_Y) {
+          if (Math.abs(p.x - DISH_CX) < DISH_HALF_W + p.radius * 0.5) {
+            p.y = DISH_Y - p.radius;
+            settle(p, null);
+            return;
+          } else {
+            // ② お皿の外に外れて落下 → GAME OVER
+            if (p.y > CANVAS_H + 60) {
+              gameoverByTopple = false;
+              gameoverByCherry = !!p.isCherry; // v0.3.5: さくらんぼ乗せ損ね文言用
+              setGameState('gameover');
+              fallingPudding = null;
+              return;
+            }
+          }
+        }
+
+        // 着地済みプリンとの衝突判定（上から乗る場合のみ）
+        // Fix C: 皿Y以下かつ皿X外に外れた落下中プリンは衝突判定をスキップ（settled混入防止）
+        const missedDish = p.y + p.radius >= DISH_Y &&
+          Math.abs(p.x - DISH_CX) >= DISH_HALF_W + p.radius * 0.5;
+        for (let i = puddings.length - 1; !missedDish && i >= 0; i--) {
+          const q = puddings[i];
+          if (!q.settled) continue;
+          const dx = p.x - q.x;
+          const dy = p.y - q.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const minDist = p.radius + q.radius;
+          if (dist < minDist && dy < 0) {
+            p.y = q.y - minDist;
+            settle(p, q);
+            return;
+          }
+        }
+
+        // ② 画面外に消えた（完全に落下）→ GAME OVER
+        if (p.y > CANVAS_H + 60) {
+          gameoverByTopple = false;
+          gameoverByCherry = !!p.isCherry; // v0.3.5: さくらんぼ乗せ損ね文言用
+          setGameState('gameover');
+          fallingPudding = null;
+          return;
+        }
+      }
+
+      // slidingプリンの更新（滑り落ち）
+      for (let i = puddings.length - 1; i >= 0; i--) {
+        const p = puddings[i];
+        if (!p.sliding) continue;
+        const prevX = p.x, prevY = p.y; // v0.3.2.1: 純移動量の計測用
+        let slidingPushX = 0, slidingPushY = 0; // v0.3.4.1: 動体衝突の押し出し量（静止判定から除外する）
+        let hadContact = false; // v0.3.6.1: このフレームに settled へ接触したか（タンジェント摩擦の発火条件）
+        p.vy += GRAVITY;
+        p.y += p.vy;
+        p.x += p.vx;
+        p.angle += p.vAngle + p.vx * 0.04; // v0.3.2.1: 固定±0.04→速度比例（止まれば回転も止まる）
+
+        // お皿との衝突（滑り中）
+        // STEP0 fix: 皿X範囲外のslidingプリンには床サポートを与えない
+        // → 皿外に出たら重力で落下し、既存の画面外除去→GAMEOVER経路に乗る
+        if (p.y + p.radius >= DISH_Y &&
+            Math.abs(p.x - DISH_CX) < DISH_HALF_W + p.radius * 0.5) {
+          p.y = DISH_Y - p.radius;
+          p.vy *= -0.3;
+          p.vx *= FRICTION_DISH; // v0.3.6.3: 皿面の転がり摩擦。残留vxを消して塊の永久回転を止める（皿外へ出たプリンは此処に入らず摩擦ゼロ＝落下GAMEOVER維持）
+        }
+
+        // settled済みプリンとの衝突
+        for (let j = puddings.length - 1; j >= 0; j--) {
+          if (i === j) continue;
+          const q = puddings[j];
+          if (!q.settled) continue;
+          const dx = p.x - q.x;
+          const dy = p.y - q.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const minDist = p.radius + q.radius;
+          if (dist < minDist && dist > 0) {
+            hadContact = true; // v0.3.6.1: 防波堤(settled)に接触＝このフレームは摩擦を効かせる
+            const nx = dx / dist, ny = dy / dist;
+            const overlap = minDist - dist;
+            p.x += nx * overlap;
+            p.y += ny * overlap;
+            const dot = p.vx * nx + p.vy * ny;
+            p.vx -= dot * nx * 0.6;
+            p.vy -= dot * ny * 0.6;
+          }
+        }
+
+        // v0.3.4.1: 動体（sliding）同士の衝突。転倒で同時sliding化したプリンが互いを
+        // すり抜けて「急に現れて落ちる」実機バグの修正。j<i のペアのみ＝1ペア1回解決。
+        for (let j = i - 1; j >= 0; j--) {
+          const q = puddings[j];
+          if (!q.sliding) continue;
+          const dx = p.x - q.x;
+          const dy = p.y - q.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const minDist = p.radius + q.radius;
+          if (dist >= minDist || dist <= 0) continue;
+
+          const nx = dx / dist, ny = dy / dist;
+          const half = (minDist - dist) * 0.5; // 押し出しは折半
+
+          // 皿に支持されているプリンは「皿の外へ押し出さない・外向き速度を与えない」
+          // （防波堤を吹き飛ばして操作と無関係なGAMEOVERを生まない・DG4）。
+          // 配列順でp/qどちらの役にもなり得るため、ガードは両側対称に掛ける。
+          const pOnDish = p.y + p.radius >= DISH_Y - 1 &&
+            Math.abs(p.x - DISH_CX) < DISH_HALF_W + p.radius * 0.5;
+          const qOnDish = q.y + q.radius >= DISH_Y - 1 &&
+            Math.abs(q.x - DISH_CX) < DISH_HALF_W + q.radius * 0.5;
+
+          // p側の押し出し（適用量を記録して静止判定から除外＝valley静止(v0.3.2.1)を壊さない）
+          let px = p.x + nx * half;
+          let py = p.y + ny * half;
+          if (pOnDish) {
+            px = Math.max(DISH_CX - DISH_HALF_W, Math.min(DISH_CX + DISH_HALF_W, px));
+            py = Math.min(DISH_Y - p.radius, py); // 皿面より下へ沈めない
+          }
+          slidingPushX += px - p.x;
+          slidingPushY += py - p.y;
+          p.x = px;
+          p.y = py;
+
+          // q側の押し出し（皿外で落下中ならクランプしない）
+          let qx = q.x - nx * half;
+          let qy = q.y - ny * half;
+          if (qOnDish) {
+            qx = Math.max(DISH_CX - DISH_HALF_W, Math.min(DISH_CX + DISH_HALF_W, qx));
+            qy = Math.min(DISH_Y - q.radius, qy);
+          }
+          q.x = qx;
+          q.y = qy;
+
+          // 速度応答：相対速度の法線成分（接近時のみ）に既存と同じ係数0.6を折半で両者へ。
+          // 接近ガードが無いと離反中の2体に引力が付く（吸い合い）ので必須。
+          const relDot = (p.vx - q.vx) * nx + (p.vy - q.vy) * ny;
+          if (relDot < 0) {
+            const imp = relDot * 0.6;
+            const pdvx = -imp * nx * 0.5;
+            // 皿上のプリンに「皿の外向き」水平速度は伝えない（位置クランプだけだと
+            // 摩擦ゼロで自走して皿外落下→GAMEOVERまで漏れる）
+            if (!pOnDish || (p.x - DISH_CX) * pdvx <= 0) {
+              p.vx += pdvx;
+            }
+            p.vy -= imp * ny * 0.5;
+            const qdvx = imp * nx * 0.5;
+            if (!qOnDish || (q.x - DISH_CX) * qdvx <= 0) {
+              q.vx += qdvx;
+            }
+            q.vy += imp * ny * 0.5;
+          }
+        }
+
+        // v0.3.2.1: 位置補正後の純移動量で静止を検出し、sliding→settledへ
+        // v0.3.4.1: 動体衝突の押し出し量は除外して測る（押し合いで stillFrames が
+        // リセットされ続け永遠にsettleしない事故を防ぐ）
+        const moved = Math.abs(p.x - prevX - slidingPushX) + Math.abs(p.y - prevY - slidingPushY);
+        if (moved < SETTLE_MOVE_EPS) {
+          p.stillFrames++;
+          if (p.stillFrames >= SETTLE_FRAMES) {
+            p.sliding = false;
+            p.settled = true;
+            p.vx = 0;
+            p.vy = 0;
+            p.targetAngle = p.angle; // 今の姿勢のまま固定（傾き計算は触らない）
+            p.bounceScale = 1.2;     // 既存の着地ぷるん演出と同じ
+            // v0.3.4: 親子リンクを再構築（谷間着地等）。ただし toppleDirty は立てない＝
+            // 物理収束の結果による再転倒チェックを遮断し、連鎖ループ（G2）を構造的に防ぐ。
+            p.baseId = findBaseId(p);
+            p.toppled = false; // 生き残った＝転倒死マークを解除
+          }
+        } else {
+          p.stillFrames = 0;
+        }
+
+        // C′改(v0.3.6.9): その場で停滞し続けるプリンを強制settle（アーチ等の永久揺れ＝事実上フリーズの安全弁）。
+        // sliding中の到達範囲(bounding box)を更新し、span が STUCK_RANGE 内に収まったまま STUCK_TIMEOUT 続いたら停滞と判定。
+        // 範囲を超えた＝去る/落ちる＝窓リセットで対象外（皿外落下GAMEOVER維持）。v0.3.6.10: 崩れ由来(toppled)も長めタイムアウト(STUCK_TIMEOUT_TOPPLED)で救済（挟まり揺れフリーズ対策）。落ちていく崩れは窓リセットで対象外＝落下のまま。
+        if (p.sliding) {
+          if (p.x < p.winMinX) p.winMinX = p.x;
+          if (p.x > p.winMaxX) p.winMaxX = p.x;
+          if (p.y < p.winMinY) p.winMinY = p.y;
+          if (p.y > p.winMaxY) p.winMaxY = p.y;
+          if ((p.winMaxX - p.winMinX) > STUCK_RANGE || (p.winMaxY - p.winMinY) > STUCK_RANGE) {
+            // 到達範囲が広い＝まだ移動中（谷へ移る/皿外へ去る）→ 窓リセット＝停滞カウントを進めない
+            p.winMinX = p.winMaxX = p.x;
+            p.winMinY = p.winMaxY = p.y;
+            p.winFrames = 0;
+          } else {
+            // 範囲内停滞が継続。崩れ由来(toppled)は長め(STUCK_TIMEOUT_TOPPLED)に様子を見る＝落下途中の一時停滞を誤って救済しない。
+            // 挟まって落ちきらず揺れ続ける崩れプリン（実機で確認のフリーズ）はここで強制決着。落ちていく崩れは上の窓リセットで対象外。
+            const stuckLimit = p.toppled ? STUCK_TIMEOUT_TOPPLED : STUCK_TIMEOUT;
+            if (++p.winFrames >= stuckLimit) {
+              // 強制決着。角度は直立寄りにクランプ（傾いたまま固定の崩れ罠を回避）。toppleDirtyは立てない（連鎖ループG2回避）。
+              p.sliding = false;
+              p.settled = true;
+              p.vx = 0;
+              p.vy = 0;
+              p.angle = p.targetAngle = Math.max(-0.25, Math.min(0.25, p.angle)); // ±約14度に即スナップ（angleも同時＝eased自己修正の「勝手に起き上がる」ジャンク回避）
+              p.bounceScale = 1.2;
+              p.baseId = findBaseId(p);
+              p.toppled = false;
+            }
+          }
+        }
+
+        // v0.3.6.1: 接触したフレームだけ水平摩擦で vx を減衰（タンジェント摩擦＝氷上の石の解）。
+        // 自由滑走（無接触）は減速させない＝皿端から外向きに滑り出したプリンの皿外落下GAMEOVERを保つ。
+        // 回転は vx 比例（行583）なので vx が落ちれば永久回転も止まる。vy には触らない（縦は既存挙動）。
+        if (hadContact) p.vx *= FRICTION_CONTACT;
+      }
+
+      // settledプリンのangle・bounceScale イージング
+      for (const p of puddings) {
+        if (!p.settled) continue;
+        p.angle += (p.targetAngle - p.angle) * 0.15;
+        p.bounceScale += (1.0 - p.bounceScale) * 0.2;
+      }
+
+      // ② 画面外に出たプリンを除去：slidingが消えたらGAME OVER
+      puddings = puddings.filter(p => {
+        if (p.y >= CANVAS_H + 80) {
+          if (p.sliding && gameState === 'playing') {
+            gameoverByTopple = !!p.toppled; // 重心転倒で崩れたプリンなら文言を変える
+            gameoverByCherry = !!p.isCherry && !p.toppled; // v0.3.5: 転倒由来でなければさくらんぼ文言
+            setGameState('gameover');
+          }
+          return false;
+        }
+        return true;
+      });
+
+      // v0.3.4: 重心はみ出し転倒（着地イベント時のみ・クリア判定の前に1回消化）
+      // → 倒れる途中の塔を「クリア扱い」にしないため、必ずクリア判定の前で実行する。
+      if (toppleDirty) checkStackTopple();
+
+      // ① クリア判定
+      if (gameState === 'playing') {
+        const settled = puddings.filter(p => p.settled);
+        if (currentLevel >= 3) {
+          // v0.3.5 Lv3：さくらんぼを乗せ切ったらクリア（プリン10個は spawn 分岐で担保済み）
+          const cherryOn = settled.some(p => p.isCherry);
+          if (cherryOn) {
+            const minY = Math.min(...settled.map(p => p.y));
+            if (minY < CLEAR_MIN_Y) setGameState('clear');
+          }
+        } else {
+          // Lv1/Lv2：従来どおり settled10個以上かつ縦積みあり（無変更）
+          if (settled.length >= CLEAR_COUNT) {
+            const minY = Math.min(...settled.map(p => p.y));
+            if (minY < CLEAR_MIN_Y) {
+              setGameState('clear');
+            }
+          }
+        }
+      }
+    }
+
+    // ---- v0.3.4: 重心はみ出し転倒（バナナ積み崩し）----
+    // 設計: puddings[]はフラット配列のため、各settledプリンが着地時に記録した baseId
+    //   （真下の支持プリンの安定id／-1=皿）で親子ツリーを再構築する。単純なY座標ソートだと
+    //   谷間ハマり・横並び（同じ親に乗った兄弟）で親子を誤認する（G1）ため、
+    //   塔を1本にフラット化せず「各プリンとその上に乗る部分木」の継ぎ目単位で評価する。
+
+    // sliding→settled で止まったプリンの支持（真下で接触している最上の settled）を探す。
+    function findBaseId(p) {
+      let best = null;
+      let supports = 0;
+      for (const q of puddings) {
+        if (q === p || !q.settled) continue;
+        if (q.y <= p.y) continue; // 支持は自分より下＝Yが大きい
+        const dx = p.x - q.x, dy = p.y - q.y;
+        if (Math.sqrt(dx * dx + dy * dy) > (p.radius + q.radius) * 1.15) continue;
+        supports++;
+        if (best === null || q.y < best.y) best = q; // 最も高い支持
+      }
+      // 谷間ハマり（支持2個以上）は両側に挟まれて安定＝片親の重心計算に入れると
+      // 誤爆転倒する（G1）ため、自己ルート扱いにして塔の継ぎ目評価から切り離す。
+      if (supports >= 2) return -1;
+      // 支持プリンが無ければ皿直置きとみなす（自分を根とする＝他の塔を誤爆しない）
+      return best ? best.id : -1;
+    }
+
+    // p の上に乗っている全プリン（baseId リンクの部分木・p自身は含まない）を集める。
+    function getDescendants(p) {
+      const result = [];
+      function collect(parentId) {
+        for (const q of puddings) {
+          if (!q.settled) continue;
+          if (q.baseId === parentId) {
+            result.push(q);
+            collect(q.id);
+          }
+        }
+      }
+      collect(p.id);
+      return result;
+    }
+
+    // v0.3.6: プリンの実効重心X。デコは comDir 側へ DECO_COM_OFFSET ズレる（水平固定・G2）。
+    // cos(angle)は掛けない：トッピングの縦オフセット(約27px)由来のsin項を落とす中途半端を避け、
+    // 誤差を「理不尽転倒が出ない側（過小評価）」に倒す。イージング中の未収束angleにも依存しない。
+    function comX(p) {
+      if (!p.isDeco) return p.x; // 非デコは p.x と完全一致＝v0.3.5挙動をビット保存（G4）
+      return p.x + p.comDir * DECO_COM_OFFSET;
+    }
+
+    function checkStackTopple() {
+      toppleDirty = false; // 消化は1フレーム1回（先にクリアして再入を防ぐ）
+
+      // 全settledプリンを「継ぎ目の下側」として評価し、
+      // 上に乗る部分木の重心Xが TOPPLE_LIMIT 超ズレた継ぎ目のうち最も下（yが大きい）を1つ崩す。
+      let worst = null; // { lower, desc, dir }
+      for (const lower of puddings) {
+        if (!lower.settled) continue;
+        const desc = getDescendants(lower);
+        if (desc.length === 0) continue;
+        let sx = 0;
+        for (const d of desc) sx += comX(d);
+        const diff = sx / desc.length - comX(lower); // 上の塊の重心X − 下プリン中心X（デコは comX で重心ズレ）
+        if (Math.abs(diff) > TOPPLE_LIMIT) {
+          if (worst === null || lower.y > worst.lower.y) {
+            worst = { lower, desc, dir: diff > 0 ? 1 : -1 };
+          }
+        }
+      }
+
+      if (worst) {
+        for (const p of worst.desc) {
+          if (p.sliding) continue;             // 既slidingは二重作用回避（G4）
+          p.settled = false;
+          p.sliding = true;
+          p.vx = worst.dir * 2.0;              // 崩れ方向は重心側
+          if (p.vy <= 0) p.vy = 0.5;
+          p.stillFrames = 0;
+          p.winMinX = p.winMaxX = p.x;         // C′改(v0.3.6.9): bounding box窓を初期化
+          p.winMinY = p.winMaxY = p.y;
+          p.winFrames = 0;
+          p.baseId = -2;                       // 親子リンクを切る（G2。-1=皿と区別する番兵値）
+          p.toppled = true;                    // GAMEOVER文言分岐用（転倒由来マーク）
+        }
+        // 1フレーム1崩し：崩した瞬間の不確定位置で他の継ぎ目を評価しない（G2/G3）。
+        // 再settle時は findBaseId で再リンクされ、次の着地イベントで再評価される。
+      }
+    }
+
+    // ---- 描画ヘルパー ----
+    function drawDish() {
+      ctx.save();
+      ctx.translate(DISH_CX, DISH_Y + DISH_VISUAL_RY * 0.3);
+
+      ctx.beginPath();
+      ctx.ellipse(0, 8, DISH_VISUAL_RX, DISH_VISUAL_RY, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.08)';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.ellipse(0, 0, DISH_VISUAL_RX, DISH_VISUAL_RY, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.strokeStyle = '#C8A87C';
+      ctx.lineWidth = 2.5;
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawPudding(p) {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.angle);
+      if (p.bounceScale && p.bounceScale !== 1.0) {
+        ctx.scale(p.bounceScale, p.bounceScale);
+      }
+
+      // v0.3.5: さくらんぼ（小さい円＋茎＋つや）。台形プリン描画には触らない。
+      if (p.isCherry) {
+        const cr = p.radius; // = CHERRY_RADIUS
+        // 接地影（settledのみ・既存と同様）
+        if (p.settled) {
+          ctx.beginPath();
+          ctx.ellipse(2, cr + 1, cr * 0.9, cr * 0.3, 0, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(0,0,0,0.10)';
+          ctx.fill();
+        }
+        // 実
+        ctx.beginPath();
+        ctx.arc(0, 0, cr, 0, Math.PI * 2);
+        ctx.fillStyle = '#D2333A';
+        ctx.fill();
+        ctx.strokeStyle = '#9E1F26';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        // 茎
+        ctx.beginPath();
+        ctx.moveTo(0, -cr * 0.7);
+        ctx.quadraticCurveTo(cr * 0.5, -cr * 1.6, cr * 0.2, -cr * 2.1);
+        ctx.strokeStyle = '#6B4A2A';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+        // つや
+        ctx.beginPath();
+        ctx.ellipse(-cr * 0.35, -cr * 0.35, cr * 0.22, cr * 0.32, -0.4, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        ctx.fill();
+        ctx.restore();
+        return;
+      }
+
+      const r = p.radius;
+      const f = p.flavor || FLAVORS[0];
+
+      // v0.3.4: 台形（プリン形）。寸法は底辺60／上辺≒41／高さ≒57（proto2実証値）。
+      const halfBot = r;          // 底辺の半幅 = 30 → 底辺60（平らに耐える見た目）
+      const halfTop = r * 0.68;   // 上辺の半幅 ≒ 20.4 → 上辺≒41
+      const yBot = r;             // 底辺Y = +30
+      const yTop = -r * 0.9;      // 上辺Y = -27 → 高さ57（積層時の浮き隙間を解消）
+      const cr = r * 0.16;        // 四隅の角丸 ≒ 4.8
+
+      // 接地影（settledのみ）
+      if (p.settled) {
+        ctx.beginPath();
+        ctx.ellipse(3, yBot + 2, halfBot * 0.92, r * 0.18, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.10)';
+        ctx.fill();
+      }
+
+      // 台形本体（四隅を軽く丸める）。本体は非デコ・デコ問わず対称を維持（歪みバグ回避）
+      ctx.beginPath();
+      ctx.moveTo(0, yTop);
+      ctx.arcTo( halfTop, yTop,  halfBot, yBot, cr); // 右上
+      ctx.arcTo( halfBot, yBot, -halfBot, yBot, cr); // 右下
+      ctx.arcTo(-halfBot, yBot, -halfTop, yTop, cr); // 左下
+      ctx.arcTo(-halfTop, yTop,  halfTop, yTop, cr); // 左上
+      ctx.closePath();
+      ctx.fillStyle = f.body;
+      ctx.fill();
+      ctx.strokeStyle = f.stroke;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // 上面ソース帽子（カラメル）。デコ・非デコ共通の対称形（重さの主役はチョコブロックに一本化）
+      ctx.beginPath();
+      ctx.ellipse(0, yTop + 1, halfTop * 0.94, r * 0.17, 0, 0, Math.PI * 2);
+      ctx.fillStyle = f.cap;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(0, yTop, halfTop * 0.94, r * 0.15, 0, 0, Math.PI * 2);
+      ctx.fillStyle = f.sauce;
+      ctx.fill();
+
+      // v0.3.6.8：デコの重さサイン＝チョコ板の角切りを comDir 側へオーバーハング（固くて重い塊＝一発で「こっちが重い」）。
+      // 帽子の偏りやいちごは廃止。重さの主役はこの1個に集約。向きは必ず comDir 一致。
+      if (p.isDeco) {
+        const CHOCO_W  = r * 0.88;                        // 26.4px：横幅（ずっしり）
+        const CHOCO_H  = r * 0.55;                        // 16.5px：厚み
+        const CHOCO_RX = r * 0.05;                        // 1.5px：角丸最小＝固い印象
+        const CHOCO_CX = p.comDir * r * 0.72;             // ±21.6px：comDir 側へ
+        const CHOCO_CY = yTop - CHOCO_H * 0.5 - r * 0.12; // 帽子上面に乗る
+        const chocoL = CHOCO_CX - CHOCO_W * 0.5;
+        const chocoT = CHOCO_CY - CHOCO_H * 0.5;
+        // 落ち影（重量感）
+        ctx.beginPath();
+        ctx.ellipse(CHOCO_CX, chocoT + CHOCO_H + r * 0.03, CHOCO_W * 0.45, r * 0.09, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.22)';
+        ctx.fill();
+        // 本体（ダークチョコ）＝手書き角丸長方形（roundRect 非対応端末対策）
+        ctx.beginPath();
+        ctx.moveTo(chocoL + CHOCO_RX, chocoT);
+        ctx.lineTo(chocoL + CHOCO_W - CHOCO_RX, chocoT);
+        ctx.arcTo(chocoL + CHOCO_W, chocoT, chocoL + CHOCO_W, chocoT + CHOCO_RX, CHOCO_RX);
+        ctx.lineTo(chocoL + CHOCO_W, chocoT + CHOCO_H - CHOCO_RX);
+        ctx.arcTo(chocoL + CHOCO_W, chocoT + CHOCO_H, chocoL + CHOCO_W - CHOCO_RX, chocoT + CHOCO_H, CHOCO_RX);
+        ctx.lineTo(chocoL + CHOCO_RX, chocoT + CHOCO_H);
+        ctx.arcTo(chocoL, chocoT + CHOCO_H, chocoL, chocoT + CHOCO_H - CHOCO_RX, CHOCO_RX);
+        ctx.lineTo(chocoL, chocoT + CHOCO_RX);
+        ctx.arcTo(chocoL, chocoT, chocoL + CHOCO_RX, chocoT, CHOCO_RX);
+        ctx.closePath();
+        ctx.fillStyle = '#5C2E0A';
+        ctx.fill();
+        ctx.strokeStyle = '#3A1A05';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+        // 割れ線（水平1本・板チョコの記号）
+        ctx.beginPath();
+        ctx.moveTo(chocoL + CHOCO_RX, CHOCO_CY);
+        ctx.lineTo(chocoL + CHOCO_W - CHOCO_RX, CHOCO_CY);
+        ctx.strokeStyle = 'rgba(30,10,0,0.70)';
+        ctx.lineWidth = 1.2;
+        ctx.lineCap = 'butt';
+        ctx.stroke();
+        // 縦割れ線（水平と合わせて田の字＝板チョコ記号を強める）
+        ctx.beginPath();
+        ctx.moveTo(CHOCO_CX, chocoT + CHOCO_RX);
+        ctx.lineTo(CHOCO_CX, chocoT + CHOCO_H - CHOCO_RX);
+        ctx.strokeStyle = 'rgba(30,10,0,0.70)';
+        ctx.lineWidth = 1.2;
+        ctx.lineCap = 'butt';
+        ctx.stroke();
+        // 上面ハイライト（固形のツヤ）
+        ctx.beginPath();
+        ctx.ellipse(CHOCO_CX, chocoT + CHOCO_H * 0.22, CHOCO_W * 0.38, CHOCO_H * 0.25, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,220,180,0.50)';
+        ctx.fill();
+      }
+
+      // 前面に1本たれるソース（デコ時はチョコが右なのにソースが左垂れになる視線迷いを消す）
+      if (!p.isDeco) {
+        ctx.beginPath();
+        ctx.moveTo(-halfTop * 0.3, yTop + 2);
+        ctx.quadraticCurveTo(-halfTop * 0.05, yTop + r * 0.75, halfTop * 0.2, yTop + r * 0.6);
+        ctx.strokeStyle = f.sauce;
+        ctx.lineWidth = 5;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+      }
+
+      // 本体ハイライト（つや・左上）
+      ctx.beginPath();
+      ctx.ellipse(-halfTop * 0.55, yTop + r * 0.55, r * 0.14, r * 0.30, -0.25, 0, Math.PI * 2);
+      ctx.fillStyle = f.shine;
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawWaitingPudding() {
+      if (!fallingPudding || !waitingDrop) return;
+      const p = fallingPudding;
+
+      ctx.save();
+      ctx.setLineDash([4, 6]);
+      ctx.strokeStyle = 'rgba(180,140,60,0.35)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y + p.radius); // v0.3.6.2: さくらんぼ(CHERRY_RADIUS)でもガイド終点が実半径に一致するよう p.radius に
+      ctx.lineTo(p.x, DISH_Y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      drawPudding(p);
+    }
+
+    function drawVersionLabel() {
+      ctx.save();
+      ctx.font = '11px monospace';
+      ctx.fillStyle = 'rgba(140, 90, 40, 0.5)';
+      ctx.textAlign = 'right';
+      ctx.fillText(VERSION_LABEL, CANVAS_W - 8, CANVAS_H - 8);
+      ctx.restore();
+    }
+
+    // ---- メインループ ----
+    function draw() {
+      ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+      ctx.fillStyle = '#FFF8E7';
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+      drawDish();
+
+      for (const p of puddings) {
+        drawPudding(p);
+      }
+
+      if (fallingPudding) {
+        if (waitingDrop) {
+          drawWaitingPudding();
+        } else {
+          drawPudding(fallingPudding);
+        }
+      }
+
+      drawVersionLabel();
+
+      // 「◯こ のった！」常時表示（回帰維持）
+      // v0.3.5: さくらんぼは「◯こ」に数えない（プリンの数で統一）
+      const settledCount = puddings.filter(p => p.settled && !p.isCherry).length;
+      ctx.save();
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillStyle = '#6B3A2A';
+      ctx.textAlign = 'left';
+      ctx.fillText(`${settledCount}こ のった！`, 10, 30);
+      ctx.restore();
+
+      // STEP2: 「あと◯こ！」カウントダウン表示
+      const remaining = Math.max(0, CLEAR_COUNT - settledCount);
+      ctx.save();
+      if (currentLevel >= 3 && remaining === 0) {
+        // v0.3.5: Lv3でプリンを積み切ったら「あと0こ！」でなく仕上げの案内（発注書§2.5）
+        ctx.font = 'bold 18px sans-serif';
+        ctx.fillStyle = '#D2333A';
+        ctx.textAlign = 'left';
+        ctx.fillText('さいごに さくらんぼ！', 10, 54);
+      } else {
+        ctx.font = remaining <= 3
+          ? 'bold 18px sans-serif'
+          : '16px sans-serif';
+        ctx.fillStyle = remaining <= 3 ? '#D94020' : '#A07850';
+        ctx.textAlign = 'left';
+        ctx.fillText(`あと${remaining}こ！`, 10, 54);
+      }
+      ctx.restore();
+
+      // STEP1: レベル表示（右上）
+      ctx.save();
+      ctx.font = 'bold 16px sans-serif';
+      ctx.fillStyle = '#8B5E3C';
+      ctx.textAlign = 'right';
+      ctx.fillText(`Lv${currentLevel}`, CANVAS_W - 8, 24);
+      ctx.restore();
+
+      // STEP3: ベスト記録表示（右下・VERSION_LABELの上）
+      // alpha 0.5→0.8、Y を -22→-34 に上げて VERSION_LABEL と重ならないようにする
+      if (bestLevel > 1 || bestCount > 0) {
+        ctx.save();
+        ctx.font = '11px monospace';
+        ctx.fillStyle = 'rgba(140, 90, 40, 0.8)';
+        ctx.textAlign = 'right';
+        ctx.fillText(`さいこう Lv${bestLevel} / ${bestCount}こ`, CANVAS_W - 8, CANVAS_H - 34);
+        ctx.restore();
+      }
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // ---- ボタン操作 ----
+    function moveLeft() {
+      if (gameState !== 'playing') return;
+      // バグ2修正: Lv2以上はnextX（揺れの中心）をAMPマージン分だけ内側に制限し、
+      // 揺れ全体が常に画面内に収まって左右対称を保つ。Lv1は従来のMIN_Xまで。
+      const clampMin = (currentLevel >= 2) ? MIN_X + LV2_SWAY_AMP : MIN_X;
+      nextX = Math.max(clampMin, nextX - MOVE_STEP);
+      // バグ1修正: Lv2以上はupdate()のサイン計算に一任し直書きしない。
+      // Lv1はfallingPudding.xをnextXに即追従させる（揺れなし）。
+      if (fallingPudding && waitingDrop && currentLevel < 2) {
+        fallingPudding.x = nextX;
+      }
+    }
+
+    function moveRight() {
+      if (gameState !== 'playing') return;
+      // バグ2修正: Lv2以上はAMPマージン分だけ内側に制限。Lv1は従来のMAX_Xまで。
+      const clampMax = (currentLevel >= 2) ? MAX_X - LV2_SWAY_AMP : MAX_X;
+      nextX = Math.min(clampMax, nextX + MOVE_STEP);
+      // バグ1修正: Lv2以上は直書きしない。
+      if (fallingPudding && waitingDrop && currentLevel < 2) {
+        fallingPudding.x = nextX;
+      }
+    }
+
+    function doDrop() {
+      if (gameState !== 'playing') return;
+      if (fallingPudding && waitingDrop) {
+        waitingDrop = false;
+        fallingPudding.vy = 2;
+      }
+    }
+
+    function flashBtn(el) {
+      el.classList.add('pressed');
+      setTimeout(() => el.classList.remove('pressed'), 120);
+    }
+
+    const btnLeft  = document.getElementById('btnLeft');
+    const btnRight = document.getElementById('btnRight');
+    const btnDrop  = document.getElementById('btnDrop');
+    const btnRestart = document.getElementById('btnRestart');
+
+    btnLeft.addEventListener('click', () => { flashBtn(btnLeft); moveLeft(); });
+    btnRight.addEventListener('click', () => { flashBtn(btnRight); moveRight(); });
+    btnDrop.addEventListener('click', () => { flashBtn(btnDrop); doDrop(); });
+    btnRestart.addEventListener('click', restartGame);
+
+    // v0.3.4.2: 進捗リセット（confirm内蔵・誤タップ対策）
+    const btnReset = document.getElementById('btnReset');
+    btnReset.addEventListener('click', resetProgress);
+
+    // タッチ長押し対応（左右ボタン）
+    let leftInterval = null;
+    let rightInterval = null;
+
+    btnLeft.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      flashBtn(btnLeft);
+      moveLeft();
+      leftInterval = setInterval(moveLeft, 130);
+    });
+    btnLeft.addEventListener('touchend', () => {
+      clearInterval(leftInterval);
+    });
+    // 着信等で指が離れた場合も連射を止める
+    btnLeft.addEventListener('touchcancel', () => {
+      clearInterval(leftInterval);
+    });
+
+    btnRight.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      flashBtn(btnRight);
+      moveRight();
+      rightInterval = setInterval(moveRight, 130);
+    });
+    btnRight.addEventListener('touchend', () => {
+      clearInterval(rightInterval);
+    });
+    btnRight.addEventListener('touchcancel', () => {
+      clearInterval(rightInterval);
+    });
+
+    // v0.3.6.4: DROPもtouchstart即応に（左右と対称）。preventDefaultで合成clickを抑止＝二重ドロップ防止。
+    btnDrop.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      flashBtn(btnDrop);
+      doDrop();
+    });
+
+    // v0.3.6.4: もう一回！/進捗リセットも touch 即応に（click 遅延解消）。preventDefault で合成click抑止＝二重発火なし。
+    btnRestart.addEventListener('touchstart', (e) => { e.preventDefault(); restartGame(); });
+    btnReset.addEventListener('touchstart', (e) => { e.preventDefault(); resetProgress(); });
+
+    // キーボード対応
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft'  || e.key === 'a' || e.key === 'A') { moveLeft(); }
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') { moveRight(); }
+      if (e.key === ' ') { e.preventDefault(); doDrop(); }
+      if (e.key === 'Enter' && gameState !== 'playing') { restartGame(); }
+    });
+
+    // ---- 起動 ----
+    // v0.3.6.5: 初回起動は setGameState('playing') を通らないため、ここでゲームクロムを初期非表示にする
+    setChromeVisible(false);
+    spawnPudding();
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
