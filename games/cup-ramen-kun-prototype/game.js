@@ -1,9 +1,9 @@
 const GAME_SECONDS = 30;
 const MAX_POWER = 100;
 const POWER_DRAIN_PER_SECOND = 5.2;
-// 連打前提の操作：1タップの回復量。子どもの連打はとても速いので、1タップは軽く設定。
-// ここが実機チューニングのノブ（簡単すぎ＝下げる／難しすぎ＝上げる）。
-const PRESS_RECOVERY = 5;
+// 連打前提の操作：1タップの回復量。子どもの連打はとても速い（実機で確認）ので、1タップは軽く。
+// ここが実機チューニングのノブ（簡単すぎ＝下げる／難しすぎ＝上げる）。さらに下げる余地あり(2)。
+const PRESS_RECOVERY = 3;
 
 const TROUBLES = [
   { name: "STEAM BURST!", damage: 8, message: "湯気がブワッ。フタがすこし浮いた！" },
