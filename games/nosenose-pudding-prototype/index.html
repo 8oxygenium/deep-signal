@@ -12,7 +12,7 @@
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>のせのせプリン v0.3.6.10 - HAPOMU</title>
+  <title>のせのせプリン v0.3.6.11 - HAPOMU</title>
   <style>
     * {
       box-sizing: border-box;
@@ -210,7 +210,7 @@
   <script>
     // ---- URLにバージョンクエリを付与 ----
     (function() {
-      const VERSION = '0.3.6.10';
+      const VERSION = '0.3.6.11';
       const url = new URL(location.href);
       if (url.searchParams.get('v') !== VERSION) {
         url.searchParams.set('v', VERSION);
@@ -219,7 +219,7 @@
     })();
 
     // ---- 定数 ----
-    const VERSION_LABEL = 'v0.3.6.10';
+    const VERSION_LABEL = 'v0.3.6.11';
     const GRAVITY = 0.3;
     const PUDDING_RADIUS = 30;
     const CANVAS_W = 360;
@@ -412,6 +412,8 @@
       clearInterval(rightInterval);
       leftInterval = null;
       rightInterval = null;
+      dragActive = false;       // debugger指摘: ドラッグ中にゲームオーバー/クリア→リスタートで次ゲームのドラッグが死ぬバグ修正
+      dragPointerId = null;
       puddings = [];
       fallingPudding = null;
       nextX = DISH_CX;
@@ -1289,6 +1291,58 @@
       if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') { moveRight(); }
       if (e.key === ' ') { e.preventDefault(); doDrop(); }
       if (e.key === 'Enter' && gameState !== 'playing') { restartGame(); }
+    });
+
+    // ---- canvas ドラッグ追従（v0.3.6.11） ----
+    // 指（マウス/タッチ/ペン統一＝Pointer Events）でプリンの投下中心 nextX を追従。
+    // 投下する（指を離す＝投下。DROPボタン/spaceも併用可）。clamp は既存 moveLeft/Right と同一式。Lv2+は中心だけ動かし sway は update() に一任。
+    let dragActive = false;
+    let dragPointerId = null;
+
+    canvas.addEventListener('pointerdown', (e) => {
+      if (gameState !== 'playing') return;
+      if (!fallingPudding) return;
+      if (!waitingDrop) return;
+      if (dragActive) return;
+      dragActive = true;
+      dragPointerId = e.pointerId;
+      canvas.setPointerCapture(e.pointerId);
+      const rect = canvas.getBoundingClientRect();
+      const canvasX = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const clampMin = (currentLevel >= 2) ? MIN_X + LV2_SWAY_AMP : MIN_X;
+      const clampMax = (currentLevel >= 2) ? MAX_X - LV2_SWAY_AMP : MAX_X;
+      nextX = Math.max(clampMin, Math.min(clampMax, canvasX));
+      if (currentLevel < 2) fallingPudding.x = nextX;
+      e.preventDefault();
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (gameState !== 'playing') return;
+      if (!fallingPudding) return;
+      if (!waitingDrop) return;
+      if (!dragActive) return;
+      if (e.pointerId !== dragPointerId) return;
+      const rect = canvas.getBoundingClientRect();
+      const canvasX = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const clampMin = (currentLevel >= 2) ? MIN_X + LV2_SWAY_AMP : MIN_X;
+      const clampMax = (currentLevel >= 2) ? MAX_X - LV2_SWAY_AMP : MAX_X;
+      nextX = Math.max(clampMin, Math.min(clampMax, canvasX));
+      if (currentLevel < 2) fallingPudding.x = nextX;
+      e.preventDefault();
+    });
+
+    canvas.addEventListener('pointerup', (e) => {
+      if (e.pointerId !== dragPointerId) return;
+      dragActive = false;
+      dragPointerId = null;
+      doDrop(); // v0.3.6.11: 指を離す＝投下（スマホ慣習）。doDrop内でplaying/fallingPudding/waitingDropをガード
+    });
+
+    canvas.addEventListener('pointercancel', (e) => {
+      if (e.pointerId !== dragPointerId) return;
+      dragActive = false;
+      dragPointerId = null;
+      // ※pointercancel は投下しない（着信割り込み等の強制解放＝意図的な指離しでないため）
     });
 
     // ---- 起動 ----
