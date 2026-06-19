@@ -124,7 +124,7 @@ function chooseHand(playerHand) {
   setResultState("");
   setHandDisplay("player", playerHand);
   setHandDisplay("cpu", null, "???");
-  elements.commentText.textContent = "選んだ手はそのまま表示。CPUが少し長くぐるぐるします。";
+  elements.commentText.textContent = "";
   updateUi();
 
   runJankenSequence(playerHand);
