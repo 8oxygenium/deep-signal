@@ -12,7 +12,7 @@
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>のせのせプリン v0.3.6.9 - HAPOMU</title>
+  <title>のせのせプリン v0.3.6.10 - HAPOMU</title>
   <style>
     * {
       box-sizing: border-box;
@@ -210,7 +210,7 @@
   <script>
     // ---- URLにバージョンクエリを付与 ----
     (function() {
-      const VERSION = '0.3.6.9';
+      const VERSION = '0.3.6.10';
       const url = new URL(location.href);
       if (url.searchParams.get('v') !== VERSION) {
         url.searchParams.set('v', VERSION);
@@ -219,7 +219,7 @@
     })();
 
     // ---- 定数 ----
-    const VERSION_LABEL = 'v0.3.6.9';
+    const VERSION_LABEL = 'v0.3.6.10';
     const GRAVITY = 0.3;
     const PUDDING_RADIUS = 30;
     const CANVAS_W = 360;
@@ -254,6 +254,7 @@
     // 去る/落ちるプリンは範囲を大きく外れて窓リセット＝対象外＝皿外落下GAMEOVERを維持。揺れ幅が大きいアーチも全振幅が範囲内なら捕捉。
     const STUCK_RANGE   = 46;   // px: sliding中の到達範囲(span)がこれ以内なら「その場停滞」とみなす（debuggerシム実測＝実アーチspan最大42px+8%余裕。実機ノブ）
     const STUCK_TIMEOUT = 60;   // frames(≈1s@60fps): 範囲内停滞がこれだけ続いたら強制settle
+    const STUCK_TIMEOUT_TOPPLED = 120; // frames(≈2s@60fps): 崩れ由来(toppled)プリンは長めに様子を見てから強制settle（落下途中の一時停滞を誤救命しない・通常は60f）
 
     // Lv2 落下待ち横揺れ（RNG撤廃・タイミングスキル化）
     // 振幅・周期は実機で娘さんの反応を見て微調整するための定数
@@ -733,7 +734,7 @@
 
         // C′改(v0.3.6.9): その場で停滞し続けるプリンを強制settle（アーチ等の永久揺れ＝事実上フリーズの安全弁）。
         // sliding中の到達範囲(bounding box)を更新し、span が STUCK_RANGE 内に収まったまま STUCK_TIMEOUT 続いたら停滞と判定。
-        // 範囲を超えた＝去る/落ちる＝窓リセットで対象外（皿外落下GAMEOVER維持）。toppled（崩れ落ち中）は救済しない。
+        // 範囲を超えた＝去る/落ちる＝窓リセットで対象外（皿外落下GAMEOVER維持）。v0.3.6.10: 崩れ由来(toppled)も長めタイムアウト(STUCK_TIMEOUT_TOPPLED)で救済（挟まり揺れフリーズ対策）。落ちていく崩れは窓リセットで対象外＝落下のまま。
         if (p.sliding) {
           if (p.x < p.winMinX) p.winMinX = p.x;
           if (p.x > p.winMaxX) p.winMaxX = p.x;
@@ -744,16 +745,21 @@
             p.winMinX = p.winMaxX = p.x;
             p.winMinY = p.winMaxY = p.y;
             p.winFrames = 0;
-          } else if (++p.winFrames >= STUCK_TIMEOUT && !p.toppled) {
-            // 範囲内停滞が継続＝強制決着。角度は直立寄りにクランプ（傾いたまま固定の崩れ罠を回避）。toppleDirtyは立てない（連鎖ループG2回避）。
-            p.sliding = false;
-            p.settled = true;
-            p.vx = 0;
-            p.vy = 0;
-            p.angle = p.targetAngle = Math.max(-0.25, Math.min(0.25, p.angle)); // ±約14度に即スナップ（angleも同時＝eased自己修正の「勝手に起き上がる」ジャンク回避）
-            p.bounceScale = 1.2;
-            p.baseId = findBaseId(p);
-            p.toppled = false;
+          } else {
+            // 範囲内停滞が継続。崩れ由来(toppled)は長め(STUCK_TIMEOUT_TOPPLED)に様子を見る＝落下途中の一時停滞を誤って救済しない。
+            // 挟まって落ちきらず揺れ続ける崩れプリン（実機で確認のフリーズ）はここで強制決着。落ちていく崩れは上の窓リセットで対象外。
+            const stuckLimit = p.toppled ? STUCK_TIMEOUT_TOPPLED : STUCK_TIMEOUT;
+            if (++p.winFrames >= stuckLimit) {
+              // 強制決着。角度は直立寄りにクランプ（傾いたまま固定の崩れ罠を回避）。toppleDirtyは立てない（連鎖ループG2回避）。
+              p.sliding = false;
+              p.settled = true;
+              p.vx = 0;
+              p.vy = 0;
+              p.angle = p.targetAngle = Math.max(-0.25, Math.min(0.25, p.angle)); // ±約14度に即スナップ（angleも同時＝eased自己修正の「勝手に起き上がる」ジャンク回避）
+              p.bounceScale = 1.2;
+              p.baseId = findBaseId(p);
+              p.toppled = false;
+            }
           }
         }
 
