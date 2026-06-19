@@ -323,6 +323,7 @@ button {
   font-weight: 700;
   cursor: pointer;
   text-transform: uppercase;
+  touch-action: manipulation;
 }
 
 .hand-button {
@@ -433,9 +434,54 @@ button {
 }
 
 @media (max-width: 760px) {
-  .machine,
-  .versus,
-  .controls {
+  /* スマホ：3択ボタン(.controls)と対決パネル(.versus)は潰さず横並びを死守。
+     潰すのは .machine の本体／スコアボードだけにする。 */
+  .cabinet {
+    padding: 12px 0 28px;
+  }
+  .marquee {
+    padding: 14px;
+  }
+  h1 {
+    font-size: clamp(30px, 10vw, 52px);
+  }
+  .machine {
     grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 14px;
+  }
+  .screen {
+    min-height: auto;
+    padding: 14px;
+  }
+  .versus {
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .versus > div {
+    min-height: 96px;
+    padding: 10px;
+  }
+  .hand-icon {
+    width: 60px;
+    height: 52px;
+  }
+  .scoreboard {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .scoreboard div {
+    padding: 8px;
+    text-align: center;
+  }
+  .scoreboard strong {
+    font-size: 26px;
+  }
+  .controls {
+    gap: 8px;
+  }
+  .hand-button {
+    min-height: 84px;
+    font-size: clamp(16px, 6.5vw, 30px);
   }
 }
