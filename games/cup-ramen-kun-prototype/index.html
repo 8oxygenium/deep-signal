@@ -12,17 +12,17 @@
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>カップラーメンくん v0.1.2 - HAPOMU</title>
-    <link rel="stylesheet" href="style.css?v=0.1.2">
+    <title>カップラーメンくん v0.1.3 - HAPOMU</title>
+    <link rel="stylesheet" href="style.css?v=0.1.3">
   </head>
   <body>
-    <main class="game-shell" aria-label="カップラーメンくん v0.1.2">
+    <main class="game-shell" aria-label="カップラーメンくん v0.1.3">
       <header class="hero">
         <p class="eyebrow">HAPOMU survival prototype</p>
-        <h1>カップラーメンくん <span>v0.1.2</span></h1>
+        <h1>カップラーメンくん <span>v0.1.3</span></h1>
         <p class="sub-title">Cup Ramen Kun</p>
-        <p class="visible-hotfix">v0.1.2 / フタがとんだらゲームオーバー</p>
-        <p>フタを押さえて、30秒間カップラーメンくんを守ろう。</p>
+        <p class="visible-hotfix">v0.1.3 / 画面を連打してフタを守れ</p>
+        <p>画面のどこでも連打してフタを押さえ、30秒間まもりきろう。</p>
       </header>
 
       <section class="machine">
@@ -33,7 +33,7 @@
             <span></span>
           </div>
           <div id="cup" class="cup">
-            <div id="lid" class="lid">PRESS!</div>
+            <div id="lid" class="lid">TAP!</div>
             <div class="spill" aria-hidden="true">
               <span class="noodle noodle-a"></span>
               <span class="noodle noodle-b"></span>
@@ -63,12 +63,12 @@
         </div>
 
         <div class="message-panel">
-          <p id="eventText">PRESS / HOLD でフタを守れ。</p>
-          <p id="titleText">Space = PRESS LID / R = RESET</p>
+          <p id="eventText">画面を連打してフタを守れ！</p>
+          <p id="titleText">画面タップ / Space = おさえる / R = リセット</p>
         </div>
 
         <div class="controls">
-          <button id="pressButton" type="button">PRESS / HOLD</button>
+          <button id="pressButton" type="button">おさえる（連打）</button>
           <button id="resetButton" type="button">RESET / TRY AGAIN</button>
         </div>
       </section>
@@ -80,6 +80,6 @@
       </nav>
     </main>
 
-    <script src="game.js?v=0.1.2"></script>
+    <script src="game.js?v=0.1.3"></script>
   </body>
 </html>

@@ -1,7 +1,9 @@
 const GAME_SECONDS = 30;
 const MAX_POWER = 100;
 const POWER_DRAIN_PER_SECOND = 5.2;
-const PRESS_RECOVERY = 13;
+// 連打前提の操作に変更：1タップの回復量を下げて「連打しないと守れない」緊張感を出す。
+// ここが実機チューニングのノブ（簡単すぎ＝上げる／難しすぎ＝上げる）。
+const PRESS_RECOVERY = 8;
 
 const TROUBLES = [
   { name: "STEAM BURST!", damage: 8, message: "湯気がブワッ。フタがすこし浮いた！" },
@@ -43,9 +45,9 @@ function resetGame() {
   state.elapsed = 0;
   state.nextTroubleAt = randomTroubleDelay();
   state.lastTime = performance.now();
-  elements.eventText.textContent = "HOLD THE LID! 30 SEC SURVIVAL";
-  elements.titleText.textContent = "Space / PRESSでフタを守れ。";
-  elements.lid.textContent = "PRESS!";
+  elements.eventText.textContent = "画面を連打してフタを守れ！ 30秒サバイバル";
+  elements.titleText.textContent = "画面タップ / Space = おさえる / R = リセット";
+  elements.lid.textContent = "TAP!";
   elements.stage.classList.remove("shake");
   elements.cup.classList.remove("game-over", "complete");
   updateUi();
@@ -63,9 +65,17 @@ function pressLid() {
     resetGame();
   }
   state.lidPower = clamp(state.lidPower + PRESS_RECOVERY, 0, MAX_POWER);
-  elements.eventText.textContent = "PUSH! フタを押さえた。";
+  elements.eventText.textContent = "PUSH! フタを押さえた！";
   elements.cup.classList.remove("loose");
+  punchLid();
   updateUi();
+}
+
+// 1タップごとにフタがドンッと沈む見た目フィードバック（押さえてる感）。
+function punchLid() {
+  elements.lid.classList.remove("pressing");
+  void elements.lid.offsetWidth;
+  elements.lid.classList.add("pressing");
 }
 
 function update(timestamp) {
@@ -171,6 +181,13 @@ function handleKeydown(event) {
 
 elements.pressButton.addEventListener("click", pressLid);
 elements.pressButton.addEventListener("touchstart", (event) => {
+  event.preventDefault();
+  pressLid();
+}, { passive: false });
+
+// 画面（ステージ）全体を連打のタップ対象にする。小さいボタン連打より遊びやすい。
+elements.stage.addEventListener("click", pressLid);
+elements.stage.addEventListener("touchstart", (event) => {
   event.preventDefault();
   pressLid();
 }, { passive: false });
