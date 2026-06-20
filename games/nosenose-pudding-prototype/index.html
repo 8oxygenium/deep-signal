@@ -12,7 +12,7 @@
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>のせのせプリン v0.3.6.11 - HAPOMU</title>
+  <title>のせのせプリン v0.3.7.0 - HAPOMU</title>
   <style>
     * {
       box-sizing: border-box;
@@ -210,7 +210,7 @@
   <script>
     // ---- URLにバージョンクエリを付与 ----
     (function() {
-      const VERSION = '0.3.6.11';
+      const VERSION = '0.3.7.0';
       const url = new URL(location.href);
       if (url.searchParams.get('v') !== VERSION) {
         url.searchParams.set('v', VERSION);
@@ -219,7 +219,7 @@
     })();
 
     // ---- 定数 ----
-    const VERSION_LABEL = 'v0.3.6.11';
+    const VERSION_LABEL = 'v0.3.7.0';
     const GRAVITY = 0.3;
     const PUDDING_RADIUS = 30;
     const CANVAS_W = 360;
@@ -995,75 +995,78 @@
       ctx.arcTo(-halfBot, yBot, -halfTop, yTop, cr); // 左下
       ctx.arcTo(-halfTop, yTop,  halfTop, yTop, cr); // 左上
       ctx.closePath();
-      ctx.fillStyle = f.body;
+      ctx.fillStyle = p.isDeco ? '#E8700A' : f.body;
       ctx.fill();
-      ctx.strokeStyle = f.stroke;
+      ctx.strokeStyle = p.isDeco ? '#A84C00' : f.stroke;
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      // 上面ソース帽子（カラメル）。デコ・非デコ共通の対称形（重さの主役はチョコブロックに一本化）
+      // 上面ソース帽子（カラメル）。デコ・非デコ共通の対称形（v0.3.7.0: デコはカボチャプリン＝本体オレンジ＋顔＋うね＋ヘタ）
       ctx.beginPath();
       ctx.ellipse(0, yTop + 1, halfTop * 0.94, r * 0.17, 0, 0, Math.PI * 2);
-      ctx.fillStyle = f.cap;
+      ctx.fillStyle = p.isDeco ? '#C45E00' : f.cap;   // デコ＝カボチャの帽子(濃オレンジ)
       ctx.fill();
       ctx.beginPath();
       ctx.ellipse(0, yTop, halfTop * 0.94, r * 0.15, 0, 0, Math.PI * 2);
-      ctx.fillStyle = f.sauce;
+      ctx.fillStyle = p.isDeco ? '#9A3F00' : f.sauce; // デコ＝カボチャ帽子の影
       ctx.fill();
 
-      // v0.3.6.8：デコの重さサイン＝チョコ板の角切りを comDir 側へオーバーハング（固くて重い塊＝一発で「こっちが重い」）。
-      // 帽子の偏りやいちごは廃止。重さの主役はこの1個に集約。向きは必ず comDir 一致。
       if (p.isDeco) {
-        const CHOCO_W  = r * 0.88;                        // 26.4px：横幅（ずっしり）
-        const CHOCO_H  = r * 0.55;                        // 16.5px：厚み
-        const CHOCO_RX = r * 0.05;                        // 1.5px：角丸最小＝固い印象
-        const CHOCO_CX = p.comDir * r * 0.72;             // ±21.6px：comDir 側へ
-        const CHOCO_CY = yTop - CHOCO_H * 0.5 - r * 0.12; // 帽子上面に乗る
-        const chocoL = CHOCO_CX - CHOCO_W * 0.5;
-        const chocoT = CHOCO_CY - CHOCO_H * 0.5;
-        // 落ち影（重量感）
+        // v0.3.7.0：カボチャプリン（娘さんの絵＝「重いプリン＝カボチャ」）。重さの主役はカボチャ素材、
+        // 倒れる向き(comDir)は「重い側のうねを濃く＋ヘタをcomDir側へ傾け＋顔をcomDir側へ寄せ」の三段。
+        const FACE_X = p.comDir * r * 0.20; // 顔の横オフセット（comDir側）
+        // ── 縦うね線5本（comDir側の外うねを濃く＝重い側の手がかり） ──
+        const ribs = [
+          { x: -r*0.64, weight: p.comDir === -1 ? 'heavy' : 'light' },
+          { x: -r*0.38, weight: 'normal' },
+          { x:  0,      weight: 'normal' },
+          { x:  r*0.38, weight: 'normal' },
+          { x:  r*0.64, weight: p.comDir ===  1 ? 'heavy' : 'light' },
+        ];
+        ctx.lineCap = 'round';
+        for (const rib of ribs) {
+          const yS = yTop + 2, yE = yBot - 3;
+          ctx.beginPath();
+          ctx.moveTo(rib.x, yS);
+          ctx.quadraticCurveTo(rib.x * 1.10, (yS + yE) / 2, rib.x, yE);
+          if (rib.weight === 'heavy')      { ctx.strokeStyle = 'rgba(110,40,0,0.90)'; ctx.lineWidth = 3.0; }
+          else if (rib.weight === 'light') { ctx.strokeStyle = 'rgba(190,90,10,0.28)'; ctx.lineWidth = 1.2; }
+          else                             { ctx.strokeStyle = 'rgba(170,75,5,0.42)'; ctx.lineWidth = 1.6; }
+          ctx.stroke();
+        }
+        // ── 目（三角×2・上向き＝ジャックオランタン） ──
+        const eyeY = yTop + r*0.55, eyeXL = FACE_X - r*0.32, eyeXR = FACE_X + r*0.32;
+        const eH = r*0.13, eW = r*0.11;
+        ctx.fillStyle = '#3A1A00';
+        for (const ex of [eyeXL, eyeXR]) {
+          ctx.beginPath();
+          ctx.moveTo(ex, eyeY - eH);
+          ctx.lineTo(ex - eW, eyeY + r*0.08);
+          ctx.lineTo(ex + eW, eyeY + r*0.08);
+          ctx.closePath();
+          ctx.fill();
+        }
+        // ── 口（ギザギザ） ──
+        const mY = yTop + r*0.80, mL = FACE_X - r*0.40, mR = FACE_X + r*0.40;
         ctx.beginPath();
-        ctx.ellipse(CHOCO_CX, chocoT + CHOCO_H + r * 0.03, CHOCO_W * 0.45, r * 0.09, 0, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(0,0,0,0.22)';
-        ctx.fill();
-        // 本体（ダークチョコ）＝手書き角丸長方形（roundRect 非対応端末対策）
-        ctx.beginPath();
-        ctx.moveTo(chocoL + CHOCO_RX, chocoT);
-        ctx.lineTo(chocoL + CHOCO_W - CHOCO_RX, chocoT);
-        ctx.arcTo(chocoL + CHOCO_W, chocoT, chocoL + CHOCO_W, chocoT + CHOCO_RX, CHOCO_RX);
-        ctx.lineTo(chocoL + CHOCO_W, chocoT + CHOCO_H - CHOCO_RX);
-        ctx.arcTo(chocoL + CHOCO_W, chocoT + CHOCO_H, chocoL + CHOCO_W - CHOCO_RX, chocoT + CHOCO_H, CHOCO_RX);
-        ctx.lineTo(chocoL + CHOCO_RX, chocoT + CHOCO_H);
-        ctx.arcTo(chocoL, chocoT + CHOCO_H, chocoL, chocoT + CHOCO_H - CHOCO_RX, CHOCO_RX);
-        ctx.lineTo(chocoL, chocoT + CHOCO_RX);
-        ctx.arcTo(chocoL, chocoT, chocoL + CHOCO_RX, chocoT, CHOCO_RX);
+        ctx.moveTo(mL, mY);
+        ctx.lineTo(mL + r*0.133, mY - r*0.12);
+        ctx.lineTo(mL + r*0.267, mY + r*0.10);
+        ctx.lineTo(mL + r*0.400, mY - r*0.12);
+        ctx.lineTo(mL + r*0.533, mY + r*0.10);
+        ctx.lineTo(mL + r*0.667, mY - r*0.12);
+        ctx.lineTo(mR, mY);
         ctx.closePath();
-        ctx.fillStyle = '#5C2E0A';
+        ctx.fillStyle = '#3A1A00';
         ctx.fill();
-        ctx.strokeStyle = '#3A1A05';
-        ctx.lineWidth = 1.2;
-        ctx.stroke();
-        // 割れ線（水平1本・板チョコの記号）
+        // ── ヘタ（緑の茎・comDir方向へ傾く＝第二の手がかり） ──
         ctx.beginPath();
-        ctx.moveTo(chocoL + CHOCO_RX, CHOCO_CY);
-        ctx.lineTo(chocoL + CHOCO_W - CHOCO_RX, CHOCO_CY);
-        ctx.strokeStyle = 'rgba(30,10,0,0.70)';
-        ctx.lineWidth = 1.2;
-        ctx.lineCap = 'butt';
+        ctx.moveTo(0, yTop - 1);
+        ctx.quadraticCurveTo(p.comDir * r*0.10, yTop - r*0.15, p.comDir * r*0.25, yTop - r*0.28);
+        ctx.strokeStyle = '#2D7A1A';
+        ctx.lineWidth = 3.5;
+        ctx.lineCap = 'round';
         ctx.stroke();
-        // 縦割れ線（水平と合わせて田の字＝板チョコ記号を強める）
-        ctx.beginPath();
-        ctx.moveTo(CHOCO_CX, chocoT + CHOCO_RX);
-        ctx.lineTo(CHOCO_CX, chocoT + CHOCO_H - CHOCO_RX);
-        ctx.strokeStyle = 'rgba(30,10,0,0.70)';
-        ctx.lineWidth = 1.2;
-        ctx.lineCap = 'butt';
-        ctx.stroke();
-        // 上面ハイライト（固形のツヤ）
-        ctx.beginPath();
-        ctx.ellipse(CHOCO_CX, chocoT + CHOCO_H * 0.22, CHOCO_W * 0.38, CHOCO_H * 0.25, 0, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,220,180,0.50)';
-        ctx.fill();
       }
 
       // 前面に1本たれるソース（デコ時はチョコが右なのにソースが左垂れになる視線迷いを消す）
@@ -1080,7 +1083,7 @@
       // 本体ハイライト（つや・左上）
       ctx.beginPath();
       ctx.ellipse(-halfTop * 0.55, yTop + r * 0.55, r * 0.14, r * 0.30, -0.25, 0, Math.PI * 2);
-      ctx.fillStyle = f.shine;
+      ctx.fillStyle = p.isDeco ? 'rgba(255,255,255,0.30)' : f.shine;
       ctx.fill();
 
       ctx.restore();
