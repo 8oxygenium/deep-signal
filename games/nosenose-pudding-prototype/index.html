@@ -12,7 +12,7 @@
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>のせのせプリン v0.3.7.0 - HAPOMU</title>
+  <title>のせのせプリン v0.3.7.1 - HAPOMU</title>
   <style>
     * {
       box-sizing: border-box;
@@ -210,7 +210,7 @@
   <script>
     // ---- URLにバージョンクエリを付与 ----
     (function() {
-      const VERSION = '0.3.7.0';
+      const VERSION = '0.3.7.1';
       const url = new URL(location.href);
       if (url.searchParams.get('v') !== VERSION) {
         url.searchParams.set('v', VERSION);
@@ -219,7 +219,7 @@
     })();
 
     // ---- 定数 ----
-    const VERSION_LABEL = 'v0.3.7.0';
+    const VERSION_LABEL = 'v0.3.7.1';
     const GRAVITY = 0.3;
     const PUDDING_RADIUS = 30;
     const CANVAS_W = 360;
@@ -287,17 +287,28 @@
     const FRICTION_CONTACT = 0.80;
     const FRICTION_DISH    = 0.95;   // v0.3.6.3: 皿面接触時の水平摩擦（dish bounce 毎に乗算・多体パイルの永久回転防止）
 
-    // v0.3.4: 色違いプリン4種（見た目のみ・物理は完全同一）。spawn時にランダム割当。
+    // v0.3.7.1: 娘さんの味デザイン5種（描画のみ・物理は完全同一）。spawn時に重み付きランダム割当。
     const FLAVORS = [
-      // カスタード（従来色）
-      { body: '#F5C518', stroke: '#D4A000', cap: '#F0B800', sauce: 'rgba(120, 60, 10, 0.55)', shine: 'rgba(255,255,255,0.35)' },
-      // チョコ
-      { body: '#A05A2C', stroke: '#6E3A18', cap: '#7C4420', sauce: 'rgba(50, 25, 8, 0.55)',   shine: 'rgba(255,235,210,0.30)' },
-      // いちご
-      { body: '#F4A6C0', stroke: '#D86A8C', cap: '#EF8AAC', sauce: 'rgba(150, 40, 75, 0.50)', shine: 'rgba(255,255,255,0.40)' },
-      // 抹茶
-      { body: '#A8C66C', stroke: '#6E8B2E', cap: '#94B84E', sauce: 'rgba(70, 90, 20, 0.50)',  shine: 'rgba(255,255,255,0.35)' },
+      // 0 ノーマル（黄＋赤茶帽）
+      { body:'#F5E020', stroke:'#C8A000', cap:'#B03A28', sauce:'rgba(176,58,40,0.60)', shine:'rgba(255,255,255,0.38)', pattern:null },
+      // 1 紅茶（青紫＝娘さんの選択を正とする・茶色にしない）
+      { body:'#7B5EC8', stroke:'#4A3490', cap:'#4B90D9', sauce:'rgba(75,144,217,0.65)', shine:'rgba(220,210,255,0.40)', pattern:'milk-tea' },
+      // 2 いちごジャム（黄body＋赤ジャム帽＋ギザたれ）
+      { body:'#F5E020', stroke:'#C8A000', cap:'#E8102A', sauce:'rgba(232,16,42,0.75)', shine:'rgba(255,255,255,0.38)', pattern:'strawberry-jam' },
+      // 3 レインボー（縞・帽子なし）
+      { body:'#FFFFFF', stroke:'#333333', cap:'#FFFFFF', sauce:'rgba(0,0,0,0)', shine:'rgba(255,255,255,0.25)', pattern:'rainbow',
+        stripes:['#F5F5F5','#F5E020','#B0B0B0','#CC2020','#F050A0','#8040C0','#1840C0','#40ACEC','#186830','#50D020','#F5E020','#F07820','#CC2020'] },
+      // 4 クリスマス（赤body＋白クリーム・ツリー/プレゼントはフェーズ2送り）
+      { body:'#CC2020', stroke:'#8B1A1A', cap:'#8B2E10', sauce:'rgba(139,46,16,0.70)', shine:'rgba(255,200,200,0.30)', pattern:'christmas-simple' },
     ];
+    // v0.3.7.1: 出現重み（normal/紅茶/いちごジャム/レインボー/クリスマス）。レインボー・クリスマスは各10%に抑制。
+    const FLAVOR_WEIGHTS = [3, 3, 2, 1, 1];
+    const FLAVOR_TOTAL = FLAVOR_WEIGHTS.reduce((a,b)=>a+b, 0);
+    function pickFlavor() {
+      let r = Math.random() * FLAVOR_TOTAL;
+      for (let i = 0; i < FLAVORS.length; i++) { r -= FLAVOR_WEIGHTS[i]; if (r <= 0) return FLAVORS[i]; }
+      return FLAVORS[FLAVORS.length - 1];
+    }
 
     // ---- DOM ----
     const canvas  = document.getElementById('gameCanvas');
@@ -481,7 +492,7 @@
         radius: spawnCherry ? CHERRY_RADIUS : PUDDING_RADIUS, // v0.3.5: さくらんぼは小半径（物理は同一）
         bounceScale: 1.0,
         id: puddingSeq++, // v0.3.4: 安定ID
-        flavor: FLAVORS[Math.floor(Math.random() * FLAVORS.length)], // v0.3.4: 色違い（見た目のみ・さくらんぼでは未使用）
+        flavor: pickFlavor(), // v0.3.7.1: 重み付きランダム（見た目のみ・さくらんぼでは未使用）
         baseId: -1, // v0.3.4: 着地時に確定（-1=皿直置き／それ以外は支持プリンのid）
         toppled: false, // v0.3.4: 重心転倒で崩れたマーク（GAMEOVER文言分岐用）
         isCherry: spawnCherry, // v0.3.5: ピース種別（描画・クリア判定・HUDで分岐）
@@ -995,21 +1006,104 @@
       ctx.arcTo(-halfBot, yBot, -halfTop, yTop, cr); // 左下
       ctx.arcTo(-halfTop, yTop,  halfTop, yTop, cr); // 左上
       ctx.closePath();
-      ctx.fillStyle = p.isDeco ? '#E8700A' : f.body;
+      if (!p.isDeco && f.pattern === 'milk-tea') {
+        const teaGrad = ctx.createLinearGradient(0, yTop, 0, yBot);
+        teaGrad.addColorStop(0.00, '#9868D4'); // 上:赤紫
+        teaGrad.addColorStop(0.45, '#7B5EC8'); // 中:紫
+        teaGrad.addColorStop(1.00, '#3A88D4'); // 下:青
+        ctx.fillStyle = teaGrad;
+      } else {
+        ctx.fillStyle = p.isDeco ? '#E8700A' : f.body;
+      }
       ctx.fill();
       ctx.strokeStyle = p.isDeco ? '#A84C00' : f.stroke;
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
+      // v0.3.7.1: レインボー縞（!p.isDeco && pattern==='rainbow' のときのみ）
+      if (!p.isDeco && f.pattern === 'rainbow') {
+        ctx.save();
+        // 台形パスを再構築してクリップ
+        ctx.beginPath();
+        ctx.moveTo(0, yTop);
+        ctx.arcTo( halfTop, yTop,  halfBot, yBot, cr);
+        ctx.arcTo( halfBot, yBot, -halfBot, yBot, cr);
+        ctx.arcTo(-halfBot, yBot, -halfTop, yTop, cr);
+        ctx.arcTo(-halfTop, yTop,  halfTop, yTop, cr);
+        ctx.closePath();
+        ctx.clip();
+        const stripeH = (yBot - yTop) / f.stripes.length;
+        for (let i = 0; i < f.stripes.length; i++) {
+          ctx.fillStyle = f.stripes[i];
+          ctx.fillRect(-halfBot - 2, yTop + i * stripeH, (halfBot + 2) * 2, stripeH + 1);
+        }
+        ctx.restore();
+        // 縞が枠を覆うので枠を再描画
+        ctx.beginPath();
+        ctx.moveTo(0, yTop);
+        ctx.arcTo( halfTop, yTop,  halfBot, yBot, cr);
+        ctx.arcTo( halfBot, yBot, -halfBot, yBot, cr);
+        ctx.arcTo(-halfBot, yBot, -halfTop, yTop, cr);
+        ctx.arcTo(-halfTop, yTop,  halfTop, yTop, cr);
+        ctx.closePath();
+        ctx.strokeStyle = f.stroke; ctx.lineWidth = 1.5; ctx.stroke();
+      }
+
       // 上面ソース帽子（カラメル）。デコ・非デコ共通の対称形（v0.3.7.0: デコはカボチャプリン＝本体オレンジ＋顔＋うね＋ヘタ）
-      ctx.beginPath();
-      ctx.ellipse(0, yTop + 1, halfTop * 0.94, r * 0.17, 0, 0, Math.PI * 2);
-      ctx.fillStyle = p.isDeco ? '#C45E00' : f.cap;   // デコ＝カボチャの帽子(濃オレンジ)
-      ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(0, yTop, halfTop * 0.94, r * 0.15, 0, 0, Math.PI * 2);
-      ctx.fillStyle = p.isDeco ? '#9A3F00' : f.sauce; // デコ＝カボチャ帽子の影
-      ctx.fill();
+      // v0.3.7.1: 非デコのレインボーだけ帽子をスキップ（縞柄を帽子で隠さない）
+      if (!(!p.isDeco && f.pattern === 'rainbow')) {
+        ctx.beginPath();
+        ctx.ellipse(0, yTop + 1, halfTop * 0.94, r * 0.17, 0, 0, Math.PI * 2);
+        ctx.fillStyle = p.isDeco ? '#C45E00' : f.cap;   // デコ＝カボチャの帽子(濃オレンジ)
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(0, yTop, halfTop * 0.94, r * 0.15, 0, 0, Math.PI * 2);
+        ctx.fillStyle = p.isDeco ? '#9A3F00' : f.sauce; // デコ＝カボチャ帽子の影
+        ctx.fill();
+      }
+
+      // v0.3.7.1: いちごジャムのギザたれ（cap楕円の直後・!p.isDeco かつ pattern==='strawberry-jam'）
+      if (!p.isDeco && f.pattern === 'strawberry-jam') {
+        const jamY0 = yTop + r * 0.17, jamDropH = r * 0.38, jamW = halfTop * 0.88, dropCount = 4;
+        const stepX = (jamW * 2) / dropCount;
+        ctx.beginPath();
+        ctx.moveTo(-jamW, jamY0);
+        for (let i = 0; i < dropCount; i++) {
+          const peakX = -jamW + stepX * i + stepX * 0.5;
+          const nextX = -jamW + stepX * (i + 1);
+          const dropDepth = (i % 2 === 0) ? jamDropH : jamDropH * 0.65;
+          ctx.quadraticCurveTo(peakX, jamY0 + dropDepth, nextX, jamY0);
+        }
+        ctx.closePath();
+        ctx.fillStyle = '#FF5070'; ctx.fill();
+      }
+
+      // v0.3.7.1: クリスマス（白クリーム＋ツリー＋プレゼント）（cap楕円の直後・!p.isDeco かつ pattern==='christmas-simple'）
+      if (!p.isDeco && f.pattern === 'christmas-simple') {
+        // 白クリーム
+        const creamCY = yTop - r * 0.05;
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath(); ctx.ellipse(0, creamCY, halfTop*0.38, r*0.16, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(-r*0.18, creamCY + r*0.06, halfTop*0.22, r*0.12, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse( r*0.18, creamCY + r*0.06, halfTop*0.22, r*0.12, 0, 0, Math.PI*2); ctx.fill();
+        // ツリー（台形左下・緑2段三角＋幹＋飾り）
+        ctx.fillStyle = '#5C3A10';
+        ctx.fillRect(-13.5, 24, 3, 5);
+        ctx.beginPath(); ctx.moveTo(-12, 24); ctx.lineTo(-20, 30); ctx.lineTo(-5, 30); ctx.closePath();
+        ctx.fillStyle = '#2A8A1A'; ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-12, 16); ctx.lineTo(-18, 24); ctx.lineTo(-6, 24); ctx.closePath();
+        ctx.fillStyle = '#36B022'; ctx.fill();
+        ctx.fillStyle = '#F5E020'; ctx.beginPath(); ctx.arc(-14, 27, 1.8, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#FF4040'; ctx.beginPath(); ctx.arc(-9, 28, 1.5, 0, Math.PI*2); ctx.fill();
+        // プレゼント箱（中央やや右・緑地＋黄リボン）
+        const bx = 5, by = 13, bw = 11, bh = 9;
+        ctx.fillStyle = '#1E8A2A'; ctx.fillRect(bx, by, bw, bh);
+        ctx.strokeStyle = '#145A1A'; ctx.lineWidth = 0.8; ctx.strokeRect(bx, by, bw, bh);
+        ctx.strokeStyle = '#F5D000'; ctx.lineWidth = 2.0;
+        ctx.beginPath(); ctx.moveTo(bx + bw*0.5, by); ctx.lineTo(bx + bw*0.5, by + bh); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(bx, by + bh*0.42); ctx.lineTo(bx + bw, by + bh*0.42); ctx.stroke();
+        ctx.fillStyle = '#FFE040'; ctx.beginPath(); ctx.arc(bx + bw*0.5, by + bh*0.42, 2.0, 0, Math.PI*2); ctx.fill();
+      }
 
       if (p.isDeco) {
         // v0.3.7.0：カボチャプリン（娘さんの絵＝「重いプリン＝カボチャ」）。重さの主役はカボチャ素材、
