@@ -26,32 +26,30 @@
           </div>
         </section>
 
-        <aside class="side-panel" aria-label="右側情報">
-          <section class="map-panel" aria-label="手描きマップ">
-            <div class="panel-heading">
-              <h2>手描きマップ</h2>
-              <span id="floorInfo">1F / 入口</span>
-            </div>
-            <canvas id="mapCanvas" width="300" height="300" aria-label="歩いた床を記録するマップ"></canvas>
-          </section>
+        <section class="map-panel" aria-label="手描きマップ">
+          <div class="panel-heading">
+            <h2>手描きマップ</h2>
+            <span id="floorInfo">1F / 入口</span>
+          </div>
+          <canvas id="mapCanvas" width="300" height="300" aria-label="歩いた床を記録するマップ"></canvas>
+        </section>
 
-          <section class="status-panel" aria-label="パーティステータス">
-            <div class="panel-heading">
-              <h2>ステータス</h2>
-              <span id="facingInfo">東向き</span>
-            </div>
-            <div id="partyStatus" class="party-status"></div>
-            <div id="enemyStatus" class="enemy-status" aria-live="polite"></div>
-          </section>
+        <section class="status-panel" aria-label="パーティステータス">
+          <div class="panel-heading">
+            <h2>ステータス</h2>
+            <span id="facingInfo">東向き</span>
+          </div>
+          <div id="partyStatus" class="party-status"></div>
+          <div id="enemyStatus" class="enemy-status" aria-live="polite"></div>
+        </section>
 
-          <section class="log-panel" aria-label="メッセージログ">
-            <div class="panel-heading">
-              <h2>ログ</h2>
-              <span>攻略本はない</span>
-            </div>
-            <ol id="messageLog" class="message-log" aria-live="polite"></ol>
-          </section>
-        </aside>
+        <section class="log-panel" aria-label="メッセージログ">
+          <div class="panel-heading">
+            <h2>ログ</h2>
+            <span>攻略本はない</span>
+          </div>
+          <ol id="messageLog" class="message-log" aria-live="polite"></ol>
+        </section>
       </section>
 
       <section class="control-panel" aria-label="操作ボタン">

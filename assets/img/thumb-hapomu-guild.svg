@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 232" role="img" aria-labelledby="title desc">
+  <title id="title">HAPOMU GUILD thumbnail</title>
+  <desc id="desc">Cream colored first person dungeon with a hand drawn map and pudding colored UI.</desc>
+  <defs>
+    <pattern id="paper" width="14" height="14" patternUnits="userSpaceOnUse">
+      <rect width="14" height="14" fill="#fff1bf"/>
+      <path d="M0 0h14M0 0v14" stroke="#e5c86b" stroke-width="1" opacity=".45"/>
+    </pattern>
+  </defs>
+  <rect width="440" height="232" fill="url(#paper)"/>
+  <rect x="14" y="14" width="412" height="204" rx="18" fill="#fff9df" stroke="#2b1813" stroke-width="6"/>
+  <rect x="34" y="32" width="264" height="132" rx="12" fill="#f4be5a" stroke="#2b1813" stroke-width="5"/>
+  <path d="M34 32h264v132H34z" fill="#efb35e"/>
+  <path d="M34 164 114 92h104l80 72" fill="#ffd86b" stroke="#2b1813" stroke-width="4"/>
+  <path d="M34 32 114 92h104l80-60" fill="#d99a51" stroke="#2b1813" stroke-width="4"/>
+  <path d="M114 92v72M218 92v72M86 48v92M250 48v92" stroke="#6a3824" stroke-width="4" opacity=".75"/>
+  <path d="M68 148h196" stroke="#8f4a20" stroke-width="2" opacity=".55"/>
+  <path d="M78 158h176" stroke="#8f4a20" stroke-width="2" opacity=".4"/>
+  <g transform="translate(312 32)">
+    <rect width="88" height="88" rx="12" fill="#fffdf0" stroke="#2b1813" stroke-width="4"/>
+    <g stroke="#2b1813" stroke-linecap="round" stroke-width="5">
+      <path d="M18 18h26v26H18z" fill="#fff9df"/>
+      <path d="M44 18h26M70 18v26M44 44h26M18 44v26M18 70h52"/>
+    </g>
+    <circle cx="57" cy="57" r="11" fill="#d83b2d" stroke="#2b1813" stroke-width="3"/>
+    <path d="M44 18h26" stroke="#8f4a20" stroke-width="4" stroke-dasharray="5 4"/>
+  </g>
+  <g transform="translate(312 132)">
+    <rect width="88" height="50" rx="12" fill="#fffdf0" stroke="#2b1813" stroke-width="4"/>
+    <rect x="12" y="13" width="50" height="8" rx="4" fill="#3f7a4b" stroke="#2b1813" stroke-width="2"/>
+    <rect x="12" y="28" width="38" height="8" rx="4" fill="#4f76ad" stroke="#2b1813" stroke-width="2"/>
+    <circle cx="70" cy="23" r="9" fill="#d83b2d" stroke="#2b1813" stroke-width="3"/>
+  </g>
+  <text x="36" y="198" fill="#2b1813" font-family="Courier New, monospace" font-size="26" font-weight="700">HAPOMU GUILD</text>
+  <text x="36" y="216" fill="#8f4a20" font-family="Courier New, monospace" font-size="13" font-weight="700">FIRST PERSON LUNCH DUNGEON</text>
+</svg>

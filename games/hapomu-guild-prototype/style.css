@@ -84,7 +84,9 @@ button:focus-visible {
 
 .topbar,
 .view-panel,
-.side-panel > section,
+.map-panel,
+.status-panel,
+.log-panel,
 .control-panel,
 .overlay-card {
   border: 4px solid var(--ink);
@@ -148,13 +150,22 @@ h1 {
 .play-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(300px, 32%);
+  grid-template-rows: auto minmax(128px, 1fr);
   gap: 12px;
   margin-top: 12px;
+  align-items: stretch;
 }
 
 .view-panel {
+  grid-column: 1;
+  grid-row: 1;
   min-width: 0;
   padding: 12px;
+}
+
+.map-panel {
+  grid-column: 2;
+  grid-row: 1;
 }
 
 .canvas-wrap {
@@ -187,15 +198,25 @@ h1 {
   background: var(--caramel);
 }
 
-.side-panel {
-  display: grid;
-  min-width: 0;
-  gap: 10px;
-}
-
-.side-panel > section {
+.map-panel,
+.log-panel,
+.status-panel {
   min-width: 0;
   padding: 10px;
+}
+
+.status-panel {
+  grid-column: 1;
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.32fr);
+  gap: 8px 10px;
+  align-content: start;
+}
+
+.status-panel .panel-heading {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
 }
 
 .panel-heading {
@@ -233,6 +254,10 @@ h1 {
   gap: 8px;
 }
 
+.status-panel .party-status {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .member {
   display: grid;
   gap: 5px;
@@ -240,6 +265,19 @@ h1 {
   border: 2px solid var(--brown);
   border-radius: 12px;
   background: #fffdf0;
+}
+
+.member.is-hit {
+  animation: memberHit 0.42s steps(2, end);
+  border-color: var(--ketchup);
+  background: #ffe0cd;
+}
+
+@keyframes memberHit {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-3px, 0); }
+  50% { transform: translate(3px, 0); }
+  75% { transform: translate(-2px, 0); }
 }
 
 .member.is-down {
@@ -258,6 +296,18 @@ h1 {
 .role {
   color: var(--caramel);
   font-size: 11px;
+}
+
+.damage-chip {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  color: var(--paper);
+  font-size: 12px;
+  line-height: 1.2;
+  background: var(--ketchup);
 }
 
 .bar {
@@ -289,7 +339,7 @@ h1 {
 
 .enemy-status {
   min-height: 46px;
-  margin-top: 8px;
+  margin-top: 0;
   padding: 8px;
   border: 2px dashed var(--ketchup-dark);
   border-radius: 12px;
@@ -302,7 +352,9 @@ h1 {
 .message-log {
   display: grid;
   gap: 6px;
-  max-height: 178px;
+  flex: 1;
+  min-height: 0;
+  max-height: none;
   margin: 0;
   padding: 0 0 0 22px;
   overflow: auto;
@@ -320,6 +372,19 @@ h1 {
   gap: 10px;
   margin-top: 12px;
   padding: 12px;
+  position: sticky;
+  bottom: 8px;
+  z-index: 5;
+}
+
+.log-panel {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  height: auto;
+  min-height: 0;
+  overflow: hidden;
+  flex-direction: column;
 }
 
 .move-buttons,
@@ -465,9 +530,22 @@ h1 {
   .play-layout,
   .control-panel {
     grid-template-columns: 1fr;
+    grid-template-rows: none;
   }
 
-  .side-panel {
+  .view-panel,
+  .map-panel,
+  .status-panel,
+  .log-panel {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .status-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .status-panel .party-status {
     grid-template-columns: 1fr;
   }
 
@@ -506,22 +584,48 @@ h1 {
   }
 
   .view-panel,
-  .side-panel > section,
+  .status-panel,
+  .map-panel,
+  .log-panel,
   .control-panel {
     padding: 8px;
     border-radius: 14px;
   }
 
-  .side-panel {
-    gap: 8px;
+  .status-panel {
+    gap: 6px 8px;
+    grid-template-columns: minmax(0, 1fr) minmax(150px, 0.28fr);
   }
 
   .status-panel .member {
     padding: 6px;
   }
 
+  .status-panel .party-status {
+    gap: 5px;
+  }
+
+  .status-panel .member-head {
+    font-size: 12px;
+  }
+
+  .status-panel .role {
+    display: none;
+  }
+
+  .status-panel .bar {
+    height: 10px;
+  }
+
+  .status-panel .numbers {
+    font-size: 11px;
+  }
+
+  .log-panel {
+    min-height: 96px;
+  }
+
   .message-log {
-    max-height: 104px;
     font-size: 12px;
   }
 

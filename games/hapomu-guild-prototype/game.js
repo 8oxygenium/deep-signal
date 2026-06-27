@@ -19,7 +19,7 @@
     "#..d.#.#",
     "##.#a#.#",
     "#n.c.#>#",
-    "#......#",
+    "#.g.p..#",
     "########"
   ];
 
@@ -57,6 +57,44 @@
     }
   ];
 
+  const levelGrowth = {
+    "オムロウ": { hp: 6, mp: 1, atk: 1 },
+    "プニメディ": { hp: 4, mp: 3, atk: 0 },
+    "ケチャペン": { hp: 4, mp: 2, atk: 1 }
+  };
+
+  const practiceEnemies = [
+    {
+      name: "しけったコッペ",
+      maxHp: 34,
+      pokeDamage: 5,
+      rewardExp: 4,
+      opening: "練習台のつもりで近づくと、ちゃんと噛む。"
+    },
+    {
+      name: "ぬるい牛乳びん",
+      maxHp: 30,
+      pokeDamage: 4,
+      rewardExp: 4,
+      opening: "ころころ転がる。割れる前に止めるべきだ。"
+    },
+    {
+      name: "昼休みクラッカー",
+      maxHp: 38,
+      pokeDamage: 6,
+      rewardExp: 5,
+      opening: "ぱちぱち鳴る。音ほど明るい相手ではない。"
+    }
+  ];
+
+  const chestRewards = [
+    { type: "milk", name: "ミルク包帯" },
+    { type: "note", name: "経験メモの束" },
+    { type: "egg", name: "たまごバッジ" }
+  ];
+
+  const extraTrapCandidates = ["3,1", "5,1", "1,6", "3,6", "5,6", "6,6"];
+
   const els = {
     viewCanvas: document.getElementById("viewCanvas"),
     mapCanvas: document.getElementById("mapCanvas"),
@@ -88,13 +126,27 @@
     memos: new Set(),
     revealedTraps: new Set(),
     defeatedEnemies: new Set(),
+    enemyRespawnAt: new Map(),
     doorOpen: false,
     chestOpen: false,
+    chestReward: null,
     trapSprung: false,
+    extraTrapKey: "",
+    extraTrapSprung: false,
     strongDefeated: false,
     strongIndex: 0,
+    supplyUses: 3,
+    guildLevel: 1,
+    exp: 0,
     steps: 0,
-    log: []
+    log: [],
+    feedback: {
+      flashUntil: 0,
+      flashText: "",
+      damageTotal: 0,
+      hitMembers: new Set(),
+      timer: 0
+    }
   };
 
   function keyOf(x, y) {
@@ -105,7 +157,8 @@
     return partyTemplate.map((member) => ({
       ...member,
       hp: member.maxHp,
-      mp: member.maxMp
+      mp: member.maxMp,
+      lastDamage: 0
     }));
   }
 
@@ -153,6 +206,49 @@
     return Math.max(min, Math.min(max, value));
   }
 
+  function choose(list) {
+    return list[Math.floor(Math.random() * list.length)];
+  }
+
+  function nextExp() {
+    return 8 + (state.guildLevel - 1) * 6;
+  }
+
+  function resetFeedback() {
+    if (state.feedback.timer) {
+      window.clearTimeout(state.feedback.timer);
+    }
+    state.feedback.flashUntil = 0;
+    state.feedback.flashText = "";
+    state.feedback.damageTotal = 0;
+    state.feedback.hitMembers.clear();
+    state.feedback.timer = 0;
+    state.party.forEach((member) => {
+      member.lastDamage = 0;
+    });
+  }
+
+  function recordDamage(member, amount) {
+    const now = Date.now();
+    if (now > state.feedback.flashUntil) {
+      state.feedback.hitMembers.clear();
+      state.feedback.damageTotal = 0;
+    }
+    state.feedback.hitMembers.add(member.name);
+    state.feedback.damageTotal += amount;
+    state.feedback.flashUntil = now + 680;
+    state.feedback.flashText = `DAMAGE -${state.feedback.damageTotal}`;
+    member.lastDamage = amount;
+
+    if (state.feedback.timer) {
+      window.clearTimeout(state.feedback.timer);
+    }
+    state.feedback.timer = window.setTimeout(() => {
+      resetFeedback();
+      render();
+    }, 700);
+  }
+
   function directionRight(dir) {
     return directions[(dir + 1) % directions.length];
   }
@@ -176,6 +272,15 @@
   function isStrongAt(x, y) {
     const strong = currentStrongPosition();
     return Boolean(strong && strong.x === x && strong.y === y);
+  }
+
+  function isExtraTrapAt(x, y) {
+    return state.extraTrapKey === keyOf(x, y) && !state.extraTrapSprung;
+  }
+
+  function isNormalEnemyReady(key) {
+    const respawnAt = state.enemyRespawnAt.get(key);
+    return respawnAt === undefined || state.steps >= respawnAt;
   }
 
   function showOverlay(kicker, title, bodyHtml, primaryLabel, secondaryLabel) {
@@ -238,16 +343,25 @@
     state.memos = new Set();
     state.revealedTraps = new Set();
     state.defeatedEnemies = new Set();
+    state.enemyRespawnAt = new Map();
     state.doorOpen = false;
     state.chestOpen = false;
+    state.chestReward = choose(chestRewards);
     state.trapSprung = false;
+    state.extraTrapKey = choose(extraTrapCandidates);
+    state.extraTrapSprung = false;
     state.strongDefeated = false;
     state.strongIndex = 0;
+    state.supplyUses = 3;
+    state.guildLevel = 1;
+    state.exp = 0;
     state.steps = 0;
     state.log = [];
+    resetFeedback();
     hideOverlay();
     addLog("給食樹の1階。入口は、まだ帰り道のふりをしている。");
     addLog("右の小窓に、歩いた床だけが記録される。");
+    addLog("南側に練習敵と補給棚がある。番長の前に寄ってもいい。");
     render();
   }
 
@@ -359,7 +473,7 @@
       addLog("君たちは、あまさにだまされた。");
       state.party.forEach((member) => {
         if (member.hp > 0) {
-          member.hp = Math.max(0, member.hp - 34);
+          damageMember(member, 34, "");
         }
       });
       if (isPartyDown()) {
@@ -368,8 +482,33 @@
       return true;
     }
 
-    if (raw === "n" && !state.defeatedEnemies.has(keyOf(state.x, state.y))) {
-      startBattle("normal");
+    if (isExtraTrapAt(state.x, state.y)) {
+      state.extraTrapSprung = true;
+      state.revealedTraps.add(keyOf(state.x, state.y));
+      addLog("床のマス目が、少しだけ斜めだった。");
+      addLog("君たちは、自由帳の線を信用しすぎた。");
+      state.party.forEach((member) => {
+        if (member.hp > 0) {
+          damageMember(member, 14, "");
+        }
+      });
+      if (isPartyDown()) {
+        showGameOver("追加の罠で倒れた。線のゆがみは、ただの絵柄ではなかった。");
+      }
+      return true;
+    }
+
+    if (raw === "n") {
+      const enemyKey = keyOf(state.x, state.y);
+      if (isNormalEnemyReady(enemyKey)) {
+        startBattle("normal");
+        return true;
+      }
+      addLog("さっきの敵は、まだ給食室で作り直されている。");
+    }
+
+    if (raw === "g") {
+      startBattle("practice");
       return true;
     }
 
@@ -380,6 +519,10 @@
 
     if (raw === "c" && !state.chestOpen) {
       addLog("小さな宝箱がある。勝手に開くほど、親切ではない。");
+    }
+
+    if (raw === "p") {
+      addLog(`給食棚がある。残り${state.supplyUses}回ぶん。調べれば補給できる。`);
     }
 
     if (raw === "h") {
@@ -422,13 +565,23 @@
 
     if ((here === "c" || frontRaw === "c") && !state.chestOpen) {
       state.chestOpen = true;
-      state.party.forEach((member) => {
-        if (member.hp > 0) {
-          member.hp = clamp(member.hp + 10, 0, member.maxHp);
-          member.mp = clamp(member.mp + 2, 0, member.maxMp);
-        }
-      });
-      addLog("宝箱にはミルク包帯が入っていた。HPとMPが少し戻った。");
+      applyChestReward();
+      advancePatrol();
+      render();
+      return;
+    }
+
+    if (isExtraTrapAt(state.x, state.y) || isExtraTrapAt(front.x, front.y)) {
+      const trapKey = isExtraTrapAt(state.x, state.y) ? keyOf(state.x, state.y) : keyOf(front.x, front.y);
+      state.revealedTraps.add(trapKey);
+      addLog("床のノート線が一か所だけ曲がっている。足を置く前に気づけた。");
+      advancePatrol();
+      render();
+      return;
+    }
+
+    if (here === "p" || frontRaw === "p") {
+      useSupply();
       advancePatrol();
       render();
       return;
@@ -507,6 +660,22 @@
         intentText: "大きく寝返りをうつ"
       };
     }
+    if (kind === "practice") {
+      const base = choose(practiceEnemies);
+      return {
+        kind,
+        name: base.name,
+        maxHp: base.maxHp,
+        hp: base.maxHp,
+        turn: 0,
+        weakness: "red",
+        pokeDamage: base.pokeDamage,
+        rewardExp: base.rewardExp,
+        opening: base.opening,
+        intent: "poke",
+        intentText: "前衛を軽くつつく"
+      };
+    }
     return {
       kind,
       name: "こげめパンケーキ",
@@ -514,6 +683,7 @@
       hp: 52,
       turn: 0,
       weakness: "red",
+      rewardExp: 6,
       opening: "焦げ目が、こちらを見ている。",
       intent: "poke",
       intentText: "前衛をつつく"
@@ -532,6 +702,18 @@
       } else {
         enemy.intent = "healer";
         enemy.intentText = "手当係をまくらで狙う";
+      }
+      return;
+    }
+
+    if (enemy.kind === "practice") {
+      const cycle = enemy.turn % 2;
+      if (cycle === 0) {
+        enemy.intent = "poke";
+        enemy.intentText = "前衛を軽くつつく";
+      } else {
+        enemy.intent = "watch";
+        enemy.intentText = "こちらのボタンを見ている";
       }
       return;
     }
@@ -651,7 +833,8 @@
     const guarded = battle.partyDefending;
 
     if (enemy.intent === "poke") {
-      damageMember(state.party[0], guarded ? 4 : 8, `${enemy.name}が前衛をつついた。`);
+      const pokeDamage = enemy.kind === "practice" ? enemy.pokeDamage : 8;
+      damageMember(state.party[0], guarded ? 3 : pokeDamage, `${enemy.name}が前衛をつついた。`);
     } else if (enemy.intent === "burn") {
       addLog(`${enemy.name}の焦げ目がはじけた。`);
       state.party.forEach((member) => damageMember(member, guarded ? 6 : 16, ""));
@@ -664,6 +847,8 @@
     } else if (enemy.intent === "snore") {
       addLog("おひるね番長のいびき。かわいい音ではない。");
       state.party.forEach((member) => damageMember(member, guarded ? 5 : 12, ""));
+    } else if (enemy.intent === "watch") {
+      addLog(`${enemy.name}は、戦う・防御・スキルのボタンを見ている。`);
     }
   }
 
@@ -675,6 +860,7 @@
       addLog(leadMessage);
     }
     member.hp = Math.max(0, member.hp - amount);
+    recordDamage(member, amount);
     if (member.hp === 0) {
       addLog(`${member.name}は倒れた。`);
     }
@@ -700,12 +886,83 @@
     if (enemy.kind === "strong") {
       state.strongDefeated = true;
       addLog("番長が寝直した。今日のところは通れる。");
-    } else if (state.battle.fixedKey) {
-      state.defeatedEnemies.add(state.battle.fixedKey);
+    } else {
+      gainExp(enemy.rewardExp || 5);
+      if (state.battle.fixedKey) {
+        const nextRespawn = state.steps + 4 + Math.floor(Math.random() * 5);
+        state.enemyRespawnAt.set(state.battle.fixedKey, nextRespawn);
+        state.defeatedEnemies.add(state.battle.fixedKey);
+        addLog("通常敵は、少し歩くとまた出る。給食は減らない。");
+      }
     }
     state.mode = "explore";
     state.battle = null;
     render();
+  }
+
+  function gainExp(amount) {
+    state.exp += amount;
+    addLog(`経験メモを${amount}枚手に入れた。`);
+    while (state.exp >= nextExp() && state.guildLevel < 4) {
+      state.exp -= nextExp();
+      state.guildLevel += 1;
+      state.party.forEach((member) => {
+        const growth = levelGrowth[member.name];
+        member.maxHp += growth.hp;
+        member.maxMp += growth.mp;
+        member.atk += growth.atk;
+        member.hp = member.maxHp;
+        member.mp = member.maxMp;
+      });
+      addLog(`ギルドLv${state.guildLevel}。全員のHPとMPが戻った。`);
+    }
+    if (state.guildLevel >= 4) {
+      state.exp = 0;
+      addLog("v0.1.0の練習上限に届いた。あとは手順です。");
+    }
+  }
+
+  function useSupply() {
+    if (state.supplyUses <= 0) {
+      addLog("給食棚は空だ。からっぽにも、いちおう音はある。");
+      return;
+    }
+    state.supplyUses -= 1;
+    state.party.forEach((member) => {
+      if (member.hp <= 0) {
+        member.hp = 8;
+      } else {
+        member.hp = clamp(member.hp + 18, 0, member.maxHp);
+      }
+      member.mp = clamp(member.mp + 4, 0, member.maxMp);
+    });
+    addLog(`給食棚からミルクゼリーを使った。残り${state.supplyUses}回。`);
+  }
+
+  function applyChestReward() {
+    const reward = state.chestReward || choose(chestRewards);
+    if (reward.type === "milk") {
+      state.party.forEach((member) => {
+        if (member.hp > 0) {
+          member.hp = clamp(member.hp + 16, 0, member.maxHp);
+          member.mp = clamp(member.mp + 3, 0, member.maxMp);
+        }
+      });
+      addLog(`宝箱には${reward.name}。HPとMPが少し戻った。`);
+      return;
+    }
+
+    if (reward.type === "note") {
+      addLog(`宝箱には${reward.name}。読むだけで少しえらくなる。`);
+      gainExp(5);
+      return;
+    }
+
+    state.party.forEach((member) => {
+      member.maxHp += 2;
+      member.hp = clamp(member.hp + 10, 0, member.maxHp);
+    });
+    addLog(`宝箱には${reward.name}。全員の最大HPが少し増えた。`);
   }
 
   function activateOverlayPrimary() {
@@ -750,8 +1007,11 @@
     els.partyStatus.innerHTML = state.party.map((member) => {
       const hpPercent = member.maxHp > 0 ? Math.round((member.hp / member.maxHp) * 100) : 0;
       const mpPercent = member.maxMp > 0 ? Math.round((member.mp / member.maxMp) * 100) : 0;
-      return `<article class="member ${member.hp <= 0 ? "is-down" : ""}">
-        <div class="member-head"><span>${member.name}</span><span class="role">${member.job}</span></div>
+      const hitClass = state.feedback.hitMembers.has(member.name) ? "is-hit" : "";
+      const downClass = member.hp <= 0 ? "is-down" : "";
+      const damageChip = hitClass ? `<span class="damage-chip">-${member.lastDamage}</span>` : "";
+      return `<article class="member ${downClass} ${hitClass}">
+        <div class="member-head"><span>${member.name}${damageChip}</span><span class="role">${member.job}</span></div>
         <div class="bar hp"><span style="width:${hpPercent}%"></span></div>
         <div class="bar mp"><span style="width:${mpPercent}%"></span></div>
         <div class="numbers"><span>HP ${member.hp}/${member.maxHp}</span><span>MP ${member.mp}/${member.maxMp}</span></div>
@@ -764,7 +1024,8 @@
     } else {
       const strong = currentStrongPosition();
       const strongText = strong ? `番長: x${strong.x + 1} y${strong.y + 1}` : "番長: 寝直し中";
-      els.enemyStatus.textContent = `${strongText} / 歩いた床だけ記録中`;
+      const expText = state.guildLevel >= 4 ? "Lv上限" : `EXP ${state.exp}/${nextExp()}`;
+      els.enemyStatus.textContent = `ギルドLv${state.guildLevel} ${expText} / 補給${state.supplyUses}回 / ${strongText}`;
     }
   }
 
@@ -776,9 +1037,10 @@
     viewCtx.clearRect(0, 0, VIEW_W, VIEW_H);
     if (state.mode === "battle" && state.battle) {
       drawBattleView();
-      return;
+    } else {
+      drawDungeonView();
     }
-    drawDungeonView();
+    drawFeedbackOverlay();
   }
 
   function drawDungeonView() {
@@ -933,7 +1195,13 @@
         drawChest(depth);
       } else if (raw === "a") {
         drawSweetFloor(depth);
-      } else if (raw === "n" && !state.defeatedEnemies.has(keyOf(center.x, center.y))) {
+      } else if (isExtraTrapAt(center.x, center.y)) {
+        drawLooseFloor(depth);
+      } else if (raw === "g") {
+        drawPracticeMarker(depth);
+      } else if (raw === "p") {
+        drawSupplyShelf(depth);
+      } else if (raw === "n" && isNormalEnemyReady(keyOf(center.x, center.y))) {
         drawEnemy(depth);
       } else if (raw === ">") {
         drawExit(depth);
@@ -1028,6 +1296,58 @@
     ctx.stroke();
   }
 
+  function drawPracticeMarker(depth) {
+    const ctx = viewCtx;
+    const rect = rectForDepth(depth);
+    ctx.fillStyle = "rgba(63, 122, 75, 0.2)";
+    ctx.beginPath();
+    ctx.ellipse(rect.x + rect.w / 2, rect.y + rect.h * 0.88, rect.w * 0.26, rect.h * 0.1, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#3f7a4b";
+    ctx.lineWidth = Math.max(2, 5 / depth);
+    ctx.stroke();
+    ctx.fillStyle = "#3f7a4b";
+    ctx.font = `${Math.max(13, 25 / depth)}px Courier New`;
+    ctx.textAlign = "center";
+    ctx.fillText("練習", rect.x + rect.w / 2, rect.y + rect.h * 0.88);
+  }
+
+  function drawLooseFloor(depth) {
+    const ctx = viewCtx;
+    const rect = rectForDepth(depth);
+    ctx.strokeStyle = "#3f7a4b";
+    ctx.lineWidth = Math.max(2, 4 / depth);
+    ctx.beginPath();
+    ctx.moveTo(rect.x + rect.w * 0.24, rect.y + rect.h * 0.86);
+    ctx.quadraticCurveTo(rect.x + rect.w * 0.46, rect.y + rect.h * 0.78, rect.x + rect.w * 0.7, rect.y + rect.h * 0.88);
+    ctx.stroke();
+    ctx.fillStyle = "#3f7a4b";
+    ctx.font = `${Math.max(12, 22 / depth)}px Courier New`;
+    ctx.textAlign = "center";
+    ctx.fillText("ゆがみ", rect.x + rect.w / 2, rect.y + rect.h * 0.82);
+  }
+
+  function drawSupplyShelf(depth) {
+    const ctx = viewCtx;
+    const anchor = objectAnchor(depth);
+    const w = 150 * anchor.scale;
+    const h = 112 * anchor.scale;
+    const x = anchor.cx - w / 2;
+    const y = anchor.floor - h - 18 * anchor.scale;
+    ctx.fillStyle = "#fff9df";
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = "#ffd86b";
+    ctx.fillRect(x + 8 * anchor.scale, y + h * 0.2, w - 16 * anchor.scale, h * 0.24);
+    ctx.fillRect(x + 8 * anchor.scale, y + h * 0.58, w - 16 * anchor.scale, h * 0.24);
+    ctx.strokeStyle = "#2b1813";
+    ctx.lineWidth = Math.max(2, 4 * anchor.scale);
+    ctx.strokeRect(x, y, w, h);
+    ctx.fillStyle = "#9c2a20";
+    ctx.font = `${Math.max(12, 22 * anchor.scale)}px Courier New`;
+    ctx.textAlign = "center";
+    ctx.fillText("補給", anchor.cx, y + h * 0.54);
+  }
+
   function drawStrong(depth) {
     const ctx = viewCtx;
     const anchor = objectAnchor(depth);
@@ -1112,6 +1432,27 @@
     ctx.fillText(`予告: ${enemy.intentText}`, VIEW_W / 2, 102);
   }
 
+  function drawFeedbackOverlay() {
+    const now = Date.now();
+    if (now > state.feedback.flashUntil || !state.feedback.flashText) {
+      return;
+    }
+    const remain = (state.feedback.flashUntil - now) / 680;
+    viewCtx.save();
+    viewCtx.globalAlpha = 0.18 + remain * 0.24;
+    viewCtx.fillStyle = "#d83b2d";
+    viewCtx.fillRect(0, 0, VIEW_W, VIEW_H);
+    viewCtx.globalAlpha = 1;
+    viewCtx.fillStyle = "#fff9df";
+    viewCtx.strokeStyle = "#2b1813";
+    viewCtx.lineWidth = 6;
+    viewCtx.font = "700 58px Courier New";
+    viewCtx.textAlign = "center";
+    viewCtx.strokeText(state.feedback.flashText, VIEW_W / 2, VIEW_H * 0.46);
+    viewCtx.fillText(state.feedback.flashText, VIEW_W / 2, VIEW_H * 0.46);
+    viewCtx.restore();
+  }
+
   function drawNormalBattle(enemy) {
     drawEnemy(1);
     viewCtx.fillStyle = "#4a2a1c";
@@ -1162,13 +1503,17 @@
         ctx.strokeStyle = "#4a2a1c";
         ctx.lineWidth = 2;
         ctx.strokeRect(px + 2, py + 2, cell - 4, cell - 4);
+        drawMapCellEdges(ctx, x, y, px, py, cell);
 
         let mark = "";
         if (raw === "h") mark = "看";
         if (raw === "d") mark = state.doorOpen ? "開" : "扉";
         if (raw === "c") mark = state.chestOpen ? "済" : "箱";
         if (raw === "a" && (state.trapSprung || state.revealedTraps.has(key))) mark = "甘";
-        if (raw === "n" && !state.defeatedEnemies.has(key)) mark = "敵";
+        if (state.extraTrapKey === key && (state.extraTrapSprung || state.revealedTraps.has(key))) mark = "怪";
+        if (raw === "n") mark = isNormalEnemyReady(key) ? "敵" : "休";
+        if (raw === "g") mark = "練";
+        if (raw === "p") mark = state.supplyUses > 0 ? "補" : "空";
         if (raw === ">") mark = "出";
         if (mark) {
           drawMapText(mark, px + cell / 2, py + cell / 2 + 5, cell * 0.4, "#8f4a20");
@@ -1220,6 +1565,38 @@
     ctx.strokeStyle = "#2b1813";
     ctx.lineWidth = 2;
     ctx.stroke();
+  }
+
+  function drawMapCellEdges(ctx, x, y, px, py, cell) {
+    const edges = [
+      { dx: 0, dy: -1, x1: px + 2, y1: py + 2, x2: px + cell - 2, y2: py + 2 },
+      { dx: 1, dy: 0, x1: px + cell - 2, y1: py + 2, x2: px + cell - 2, y2: py + cell - 2 },
+      { dx: 0, dy: 1, x1: px + 2, y1: py + cell - 2, x2: px + cell - 2, y2: py + cell - 2 },
+      { dx: -1, dy: 0, x1: px + 2, y1: py + 2, x2: px + 2, y2: py + cell - 2 }
+    ];
+
+    edges.forEach((edge) => {
+      const nx = x + edge.dx;
+      const ny = y + edge.dy;
+      const neighbor = rawCell(nx, ny);
+      const closedDoor = neighbor === "d" && !state.doorOpen;
+      if (neighbor !== "#" && !closedDoor) {
+        return;
+      }
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(edge.x1, edge.y1);
+      ctx.lineTo(edge.x2, edge.y2);
+      ctx.strokeStyle = closedDoor ? "#8f4a20" : "#2b1813";
+      ctx.lineWidth = closedDoor ? 4 : 5;
+      ctx.lineCap = "round";
+      if (closedDoor) {
+        ctx.setLineDash([5, 4]);
+      }
+      ctx.stroke();
+      ctx.restore();
+    });
   }
 
   function drawMapText(text, x, y, size, color) {
