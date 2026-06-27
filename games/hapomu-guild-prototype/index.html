@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>HAPOMU GUILD v0.1.0 - はぽむギルドと給食樹の迷宮</title>
+    <meta name="description" content="HAPOMU GUILD / はぽむギルドと給食樹の迷宮 v0.1.0。一人称3DダンジョンRPG風プロトタイプ。">
+    <link rel="stylesheet" href="style.css?v=v0.1.0">
+  </head>
+  <body>
+    <main class="guild-shell" aria-label="HAPOMU GUILD v0.1.0">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">HAPOMU first-person lunch dungeon</p>
+          <h1>HAPOMU GUILD</h1>
+          <p class="subtitle">はぽむギルドと給食樹の迷宮</p>
+        </div>
+        <p class="version-badge" aria-label="version">v0.1.0</p>
+      </header>
+
+      <section class="play-layout" aria-label="game screen">
+        <section class="view-panel" aria-label="一人称ダンジョンビュー">
+          <div class="canvas-wrap">
+            <canvas id="viewCanvas" width="960" height="540" aria-label="一人称ダンジョンビュー"></canvas>
+            <p id="modeBadge" class="mode-badge">TITLE</p>
+          </div>
+        </section>
+
+        <aside class="side-panel" aria-label="右側情報">
+          <section class="map-panel" aria-label="手描きマップ">
+            <div class="panel-heading">
+              <h2>手描きマップ</h2>
+              <span id="floorInfo">1F / 入口</span>
+            </div>
+            <canvas id="mapCanvas" width="300" height="300" aria-label="歩いた床を記録するマップ"></canvas>
+          </section>
+
+          <section class="status-panel" aria-label="パーティステータス">
+            <div class="panel-heading">
+              <h2>ステータス</h2>
+              <span id="facingInfo">東向き</span>
+            </div>
+            <div id="partyStatus" class="party-status"></div>
+            <div id="enemyStatus" class="enemy-status" aria-live="polite"></div>
+          </section>
+
+          <section class="log-panel" aria-label="メッセージログ">
+            <div class="panel-heading">
+              <h2>ログ</h2>
+              <span>攻略本はない</span>
+            </div>
+            <ol id="messageLog" class="message-log" aria-live="polite"></ol>
+          </section>
+        </aside>
+      </section>
+
+      <section class="control-panel" aria-label="操作ボタン">
+        <div class="move-buttons" aria-label="移動">
+          <button type="button" data-action="turnLeft">左回転<br><span>A / ←</span></button>
+          <button type="button" data-action="forward">前進<br><span>W / ↑</span></button>
+          <button type="button" data-action="turnRight">右回転<br><span>D / →</span></button>
+          <button type="button" data-action="backward">後退<br><span>S / ↓</span></button>
+        </div>
+        <div class="command-buttons" aria-label="調査と戦闘">
+          <button type="button" data-action="inspect">調べる<br><span>Space / Enter</span></button>
+          <button type="button" data-action="memo">メモ<br><span>M</span></button>
+          <button type="button" data-action="attack">戦う<br><span>攻撃</span></button>
+          <button type="button" data-action="defend">防御<br><span>守る</span></button>
+          <button type="button" data-action="skill">スキル<br><span>MP</span></button>
+          <button type="button" data-action="heal">回復<br><span>手当</span></button>
+          <button type="button" data-action="flee">逃げる<br><span>退却</span></button>
+        </div>
+      </section>
+
+      <section id="overlay" class="overlay is-visible" aria-live="polite">
+        <div class="overlay-card">
+          <p id="overlayKicker" class="overlay-kicker">v0.1.0 prototype</p>
+          <h2 id="overlayTitle">HAPOMU GUILD</h2>
+          <div id="overlayBody" class="overlay-body"></div>
+          <div class="overlay-actions">
+            <button id="overlayPrimary" type="button">はじめる</button>
+            <button id="overlaySecondary" type="button">リトライ</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="game.js?v=v0.1.0"></script>
+  </body>
+</html>
