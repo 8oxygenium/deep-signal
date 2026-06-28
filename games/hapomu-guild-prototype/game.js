@@ -998,6 +998,7 @@
     drawMap();
     renderStatus();
     renderLog();
+    document.body.dataset.mode = state.mode;
     els.modeBadge.textContent = `${state.mode.toUpperCase()} / ${VERSION}`;
     els.floorInfo.textContent = `1F x${state.x + 1} y${state.y + 1}`;
     els.facingInfo.textContent = `${directions[state.dir].name}向き ${directions[state.dir].arrow}`;

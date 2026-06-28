@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>HAPOMU GUILD v0.1.0 - はぽむギルドと給食樹の迷宮</title>
     <meta name="description" content="HAPOMU GUILD / はぽむギルドと給食樹の迷宮 v0.1.0。一人称3DダンジョンRPG風プロトタイプ。">
-    <link rel="stylesheet" href="style.css?v=v0.1.0">
+    <link rel="stylesheet" href="style.css?v=v0.1.0-iphone6s">
   </head>
   <body>
     <main class="guild-shell" aria-label="HAPOMU GUILD v0.1.0">
@@ -54,19 +54,19 @@
 
       <section class="control-panel" aria-label="操作ボタン">
         <div class="move-buttons" aria-label="移動">
-          <button type="button" data-action="turnLeft">左回転<br><span>A / ←</span></button>
-          <button type="button" data-action="forward">前進<br><span>W / ↑</span></button>
-          <button type="button" data-action="turnRight">右回転<br><span>D / →</span></button>
-          <button type="button" data-action="backward">後退<br><span>S / ↓</span></button>
+          <button class="explore-action" type="button" data-action="turnLeft">左回転<br><span>A / ←</span></button>
+          <button class="explore-action" type="button" data-action="forward">前進<br><span>W / ↑</span></button>
+          <button class="explore-action" type="button" data-action="turnRight">右回転<br><span>D / →</span></button>
+          <button class="explore-action" type="button" data-action="backward">後退<br><span>S / ↓</span></button>
         </div>
         <div class="command-buttons" aria-label="調査と戦闘">
-          <button type="button" data-action="inspect">調べる<br><span>Space / Enter</span></button>
-          <button type="button" data-action="memo">メモ<br><span>M</span></button>
-          <button type="button" data-action="attack">戦う<br><span>攻撃</span></button>
-          <button type="button" data-action="defend">防御<br><span>守る</span></button>
-          <button type="button" data-action="skill">スキル<br><span>MP</span></button>
-          <button type="button" data-action="heal">回復<br><span>手当</span></button>
-          <button type="button" data-action="flee">逃げる<br><span>退却</span></button>
+          <button class="explore-action" type="button" data-action="inspect">調べる<br><span>Space / Enter</span></button>
+          <button class="explore-action" type="button" data-action="memo">メモ<br><span>M</span></button>
+          <button class="battle-action" type="button" data-action="attack">戦う<br><span>攻撃</span></button>
+          <button class="battle-action" type="button" data-action="defend">防御<br><span>守る</span></button>
+          <button class="battle-action" type="button" data-action="skill">スキル<br><span>MP</span></button>
+          <button class="battle-action" type="button" data-action="heal">回復<br><span>手当</span></button>
+          <button class="battle-action" type="button" data-action="flee">逃げる<br><span>退却</span></button>
         </div>
       </section>
 
@@ -83,6 +83,6 @@
       </section>
     </main>
 
-    <script src="game.js?v=v0.1.0"></script>
+    <script src="game.js?v=v0.1.0-iphone6s"></script>
   </body>
 </html>
