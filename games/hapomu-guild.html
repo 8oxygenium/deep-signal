@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-SHZ3P81R05"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-SHZ3P81R05');
+    </script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
+    <meta name="google-adsense-account" content="ca-pub-8518063363319616">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>HAPOMU GUILD - HAPOMU</title>
+    <meta name="description" content="HAPOMU GUILD / はぽむギルドと給食樹の迷宮 は、3人パーティで給食樹のダンジョン1階を進む、HAPOMUの一人称ダンジョンRPG風プロトタイプ。あそびかた解説。">
+    <link rel="icon" href="../assets/icons/favicon.svg" type="image/svg+xml">
+    <meta property="og:title" content="HAPOMU GUILD - HAPOMU">
+    <meta property="og:description" content="手描きマップを頼りに給食樹の迷宮1階を進む、一人称ダンジョンRPG風プロトタイプ。あそびかた解説。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://hapomu.com/games/hapomu-guild.html">
+    <meta property="og:image" content="../assets/img/ogp-hapomu.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="HAPOMU GUILD - HAPOMU">
+    <meta name="twitter:description" content="手描きマップを頼りに給食樹の迷宮1階を進む、一人称ダンジョンRPG風プロトタイプ。">
+    <meta name="twitter:image" content="../assets/img/ogp-hapomu.svg">
+    <style>
+      :root {
+        --cream: #fff1bf;
+        --custard: #ffd86b;
+        --caramel: #8f4a20;
+        --cherry: #d83b2d;
+        --plate: #fff9df;
+        --brown: #43261c;
+        --mint: #4c7a46;
+        --shadow: rgba(67, 38, 28, 0.24);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        color: var(--brown);
+        font-family: "Courier New", "MS Gothic", monospace;
+        line-height: 1.85;
+        background:
+          radial-gradient(circle at 14% 10%, rgba(76, 122, 70, 0.18), transparent 18%),
+          radial-gradient(circle at 84% 4%, rgba(255, 216, 107, 0.76), transparent 24%),
+          linear-gradient(rgba(67, 38, 28, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(67, 38, 28, 0.035) 1px, transparent 1px),
+          var(--cream);
+        background-size: 100% 100%, 100% 100%, 14px 14px, 14px 14px, auto;
+      }
+
+      main {
+        width: min(960px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 36px 0 56px;
+      }
+
+      header, section {
+        margin-top: 18px;
+        padding: 22px;
+        border: 4px solid var(--brown);
+        border-radius: 18px;
+        background: rgba(255, 249, 223, 0.94);
+        box-shadow: 8px 8px 0 var(--shadow);
+      }
+
+      header {
+        background:
+          radial-gradient(ellipse at 80% 26%, rgba(76, 122, 70, 0.85) 0 16px, transparent 18px),
+          linear-gradient(135deg, rgba(76, 122, 70, 0.45), rgba(255, 249, 223, 0.96));
+      }
+
+      h1, h2 { margin: 0 0 12px; line-height: 1.2; }
+      h1 { font-size: clamp(34px, 7.5vw, 64px); text-shadow: 5px 5px 0 rgba(76, 122, 70, 0.2); }
+      h2 { color: var(--caramel); }
+      p, li { margin-top: 8px; }
+      a { color: var(--brown); font-weight: 700; }
+      strong { color: var(--cherry); }
+
+      .status, nav a {
+        display: inline-block;
+        padding: 7px 12px;
+        border: 3px solid var(--brown);
+        border-radius: 999px;
+        color: var(--plate);
+        font-weight: 700;
+        text-decoration: none;
+        background: var(--mint);
+      }
+
+      nav { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+      nav a:hover, nav a:focus-visible { color: var(--plate); outline: none; background: var(--cherry); }
+      .subtitle { font-weight: 700; color: var(--caramel); }
+
+      .card {
+        margin-top: 12px; padding: 12px 14px;
+        border: 3px dashed var(--caramel); border-radius: 12px;
+        background: rgba(255, 241, 191, 0.5);
+      }
+      .card h3 { margin: 0 0 4px; color: var(--mint); font-size: 1.05em; }
+
+      @media (max-width: 680px) {
+        main { width: min(100% - 20px, 560px); padding: 22px 0 36px; }
+        header, section { padding: 16px; border-radius: 12px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p>HAPOMU / Happy Omurice Games</p>
+        <h1>HAPOMU GUILD</h1>
+        <p class="subtitle">はぽむギルドと給食樹の迷宮</p>
+        <span class="status">v0.1.0 Prototype あそべます</span>
+        <p>3人の なかまで「給食樹（きゅうしょくじゅ）」の めいきゅうの 1かいを すすむ、<strong>いちにんしょう（じぶんの目せん）</strong>の ダンジョンRPGです。てがきの ちずを たよりに、しらべながら すすみます。</p>
+        <p><a href="hapomu-guild-prototype/index.html">▶ あそぶ</a></p>
+        <nav aria-label="主要ページ">
+          <a href="../index.html">TOP</a>
+          <a href="index.html">Games</a>
+          <a href="../about.html">About</a>
+        </nav>
+      </header>
+
+      <section>
+        <h2>どんなゲーム？</h2>
+        <p>はぽむギルドの 3人パーティで、給食樹の めいきゅう（8×8マスの 1かい）を たんけんします。とびらを あけ、かんばんを よみ、たからばこを あけながら、<strong>出口を みつけて 1かいクリア</strong>を めざします。</p>
+        <p>てきと たたかったり、なんかいも れんしゅうして つよく なったり、こわい きょうてきを よけたり…。むかしの「ウィザードリィ」みたいな いちにんしょう めいきゅうゲームです。</p>
+      </section>
+
+      <section>
+        <h2>なかま（3人）</h2>
+        <div class="card">
+          <h3>オムロウ（はぽたま守り）</h3>
+          <p>まえで みんなを まもる、ぼうぎょやくの まええい。</p>
+        </div>
+        <div class="card">
+          <h3>プニメディ（ぷりん手当係）</h3>
+          <p>みんなを かいふくする ヒーラー。うたれよわいので まもってあげよう。</p>
+        </div>
+        <div class="card">
+          <h3>ケチャペン（赤だれ書記）</h3>
+          <p>こうげきが とくい。でも MPが すくなめ。</p>
+        </div>
+      </section>
+
+      <section>
+        <h2>あそびかた</h2>
+        <ul>
+          <li><strong>すすむ</strong>：前進（W／↑）・後退（S／↓）・左回転（A／←）・右回転（D／→）。じぶんが むいてる ほうこうに すすむ「いちにんしょう」です。</li>
+          <li><strong>しらべる</strong>：「調べる」（Space／Enter）で、とびら・かんばん・たからばこ・たな などを しらべる。</li>
+          <li><strong>メモ（ちず）</strong>：「メモ」（M）で てがきマップ。あるいた ゆかが きろくされて いきます。</li>
+          <li><strong>たたかう（ターンせい）</strong>：てきに あうと せんとう。<strong>戦う・防御・スキル（MP）・回復（手当）・逃げる</strong>を ボタンで えらびます。</li>
+          <li><strong>スマホ</strong>は よこもちで、画面したの おおきな ボタンで そうさします。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>めいきゅうの しかけ</h2>
+        <ul>
+          <li><strong>かんばん</strong>：ヒントが かいてあります。しらべよう。</li>
+          <li><strong>たからばこ</strong>：なかみは <strong>ランダム</strong>。あけてのお楽しみ。</li>
+          <li><strong>補（きゅうしょくだな）</strong>：<strong>3かいまで</strong> つかえる たてなおし用。ボスまえに とっておこう。</li>
+          <li><strong>練（れんしゅうマス・みなみがわ）</strong>：れんしゅうてき「しけったコッペ」と さいせん できる。けいけんメモを あつめると <strong>ギルドLvが あがって、みんなの HP・MPが もどります</strong>。</li>
+          <li><strong>ワナ「あまい床」</strong>：かわいい みためだけど <strong>大ダメージ</strong>。ちかくの かんばんに ヒントが あります。ほかにも ランダムの ワナが あって、<strong>ゆかの 線が ゆがんで みえる ところは、ふむ前に しらべる</strong>と あんしん。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>きょうてき：おひるね番長</h2>
+        <p>みぎがわの つうろを 上下に うろうろしている つよい てきです。<strong>じょばんに たたかうと ほぼ まけます</strong>。みぎがわの ちずで いちを みて、<strong>よけて すすむ</strong>のが かしこいやりかた。</p>
+      </section>
+
+      <section>
+        <h2>かつ コツ</h2>
+        <ul>
+          <li>みなみの「練」マスで れんしゅうして、つよくなってから すすむ。</li>
+          <li>あやしい ゆか（線が ゆがむ）は ふむ前に しらべる。</li>
+          <li>「おひるね番長」は じょばんは よける。</li>
+          <li>「補」の きゅうしょくだなは、ボスまえに とっておく。</li>
+        </ul>
+      </section>
+
+      <section>
+        <p><a href="index.html">← ゲーム一覧へ</a> / <a href="../index.html">← TOPへ</a></p>
+      </section>
+    </main>
+  </body>
+</html>

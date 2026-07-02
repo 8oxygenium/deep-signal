@@ -25,11 +25,11 @@ DEEP SIGNAL は、HAPOMUの第1作として公開しているブラウザゲー�
 プレイヤーは潜航艇を操作し、広い海域を探索しながらソナーで敵を発見し、爆雷で撃破します。
 後半では浮上した潜水艦による対空迎撃、さらに ORBITAL SIGNAL MODE として宇宙エンドレスへ展開します。
 
-現在の開発版: DEEP SIGNAL v0.5.4 mobile sonar button
+現在の開発版: DEEP SIGNAL v0.5.5 continue homing power
 
 ## Playable Games
 
-- DEEP SIGNAL: Retro deep-sea shooter / v0.5.4 mobile sonar button
+- DEEP SIGNAL: Retro deep-sea shooter / v0.5.5 continue homing power
 - ハッピーオムライス (Happy Omurice) v0.1: オムライスにケチャップを描くミニゲーム
 - じゃんけんキッチン (JANKEN KITCHEN) v0.1.2: GUU / CHOKI / PAA の3ボタンジャンケンミニゲーム。選んだ手表示とCPUルーレット時間を調整しました。
 - カップラーメンくん (Cup Ramen Kun) v0.1.2: 30秒間フタを押さえて完成を目指すミニゲーム。GAME OVER時に必ずフタが飛び、中身がこぼれる見た目に修正しました。
@@ -60,6 +60,7 @@ DEEP SIGNAL は、HAPOMUの第1作として公開しているブラウザゲー�
 - `games/pudding-pinball-prototype/`: プリンピンボール (Pudding Pinball) v0.1.2 prototype
 - `devlog/index.html`: HAPOMUの更新履歴と開発ログページ
 
+DEEP SIGNAL v0.5.5 continue homing power. GAME OVER後に同じステージ/waveから続きが選べるようにし、POWERアイテム取得中は弾が少し敵へ寄る微追尾弾になります。
 HAPOMU mobile sonar and plate-rule tuning. DEEP SIGNAL v0.5.4でスマホ用ソナーボタンを追加し、のせのせプリン v0.2.3でお皿の上ならどこでもセーフ（横並びOK）に変更し、プリンピンボール v0.1.2で落ちやすさと理不尽さのバランスを調整しました。
 HAPOMU mobile control and balance tuning. DEEP SIGNAL v0.5.3で仮想スティック操作を追加し、のせのせプリン v0.2.1でお皿・接触判定を調整し、プリンピンボール v0.1.2で落ちやすさと理不尽さのバランスを調整しました。
 HAPOMU kids fairness tuning. DEEP SIGNAL v0.5.2で補給ヒントを矢印中心に整理し、のせのせプリン v0.2.0でお皿セーフ判定を追加し、じゃんけんキッチン v0.1.2でルーレット時間と自分の手表示を調整し、プリンピンボール v0.1.1でフリッパー周辺を遊びやすくしました。
@@ -137,6 +138,7 @@ DEEP SIGNAL v0.4.7 visible mobile hotfix. 画面上にv0.4.7表示を追加し�
 - v0.5.2: 補給ヒントを矢印中心に整理
 - v0.5.3: スマホ向け仮想スティック操作を追加
 - v0.5.4: スマホ用ソナーボタンを追加し、ステージクリア枠の文字被りを修正
+- v0.5.5: 続きから再開と微追尾弾POWERを追加
 
 ## プロトタイプアーカイブ
 

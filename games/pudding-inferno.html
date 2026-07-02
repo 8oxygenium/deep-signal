@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-SHZ3P81R05"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-SHZ3P81R05');
+    </script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8518063363319616" crossorigin="anonymous"></script>
+    <meta name="google-adsense-account" content="ca-pub-8518063363319616">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PUDDING INFERNO - HAPOMU</title>
+    <meta name="description" content="PUDDING INFERNO (Pudding Inferno) は、プリンくんが魔物の体内の迷宮をマス目移動でさぐる、HAPOMUの探検ローグライクです。あそびかたと敵の解説。">
+    <link rel="icon" href="../assets/icons/favicon.svg" type="image/svg+xml">
+    <meta property="og:title" content="PUDDING INFERNO - HAPOMU">
+    <meta property="og:description" content="プリンくんが魔界の体内ダンジョンをマス目移動でさぐる、暗い迷宮の探検ローグライク。あそびかた解説。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://hapomu.com/games/pudding-inferno.html">
+    <meta property="og:image" content="../assets/img/ogp-hapomu.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="PUDDING INFERNO - HAPOMU">
+    <meta name="twitter:description" content="プリンくんが魔界の体内ダンジョンをマス目移動でさぐる、暗い迷宮の探検ローグライク。">
+    <meta name="twitter:image" content="../assets/img/ogp-hapomu.svg">
+    <style>
+      :root {
+        --cream: #fff1bf;
+        --custard: #ffd86b;
+        --caramel: #8f4a20;
+        --cherry: #d83b2d;
+        --plate: #fff9df;
+        --brown: #43261c;
+        --mint: #4c7a46;
+        --shadow: rgba(67, 38, 28, 0.24);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        color: var(--brown);
+        font-family: "Courier New", "MS Gothic", monospace;
+        line-height: 1.85;
+        background:
+          radial-gradient(circle at 14% 10%, rgba(216, 59, 45, 0.16), transparent 18%),
+          radial-gradient(circle at 84% 4%, rgba(255, 216, 107, 0.76), transparent 24%),
+          linear-gradient(rgba(67, 38, 28, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(67, 38, 28, 0.035) 1px, transparent 1px),
+          var(--cream);
+        background-size: 100% 100%, 100% 100%, 14px 14px, 14px 14px, auto;
+      }
+
+      main {
+        width: min(960px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 36px 0 56px;
+      }
+
+      header, section {
+        margin-top: 18px;
+        padding: 22px;
+        border: 4px solid var(--brown);
+        border-radius: 18px;
+        background: rgba(255, 249, 223, 0.94);
+        box-shadow: 8px 8px 0 var(--shadow);
+      }
+
+      header {
+        background:
+          radial-gradient(ellipse at 80% 30%, rgba(216,59,45,0.85) 0 18px, transparent 20px),
+          linear-gradient(135deg, rgba(143, 74, 32, 0.55), rgba(255, 249, 223, 0.96));
+      }
+
+      h1, h2 { margin: 0 0 12px; line-height: 1.2; }
+      h1 { font-size: clamp(34px, 7.5vw, 64px); text-shadow: 5px 5px 0 rgba(216, 59, 45, 0.18); }
+      h2 { color: var(--caramel); }
+      p, li { margin-top: 8px; }
+      a { color: var(--brown); font-weight: 700; }
+      strong { color: var(--cherry); }
+
+      .status, nav a {
+        display: inline-block;
+        padding: 7px 12px;
+        border: 3px solid var(--brown);
+        border-radius: 999px;
+        color: var(--plate);
+        font-weight: 700;
+        text-decoration: none;
+        background: var(--cherry);
+      }
+
+      nav { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+      nav a:hover, nav a:focus-visible { color: var(--plate); outline: none; background: var(--mint); }
+      .subtitle { font-weight: 700; color: var(--caramel); }
+
+      .enemy {
+        margin-top: 12px; padding: 12px 14px;
+        border: 3px dashed var(--caramel); border-radius: 12px;
+        background: rgba(255, 241, 191, 0.5);
+      }
+      .enemy h3 { margin: 0 0 4px; color: var(--cherry); font-size: 1.05em; }
+
+      @media (max-width: 680px) {
+        main { width: min(100% - 20px, 560px); padding: 22px 0 36px; }
+        header, section { padding: 16px; border-radius: 12px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p>HAPOMU / Happy Omurice Games</p>
+        <h1>PUDDING INFERNO</h1>
+        <p class="subtitle">プリン・インフェルノ</p>
+        <span class="status">v0.2.8 Prototype あそべます</span>
+        <p>プリンくんが まかいの まものに まるのみされて、からだの なかの くらい めいきゅうを すすんで だっしゅつする、たんけんローグライクです。1マスずつ うごく「ターンせい」だから、じっくり かんがえて すすめます。</p>
+        <p><a href="pudding-inferno-grid-prototype/index.html">▶ あそぶ</a></p>
+        <nav aria-label="主要ページ">
+          <a href="../index.html">TOP</a>
+          <a href="index.html">Games</a>
+          <a href="../about.html">About</a>
+        </nav>
+      </header>
+
+      <section>
+        <h2>どんなゲーム？</h2>
+        <p>プリンくんは まものに ごっくんされて、おなかの なかの「にくの めいきゅう」に とじこめられました。ちか1かい（B1）から どんどん おくへ おりていって、いちばん した（B5）の <strong>「心ノ臓（しんのぞう）」ボス</strong>を たおすと、まものが くずれて だっしゅつ＝<strong>クリア</strong>です。</p>
+        <p>くらくて こわいけど、てきの うごきには ルールが あるので、よく みれば かてます。</p>
+      </section>
+
+      <section>
+        <h2>あそびかた</h2>
+        <ul>
+          <li><strong>うごく</strong>：画面したの 十字ボタン（▲▼◀▶）／キーボードの やじるし・WASD／ゆびで スワイプ。<br>※1かい うごくと てきも 1かい うごく（ターンせい）。とまっている あいだは てきも とまります。</li>
+          <li><strong>こうげき</strong>：「こうげき」ボタンで となりの てきを たたく。てきに ぶつかっても こうげきできます。</li>
+          <li><strong>まつ</strong>：「まつ」ボタンで、その場で 1ターン やりすごす。</li>
+          <li><strong>ちず</strong>：「ちず」ボタンで、あるいた ところの ちずを みる。</li>
+          <li><strong>つぎの かいへ</strong>：ゆかの「出」に のると、つぎの かいへ おりられます。</li>
+          <li>プリンくんは <strong>すすむ ほうこうを むく</strong>ので、いま どっちを むいてるか わかります。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>でてくる てき（3しゅるい）</h2>
+        <p>てきは ぜんぶ プリンくんの ほうを にらみます。いま どの てきが どっちを ねらってるか、目で わかります。</p>
+        <div class="enemy">
+          <h3>きし（騎士）</h3>
+          <p>となりに くると、あかい ◇マークを だして、<strong>つぎの ターンに こうげき</strong>します。◇が でたら、にげるか、さきに たたきましょう。かたさは ふつう（2かい）。</p>
+        </div>
+        <div class="enemy">
+          <h3>きば（牙）</h3>
+          <p>ちいさくて よわい（<strong>1かいで たおせる</strong>）けど、<strong>よこくなしで いきなり かみつく</strong>のが あぶない。きばの となりで じぶんの ターンを おわらせないように！</p>
+        </div>
+        <div class="enemy">
+          <h3>にくのかたまり（肉塊）</h3>
+          <p>おおきくて かたい（<strong>3かい たたかないと たおれない</strong>）。<strong>2ターンに 1かいしか うごかない</strong>けど、みちを ふさいで じゃまを します。いそがず よけるか、たたいて とおりましょう。</p>
+        </div>
+      </section>
+
+      <section>
+        <h2>ボス：心ノ臓（しんのぞう）</h2>
+        <p>いちばん した（B5）の おおきな へやに いる、ドクンドクンと うごく でっかい しんぞうです。</p>
+        <ul>
+          <li>まわりの マスを <strong>あかく ピカピカ</strong>させて よこくし、つぎの ターンに たたきます。<strong>あかい マスから にげて</strong>、あいだに ちかづいて たたきましょう。</li>
+          <li>HPが はんぶんに なると <strong>おこって</strong>、きばを よんだり うごきが はやく なります。</li>
+          <li>6かい たたけば げきは。たおすと まものが くずれて クリア！</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>そのほかの しかけ</h2>
+        <ul>
+          <li><strong>ワナ</strong>：あかく ひかる ゆか。ふむと いたい。みえる ワナと、ふむまで かくれてる ワナが あります。</li>
+          <li><strong>くらやみ（フォグ）</strong>：あるくと まわりが あかるく なって、ちずが うまって いきます。</li>
+          <li><strong>かざり＝ライフ</strong>：ダメージを うけると ぼうし→クリーム→本体 の じゅんに とれて いって、3かいで ゲームオーバー。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>むずかしさ（タイトルで えらぶ）</h2>
+        <ul>
+          <li><strong>やさしい</strong>：しんでも、しんだ かいから やりなおし（HPは ぜんかい）。</li>
+          <li><strong>ハード</strong>：しんだら さいしょ（ちか1かい）から。ほんかくロークライク。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>かつ コツ</h2>
+        <ul>
+          <li>てきの となりで じぶんの ターンを おわらせない（とくに きば）。</li>
+          <li>きしの ◇が でたら、よける か さきに たたく。</li>
+          <li>ボスは あかい マスから かならず にげて、あいだに たたく。</li>
+          <li>あやしい ゆかは ようちゅうい。にくのかたまりは いそがず よける。</li>
+        </ul>
+      </section>
+
+      <section>
+        <p><a href="index.html">← ゲーム一覧へ</a> / <a href="../index.html">← TOPへ</a></p>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,5 +1,5 @@
 // ============================================================
-// DEEP SIGNAL v0.5.4 mobile sonar button
+// DEEP SIGNAL v0.5.5 continue homing power
 // Web版の完成ゲームへ育てるためのベース実装です。
 // 将来の展開先:
 // - Web版: このままHTML/CSS/JavaScriptで拡張
@@ -14,7 +14,7 @@
 // ------------------------------------------------------------
 
 const CONFIG = {
-  version: "v0.5.4 mobile sonar button",
+  version: "v0.5.5 continue homing power",
 
   // 表示は800x600相当の論理座標で作り、canvas内部は400x300で描画します。
   // CSSで2倍表示することで、ピクセルがくっきり見えるようにしています。
@@ -122,6 +122,11 @@ const CONFIG = {
     oneUpLifetime: 560,
     oneUpScoreBonus: 1000,
     pickupRadius: 42,
+    powerChance: 0.08,
+    powerStrongChance: 0.16,
+    powerBossChance: 1.0,
+    powerLifetime: 520,
+    homingDuration: 720,
   },
 
   effects: {
@@ -246,6 +251,11 @@ const game = {
   statusTimer: 0,
   fireNoticeText: "",
   fireNoticeTimer: 0,
+  homingTimer: 0,
+  continueAvailable: false,
+  continueStageIndex: 0,
+  continueWave: 0,
+  continueScore: 0,
   titleTimer: 0,
   lastTime: 0,
   soundEnabled: true,
@@ -637,6 +647,7 @@ const sonarPulses = [];
 const sonarButton = { x: 708, y: 396, r: 34 };
 const supplies = [];
 const oneUps = [];
+const powerUps = [];
 const muzzleFlashes = [];
 const particles = [];
 const popups = [];
@@ -895,7 +906,7 @@ document.addEventListener("keydown", (event) => {
   }
 
   if (game.state === STATE.GAME_OVER && isContinueKey(event.code)) {
-    returnToTitle();
+    continueFromCheckpoint();
     return;
   }
 
@@ -1024,7 +1035,7 @@ function handleTouchConfirm() {
   }
 
   if (game.state === STATE.GAME_OVER) {
-    returnToTitle();
+    continueFromCheckpoint();
     return;
   }
 
@@ -1269,6 +1280,7 @@ function updatePlaying(frameScale) {
   updateEnemyBullets(frameScale);
   updateSupplies(frameScale);
   updateOneUps(frameScale);
+  updatePowerUps(frameScale);
   updateSonar(frameScale);
   updateExplosions(frameScale);
   updateParticles(frameScale);
@@ -1346,6 +1358,7 @@ function updateTimers(frameScale) {
   game.screenShakeTimer = Math.max(0, game.screenShakeTimer - frameScale);
   game.statusTimer = Math.max(0, game.statusTimer - frameScale);
   game.fireNoticeTimer = Math.max(0, game.fireNoticeTimer - frameScale);
+  game.homingTimer = Math.max(0, game.homingTimer - frameScale);
   player.invincibleTimer = Math.max(0, player.invincibleTimer - frameScale);
 }
 
@@ -1437,11 +1450,12 @@ function dropBomb() {
   }
 
   let fireHint = "";
+  const homingActive = game.homingTimer > 0;
 
   if (isSpaceStage()) {
     // 宇宙モードでは上方向へ短いパルスビームを撃ちます。
     bombs.push({
-      kind: "beam",
+      kind: homingActive ? "homingBeam" : "beam",
       x: player.x,
       y: player.y - player.height / 2 - 12,
       width: CONFIG.space.beamWidth,
@@ -1453,7 +1467,7 @@ function dropBomb() {
   } else if (isAirStage()) {
     // 空中戦のSpaceは上方向へ飛ぶ対空弾です。
     bombs.push({
-      kind: "aa",
+      kind: homingActive ? "homingAa" : "aa",
       x: player.x,
       y: player.y - player.height / 2 - 12,
       width: 7,
@@ -1465,7 +1479,7 @@ function dropBomb() {
   } else {
     // 海中戦のSpaceは従来通り、ワールド座標で下へ沈む爆雷です。
     bombs.push({
-      kind: "depth",
+      kind: homingActive ? "homingDepth" : "depth",
       x: player.x,
       y: player.y + player.height / 2 + 6,
       width: 8,
@@ -1479,7 +1493,7 @@ function dropBomb() {
   game.ammo -= 1;
   game.bombCooldown = isSpaceStage() ? 6 : isAirStage() ? 8 : 10;
   if (game.statusTimer <= 0 && fireHint) {
-    setStatus(fireHint, 24);
+    setStatus(homingActive ? "HOMING " + fireHint : fireHint, 24);
   }
   playSound(isSpaceStage() ? "beam" : "bomb");
 }
@@ -1544,7 +1558,9 @@ function getSupplyArrow(dx, dy) {
 
 function updateBombs(frameScale) {
   for (const bomb of bombs) {
-    if (bomb.kind === "aa" || bomb.kind === "beam") {
+    updateHomingProjectile(bomb, frameScale);
+
+    if (bomb.kind === "aa" || bomb.kind === "beam" || bomb.kind === "homingAa" || bomb.kind === "homingBeam") {
       bomb.y -= bomb.speed * frameScale;
     } else {
       const depthDrag = 1 - getDepthFactor(bomb.y) * 0.28;
@@ -1553,6 +1569,56 @@ function updateBombs(frameScale) {
   }
 
   removeWhere(bombs, (bomb) => bomb.y > getWorldHeight() + 30 || bomb.y < -40);
+}
+
+function updateHomingProjectile(projectile, frameScale) {
+  if (!projectile || !String(projectile.kind || "").startsWith("homing")) {
+    return;
+  }
+
+  const target = findHomingTarget(projectile);
+  if (!target) {
+    return;
+  }
+
+  const dx = target.x - projectile.x;
+  const dy = target.y - projectile.y;
+  const distanceToTarget = Math.max(1, Math.hypot(dx, dy));
+  const strength = projectile.kind === "homingDepth" ? 0.85 : 1.05;
+  projectile.x += (dx / distanceToTarget) * strength * frameScale;
+
+  // 微追尾なので、上下方向は少しだけ補正します。弾の基本方向は維持します。
+  if (projectile.kind !== "homingDepth") {
+    projectile.y += (dy / distanceToTarget) * 0.22 * frameScale;
+  }
+}
+
+function findHomingTarget(projectile) {
+  const domain = projectile.kind === "homingDepth" ? "sea" : projectile.kind === "homingAa" ? "air" : "space";
+  let best = null;
+  let bestScore = Infinity;
+
+  for (const enemy of enemies) {
+    if (!enemy || !enemy.alive || enemy.entryTimer > 0 || !hasUsablePosition(enemy) || getEnemyDomain(enemy) !== domain) {
+      continue;
+    }
+
+    const dy = enemy.y - projectile.y;
+    if (domain !== "sea" && dy > 40) {
+      continue;
+    }
+    if (domain === "sea" && dy < -40) {
+      continue;
+    }
+
+    const score = Math.abs(enemy.x - projectile.x) + Math.abs(dy) * 0.45;
+    if (score < bestScore) {
+      best = enemy;
+      bestScore = score;
+    }
+  }
+
+  return best;
 }
 
 function updateEnemies(frameScale) {
@@ -2110,6 +2176,79 @@ function updateOneUps(frameScale) {
   }
 }
 
+function updatePowerUps(frameScale) {
+  for (let i = powerUps.length - 1; i >= 0; i -= 1) {
+    const powerUp = powerUps[i];
+    powerUp.timer -= frameScale;
+    powerUp.phase += 0.08 * frameScale;
+
+    if (powerUp.kind === "air") {
+      powerUp.y = Math.min(powerUp.y + powerUp.vy * frameScale, getAirSupplyY() - 16);
+    } else if (powerUp.kind === "space") {
+      powerUp.x += Math.sin(powerUp.phase * 0.7) * 0.14 * frameScale;
+      powerUp.y += Math.cos(powerUp.phase) * 0.18 * frameScale;
+      powerUp.y = clamp(powerUp.y, 80, getWorldHeight() - 80);
+    } else {
+      powerUp.y += Math.sin(powerUp.phase) * 0.16 * frameScale;
+    }
+
+    if (powerUp.timer <= 0) {
+      powerUps.splice(i, 1);
+      continue;
+    }
+
+    if (distance(player.x, player.y, powerUp.x, powerUp.y) <= CONFIG.drops.pickupRadius) {
+      collectPowerUp(powerUp);
+      powerUps.splice(i, 1);
+    }
+  }
+}
+
+function maybeDropPowerUp(enemy) {
+  if (!shouldDropPowerUp(enemy)) {
+    return;
+  }
+
+  const domain = getEnemyDomain(enemy);
+  powerUps.push({
+    x: clamp(enemy.x, 60, WORLD_WIDTH - 60),
+    y: domain === "air"
+      ? Math.max(90, enemy.y)
+      : domain === "space"
+        ? clamp(enemy.y, 90, getWorldHeight() - 90)
+        : clamp(enemy.y, getSeaSurfaceY() + 80, getWorldHeight() - 120),
+    kind: domain === "air" ? "air" : domain === "space" ? "space" : "sea",
+    timer: CONFIG.drops.powerLifetime,
+    phase: Math.random() * Math.PI * 2,
+    vy: domain === "air" ? 0.5 : domain === "space" ? 0.12 : 0,
+    width: 30,
+    height: 20,
+  });
+}
+
+function shouldDropPowerUp(enemy) {
+  const type = ENEMY_TYPES[enemy.type];
+  if (!type) {
+    return false;
+  }
+
+  if (type.boss) {
+    return Math.random() < CONFIG.drops.powerBossChance;
+  }
+
+  const strongEnemy = enemy.maxHealth >= 2 || enemy.type === "ufo" || enemy.type === "torpedo" || enemy.type === "rammer" || enemy.type === "hunterUFO";
+  const chance = strongEnemy ? CONFIG.drops.powerStrongChance : CONFIG.drops.powerChance;
+  return Math.random() < chance;
+}
+
+function collectPowerUp(powerUp) {
+  game.homingTimer = CONFIG.drops.homingDuration;
+  addBurstParticles(powerUp.x, powerUp.y, 14, "light");
+  setStatus("HOMING MODULE", 150);
+  addPopup("HOMING!", powerUp.x, powerUp.y - 24);
+  playSound("oneup");
+}
+
 function maybeDropOneUp(enemy) {
   if (!shouldDropOneUp(enemy)) {
     return;
@@ -2300,15 +2439,15 @@ function canProjectileDamageEnemy(projectile, enemy, projectileBox) {
     return false;
   }
 
-  if (projectileKind === "depth" && enemyDomain !== "sea") {
+  if ((projectileKind === "depth" || projectileKind === "homingDepth") && enemyDomain !== "sea") {
     return false;
   }
 
-  if (projectileKind === "aa" && enemyDomain !== "air") {
+  if ((projectileKind === "aa" || projectileKind === "homingAa") && enemyDomain !== "air") {
     return false;
   }
 
-  if (projectileKind === "beam" && enemyDomain !== "space") {
+  if ((projectileKind === "beam" || projectileKind === "homingBeam") && enemyDomain !== "space") {
     return false;
   }
 
@@ -2376,6 +2515,7 @@ function destroyEnemy(enemy, addScore) {
 
   if (addScore) {
     maybeDropOneUp(enemy);
+    maybeDropPowerUp(enemy);
   }
 
   if (ENEMY_TYPES[enemy.type].boss) {
@@ -2495,12 +2635,20 @@ function damagePlayer(reason = "damage", source = null) {
 
   if (game.lives <= 0) {
     updateBestProgress();
+    prepareContinueCheckpoint();
     game.state = STATE.GAME_OVER;
     setStatus("SIGNAL LOST", 120);
     playSound("gameover");
   }
 
   return true;
+}
+
+function prepareContinueCheckpoint() {
+  game.continueAvailable = true;
+  game.continueStageIndex = game.stageIndex;
+  game.continueWave = isSpaceStage() ? Math.max(1, game.wave) : 0;
+  game.continueScore = getFiniteNumber(game.score, 0);
 }
 
 function startInvincibility() {
@@ -2641,6 +2789,7 @@ function drawGameScreen() {
   drawBackground();
   drawSupplies();
   drawOneUps();
+  drawPowerUps();
   drawBombs();
   drawEnemies();
   drawEnemyBullets();
@@ -2667,7 +2816,7 @@ function drawGameScreen() {
     if (isSpaceStage()) {
       drawSpaceGameOver();
     } else {
-      drawCenteredMessage("GAME OVER", `FINAL SCORE ${padScore(game.score)}`, "PRESS R TO RESTART");
+      drawGameOverOptions();
     }
   }
 
@@ -3292,6 +3441,34 @@ function drawOneUps() {
   }
 }
 
+function drawPowerUps() {
+  for (const powerUp of powerUps) {
+    if (!isPointVisible(powerUp.x, powerUp.y, 70)) {
+      continue;
+    }
+
+    const blink = Math.floor(powerUp.timer / 12) % 2 === 0;
+    const x = Math.round(powerUp.x - cameraX);
+    const y = Math.round(powerUp.y - cameraY + Math.sin(powerUp.phase) * 3);
+
+    ctx.save();
+    ctx.globalAlpha = powerUp.timer < 120 && !blink ? 0.35 : 1;
+    ctx.fillStyle = blink ? gb("light") : gb("black");
+    ctx.fillRect(x - 15, y - 10, 30, 20);
+    ctx.fillStyle = gb("mid");
+    ctx.fillRect(x - 9, y - 5, 18, 10);
+    ctx.fillStyle = gb("light");
+    ctx.font = "10px 'Courier New', monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("PWR", x, y);
+    ctx.fillStyle = gb("light");
+    ctx.fillRect(x - 20, y - 2, 7, 4);
+    ctx.fillRect(x + 13, y - 2, 7, 4);
+    ctx.restore();
+  }
+}
+
 function drawSeaOneUpCapsule(x, y, blink) {
   ctx.fillStyle = blink ? gb("light") : gb("black");
   ctx.fillRect(x - 15, y - 8, 30, 16);
@@ -3341,16 +3518,24 @@ function drawBombs() {
     const x = Math.round(bomb.x - cameraX);
     const y = Math.round(bomb.y - cameraY);
 
-    if (bomb.kind === "beam") {
+    if (bomb.kind === "beam" || bomb.kind === "homingBeam") {
       ctx.fillStyle = gb("light");
       ctx.fillRect(x - 3, y - 12, 6, 24);
       ctx.fillStyle = gb("mid");
       ctx.fillRect(x - 7, y + 5, 14, 5);
-    } else if (bomb.kind === "aa") {
+      if (bomb.kind === "homingBeam") {
+        ctx.fillStyle = gb("light");
+        ctx.fillRect(x - 10, y - 3, 20, 3);
+      }
+    } else if (bomb.kind === "aa" || bomb.kind === "homingAa") {
       ctx.fillStyle = gb("light");
       ctx.fillRect(x - 2, y - 10, 4, 20);
       ctx.fillStyle = gb("black");
       ctx.fillRect(x - 4, y + 3, 8, 5);
+      if (bomb.kind === "homingAa") {
+        ctx.fillStyle = gb("mid");
+        ctx.fillRect(x - 7, y - 2, 14, 3);
+      }
     } else {
       ctx.fillStyle = gb("black");
       ctx.fillRect(x - 3, y - 7, 6, 14);
@@ -3358,6 +3543,9 @@ function drawBombs() {
       ctx.fillRect(x - 6, y + 5, 12, 3);
       ctx.fillStyle = gb("light");
       ctx.fillRect(x - 2, y - 10, 4, 3);
+      if (bomb.kind === "homingDepth") {
+        ctx.fillRect(x - 8, y - 2, 16, 3);
+      }
     }
   }
 }
@@ -3995,7 +4183,7 @@ function drawHud() {
 
   ctx.fillStyle = gb("light");
   ctx.font = "12px 'Courier New', monospace";
-  ctx.fillText("v0.5.4 SONAR", 636, 66);
+  ctx.fillText("v0.5.5 HOME", 636, 66);
   ctx.font = "16px 'Courier New', monospace";
 
   ctx.fillStyle = game.sonarCooldown <= 0 ? gb("light") : gb("mid");
@@ -4004,6 +4192,11 @@ function drawHud() {
 
   ctx.fillStyle = gb("mid");
   ctx.fillText(`SND ${game.soundEnabled ? "ON" : "OFF"}`, soundX, 48);
+
+  if (game.homingTimer > 0) {
+    ctx.fillStyle = gb("light");
+    ctx.fillText(`HOMING ${Math.ceil(game.homingTimer / 60)}`, 18, 66);
+  }
 
   if (game.ammo <= 0) {
     ctx.fillStyle = gb("light");
@@ -4207,6 +4400,34 @@ function drawCenteredMessage(title, subtitle, prompt) {
   ctx.textAlign = "left";
 }
 
+function drawGameOverOptions() {
+  const continueLabel = isSpaceStage()
+    ? `CONTINUE WAVE ${Math.max(1, game.continueWave || game.wave || 1)}`
+    : `CONTINUE STAGE ${Math.max(1, game.continueStageIndex + 1)}`;
+
+  ctx.fillStyle = gba("black", 0.78);
+  ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = gb("light");
+  ctx.font = "42px 'Courier New', monospace";
+  ctx.fillText("GAME OVER", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 76);
+
+  ctx.fillStyle = gb("mid");
+  ctx.font = "20px 'Courier New', monospace";
+  ctx.fillText(`FINAL SCORE ${padScore(game.score)}`, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 24);
+
+  ctx.fillStyle = gb("light");
+  ctx.font = "18px 'Courier New', monospace";
+  ctx.fillText(`SPACE / TAP: ${continueLabel}`, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 24);
+  ctx.fillStyle = gb("mid");
+  ctx.fillText("R: RESTART FROM STAGE 1", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 56);
+  ctx.fillText("M: SOUND  /  ESC: PAUSE", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 88);
+
+  ctx.textAlign = "left";
+}
+
 function drawOrbitalUnlockOverlay() {
   // STAGE 8後の接続画面です。完全終了ではなく、宇宙エンドレスへ進めることを明示します。
   const blink = Math.floor(game.clearTimer / 16) % 2 === 0;
@@ -4264,10 +4485,11 @@ function drawSpaceGameOver() {
   ctx.font = "16px 'Courier New', monospace";
   ctx.fillText(`BEST SCORE ${padScore(getFiniteNumber(game.bestScore, 0))}   BEST WAVE ${getFiniteNumber(game.bestWave, 0)}`, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 48);
 
-  ctx.fillStyle = gb("mid");
+  ctx.fillStyle = gb("light");
   ctx.font = "16px 'Courier New', monospace";
-  ctx.fillText("PRESS R TO RESTART", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 82);
-  ctx.fillText("PRESS SPACE TO TITLE", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 108);
+  ctx.fillText(`SPACE / TAP: CONTINUE WAVE ${Math.max(1, game.continueWave || game.wave || 1)}`, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 82);
+  ctx.fillStyle = gb("mid");
+  ctx.fillText("R: RESTART FROM STAGE 1", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 108);
   ctx.textAlign = "left";
 }
 
@@ -4325,6 +4547,10 @@ function startNewGame() {
   game.spaceWaveTimer = 0;
   game.spaceBossClearPending = false;
   game.signalCoreDefeated = false;
+  game.continueAvailable = false;
+  game.continueStageIndex = 0;
+  game.continueWave = 0;
+  game.continueScore = 0;
   game.lastTime = 0;
   loadStage(0, false);
   game.state = STATE.PLAYING;
@@ -4335,6 +4561,7 @@ function resetRunResources() {
   game.score = 0;
   game.lives = CONFIG.player.startLives;
   game.ammo = CONFIG.player.maxAmmo;
+  game.homingTimer = 0;
 }
 
 function returnToTitle() {
@@ -4371,6 +4598,45 @@ function startSpaceMode() {
 function startDirectSpaceMode() {
   resetRunResources();
   startSpaceMode();
+}
+
+function continueFromCheckpoint() {
+  if (!game.continueAvailable) {
+    returnToTitle();
+    return;
+  }
+
+  const stageIndex = clamp(Math.round(game.continueStageIndex), 0, STAGES.length - 1);
+  const score = getFiniteNumber(game.continueScore, 0);
+  const wave = Math.max(1, Math.round(game.continueWave || 1));
+
+  clearTouchInput();
+  game.score = score;
+  game.lives = CONFIG.player.startLives;
+  game.ammo = CONFIG.player.maxAmmo;
+  game.homingTimer = 0;
+  game.spaceWavePending = false;
+  game.spaceWaveTimer = 0;
+  game.spaceBossClearPending = false;
+  game.signalCoreDefeated = false;
+  game.lastTime = 0;
+  loadStage(stageIndex, true);
+  game.score = score;
+  game.lives = CONFIG.player.startLives;
+  game.ammo = CONFIG.player.maxAmmo;
+
+  if (isSpaceStage()) {
+    game.wave = wave;
+    game.reachedWave = Math.max(game.reachedWave, wave);
+    spawnSpaceWave();
+    setStatus(`CONTINUE WAVE ${game.wave}`, 150);
+  } else {
+    setStatus(`CONTINUE STAGE ${game.stageIndex + 1}`, 150);
+  }
+
+  game.continueAvailable = false;
+  game.state = STATE.PLAYING;
+  playSound("start");
 }
 
 function beginSpaceWaveClear() {
@@ -4574,6 +4840,7 @@ function loadStage(stageIndex, keepPlayerResources) {
   game.statusTimer = 0;
   game.fireNoticeText = "";
   game.fireNoticeTimer = 0;
+  game.homingTimer = 0;
 
   if (!keepPlayerResources) {
     game.score = 0;
@@ -4597,6 +4864,7 @@ function loadStage(stageIndex, keepPlayerResources) {
   explosions.length = 0;
   sonarPulses.length = 0;
   oneUps.length = 0;
+  powerUps.length = 0;
   muzzleFlashes.length = 0;
   particles.length = 0;
   popups.length = 0;
