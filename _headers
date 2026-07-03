@@ -1,0 +1,14 @@
+/builds/*
+  X-Robots-Tag: noindex, noarchive
+
+/current/*
+  X-Robots-Tag: noindex, noarchive
+
+/games/*-prototype/*
+  X-Robots-Tag: noindex, noarchive
+
+/docs/*
+  X-Robots-Tag: noindex, noarchive
+
+/*.txt
+  X-Robots-Tag: noindex, noarchive
