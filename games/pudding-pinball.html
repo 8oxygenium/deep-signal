@@ -63,13 +63,20 @@
       }
 
       header,
-      section {
+      section,
+      footer {
         margin-top: 18px;
         padding: 22px;
         border: 4px solid var(--brown);
         border-radius: 18px;
         background: rgba(255, 249, 223, 0.94);
         box-shadow: 8px 8px 0 var(--shadow);
+      }
+
+      footer p {
+        margin: 0;
+        text-align: center;
+        font-size: 13px;
       }
 
       header {
@@ -192,8 +199,44 @@
       </section>
 
       <section>
+        <h2>開発意図</h2>
+        <p>スマホでも片手で遊べるピンボールを作りたいという発想から生まれました。本格的な物理演算ではなく、軽量なCanvas描画で「弾く気持ちよさ」だけを再現することを優先しています。複雑な盤面構成よりも、短い時間で何度も挑戦できるテンポの良さを大切にしています。</p>
+        <p>フリッパー操作は左右2ボタンのみに絞り込み、ボタンを押している間だけスプーンが持ち上がる単純な仕組みにしています。狙って弾く難しさよりも、テンポよく打ち返す気持ちよさを優先した調整です。</p>
+      </section>
+
+      <section>
+        <h2>現在の開発状況</h2>
+        <p>v0.1.2までの調整で、フリッパー外側のすき間をふさぎ、ボールが理不尽に横から抜け落ちないようにしました。左右タップ操作、3個のボール、バンパー、MISS判定までは実装済みで、実際に最後まで遊べます。</p>
+      </section>
+
+      <section>
+        <h2>既知の課題</h2>
+        <ul>
+          <li>ハイスコアの保存機能がまだ無い。</li>
+          <li>バンパーの配置バリエーションが少ない。</li>
+          <li>効果音がまだ未実装。</li>
+          <li>長押しでフリッパーを上げ続けたときの挙動が、実機のピンボールに比べてやや単純。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>このゲームの独自性</h2>
+        <p>左右タップだけの2ボタン操作に絞り込み、スマホで片手でもすぐ遊べることを最優先にしています。カラメル玉、プリン、さくらんぼといったHAPOMUらしいモチーフでピンボール台を構成している点も特徴です。</p>
+      </section>
+
+      <section>
         <p><a href="index.html">Back to Games</a> / <a href="../index.html">Back to Top</a></p>
       </section>
+
+      <footer>
+        <p>© HAPOMU / Happy Omurice Games &nbsp;·&nbsp;
+          <a href="../index.html">HOME</a> &nbsp;·&nbsp;
+          <a href="index.html">GAMES</a> &nbsp;·&nbsp;
+          <a href="../about.html">ABOUT</a> &nbsp;·&nbsp;
+          <a href="../privacy.html">PRIVACY</a> &nbsp;·&nbsp;
+          <a href="../devlog/">DEVLOG</a>
+        </p>
+      </footer>
     </main>
   </body>
 </html>

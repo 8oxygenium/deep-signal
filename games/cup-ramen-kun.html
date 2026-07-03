@@ -59,11 +59,19 @@
       }
 
       header,
-      section {
+      section,
+      footer {
         margin-top: 18px;
         padding: 22px;
         border: 2px solid var(--gb-dark);
         background: rgba(8, 24, 32, 0.8);
+      }
+
+      footer p {
+        margin: 0;
+        text-align: center;
+        color: var(--gb-mid);
+        font-size: 13px;
       }
 
       header {
@@ -106,10 +114,10 @@
         <p>HAPOMU / Happy Omurice Games</p>
         <h1>カップラーメンくん</h1>
         <p>Cup Ramen Kun</p>
-        <span class="status">Coming Soon / Prototype Available</span>
+        <span class="status">プレイ可能な開発版 / v0.1.6</span>
         <p>息子のアイディアから生まれた、3分間をテーマにしたカップラーメンくんゲーム構想。</p>
-        <p>カップラーメンくん (Cup Ramen Kun) v0.1.2 prototype is now playable.</p>
-        <p>v0.1.2では、GAME OVER時に必ずフタが飛び、カップの口が開いて中身がこぼれる見た目に修正しました。</p>
+        <p>カップラーメンくん (Cup Ramen Kun) v0.1.6 prototype is now playable.</p>
+        <p>v0.1.6では、GAME OVER時に必ずフタが飛び、カップの口が開いて中身がこぼれる見た目に修正しました。</p>
         <p><a href="cup-ramen-kun-prototype/index.html">PLAY PROTOTYPE</a></p>
       </header>
 
@@ -131,7 +139,7 @@
 
       <section>
         <h2>操作イメージ</h2>
-        <p>キーボード / マウス / タッチ操作を想定しています。</p>
+        <p>キーボード / マウス / タッチ操作を想定しています。現在のプロトタイプでは、フタを押さえるボタンを連打・長押ししてトラブルを防ぐ操作を中心に、短いラウンドをテンポよく繰り返せるようにしています。</p>
       </section>
 
       <section>
@@ -143,8 +151,45 @@
       </section>
 
       <section>
+        <h2>開発意図</h2>
+        <p>息子が「カップラーメンは3分でできるから、3分間守るゲームがいい」と言ったのがきっかけで企画しました。時間制限のあるサバイバルゲームとして、短時間で遊び切れることを大事にしています。何度も挑戦しやすいよう、1プレイの長さをあえて短く設計しています。</p>
+        <p>実際の3分は子どもが遊ぶには少し長く感じたため、まずは30秒のタイムアタックとして試作し、遊びやすさを確認してから時間を伸ばす方針にしています。</p>
+      </section>
+
+      <section>
+        <h2>現在の開発状況</h2>
+        <p>v0.1.6では、GAME OVER時に必ずフタが飛び、カップの口が開いて中身がこぼれる見た目に修正しました。現在はタイムアタック形式の基本ルールが遊べる状態で公開しています。</p>
+      </section>
+
+      <section>
+        <h2>既知の課題</h2>
+        <ul>
+          <li>敵やトラブルの種類がまだ少ない。</li>
+          <li>スコアや称号システムが未実装。</li>
+          <li>3分間フルの防衛ルールはまだ試作段階（現状は短縮版）。</li>
+          <li>難易度カーブが荒く、後半の失敗しやすさを今後調整したい。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>このゲームの独自性</h2>
+        <p>「フタが飛ぶ・具材が逃げる・麺がのびる」という、カップラーメンならではの緊張感をゲームのルールに落とし込んでいる点が特徴です。負けたときの演出も、単なる失敗ではなく「フタが飛んでこぼれる」というユーモラスな見た目にこだわっています。</p>
+        <p>他のHAPOMU作品と同じく、専用のキャラクターやアイテムを新しく描き起こしており、既存の食品キャラクターのデザインを流用していません。</p>
+      </section>
+
+      <section>
         <p><a href="index.html">Back to Games</a> / <a href="../index.html">Back to Top</a></p>
       </section>
+
+      <footer>
+        <p>© HAPOMU / Happy Omurice Games &nbsp;·&nbsp;
+          <a href="../index.html">HOME</a> &nbsp;·&nbsp;
+          <a href="index.html">GAMES</a> &nbsp;·&nbsp;
+          <a href="../about.html">ABOUT</a> &nbsp;·&nbsp;
+          <a href="../privacy.html">PRIVACY</a> &nbsp;·&nbsp;
+          <a href="../devlog/">DEVLOG</a>
+        </p>
+      </footer>
     </main>
   </body>
 </html>

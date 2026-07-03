@@ -60,10 +60,27 @@
       }
 
       header,
-      .game-card {
+      .game-card,
+      .info,
+      footer {
         padding: 22px;
         border: 2px solid var(--line);
         background: rgba(8, 24, 32, 0.78);
+      }
+
+      .info {
+        margin-top: 18px;
+      }
+
+      footer {
+        margin-top: 22px;
+      }
+
+      footer p {
+        margin: 0;
+        text-align: center;
+        color: var(--gb-mid);
+        font-size: 13px;
       }
 
       header {
@@ -153,6 +170,12 @@
         <p><a href="../index.html">TOPへ戻る</a></p>
       </header>
 
+      <section class="info" aria-label="このページについて">
+        <h2>このページについて</h2>
+        <p>HAPOMUで公開しているゲームとプロトタイプを1つずつ紹介しています。各カードの「Play」からすぐに遊べます。「Detail / Concept Page」では、遊び方や開発の意図、現在の課題など、より詳しい情報を読めます。</p>
+        <p>ステータス表示は開発の進み具合を示すものです。「Playable」はいま最も版が進んでいる作品、「プレイ可能な開発版」は試作段階ですが最後まで遊べる作品を指します。表示が変わっても、リンク先のゲームは常に実際に遊べる状態で公開しています。</p>
+      </section>
+
       <section class="grid" aria-label="ゲーム一覧">
         <article class="game-card">
           <span class="status">Playable</span>
@@ -165,7 +188,7 @@
         </article>
 
         <article class="game-card">
-          <span class="status">Coming Soon / Prototype Available</span>
+          <span class="status">プレイ可能な開発版 / v0.1</span>
           <h2>ハッピーオムライス</h2>
           <p>Happy Omurice</p>
           <p>娘のアイディアから生まれた、しあわせなオムライスゲーム構想。v0.1ではケチャップお絵かきミニゲームを試作中です。</p>
@@ -176,10 +199,10 @@
         </article>
 
         <article class="game-card">
-          <span class="status">Coming Soon / Prototype Available</span>
+          <span class="status">プレイ可能な開発版 / v0.1.6</span>
           <h2>カップラーメンくん</h2>
           <p>Cup Ramen Kun</p>
-          <p>息子のアイディアから生まれた、3分間をテーマにしたカップラーメンくんゲーム構想。v0.1.2ではGAME OVER時に必ずフタが飛び、中身がこぼれる見た目に修正しました。</p>
+          <p>息子のアイディアから生まれた、3分間をテーマにしたカップラーメンくんゲーム構想。v0.1.6ではGAME OVER時に必ずフタが飛び、中身がこぼれる見た目に修正しました。</p>
           <div class="actions">
             <a class="button" href="cup-ramen-kun-prototype/index.html">Play Prototype</a>
             <a class="button" href="cup-ramen-kun.html">Concept Page</a>
@@ -187,10 +210,10 @@
         </article>
 
         <article class="game-card">
-          <span class="status">Coming Soon / Prototype Available</span>
+          <span class="status">プレイ可能な開発版 / v0.1.4</span>
           <h2>じゃんけんキッチン</h2>
           <p>JANKEN KITCHEN</p>
-          <p>昔の駄菓子屋・アーケード筐体風のジャンケンミニゲーム構想。v0.1.2では選んだ手を見せたまま、CPUルーレットが少し長く回ります。</p>
+          <p>昔の駄菓子屋・アーケード筐体風のジャンケンミニゲーム構想。v0.1.4では選んだ手を見せたまま、CPUルーレットが少し長く回ります。</p>
           <div class="actions">
             <a class="button" href="janken-kitchen-prototype/index.html">Play Prototype</a>
             <a class="button" href="janken-kitchen.html">Concept Page</a>
@@ -198,10 +221,10 @@
         </article>
 
         <article class="game-card">
-          <span class="status">Coming Soon / Prototype Available</span>
+          <span class="status">プレイ可能な開発版 / v0.3.7.1</span>
           <h2>のせのせプリン</h2>
           <p>Pudding Stack</p>
-          <p>娘のアイディアから生まれた、ぷるぷるプリンをお皿にどんどん積み上げるバランス落ち物ゲーム。v0.2.3ではお皿の上ならどこでもセーフ（横並びOK）に変更しました。</p>
+          <p>娘のアイディアから生まれた、ぷるぷるプリンをお皿にどんどん積み上げるバランス落ち物ゲーム。v0.3.7.1ではお皿の上ならどこでもセーフ（横並びOK）に変更しました。</p>
           <div class="actions">
             <a class="button" href="nosenose-pudding-prototype/index.html">あそぶ</a>
             <a class="button" href="nosenose-pudding.html">くわしく</a>
@@ -229,6 +252,16 @@
           </div>
         </article>
       </section>
+
+      <footer>
+        <p>© HAPOMU / Happy Omurice Games &nbsp;·&nbsp;
+          <a href="../index.html">HOME</a> &nbsp;·&nbsp;
+          <a href="index.html">GAMES</a> &nbsp;·&nbsp;
+          <a href="../about.html">ABOUT</a> &nbsp;·&nbsp;
+          <a href="../privacy.html">PRIVACY</a> &nbsp;·&nbsp;
+          <a href="../devlog/">DEVLOG</a>
+        </p>
+      </footer>
     </main>
   </body>
 </html>

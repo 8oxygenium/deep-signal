@@ -59,11 +59,19 @@
       }
 
       header,
-      section {
+      section,
+      footer {
         margin-top: 18px;
         padding: 22px;
         border: 2px solid var(--gb-dark);
         background: rgba(8, 24, 32, 0.8);
+      }
+
+      footer p {
+        margin: 0;
+        text-align: center;
+        color: var(--gb-mid);
+        font-size: 13px;
       }
 
       header {
@@ -106,7 +114,7 @@
         <p>HAPOMU / Happy Omurice Games</p>
         <h1>ハッピーオムライス</h1>
         <p>Happy Omurice</p>
-        <span class="status">Coming Soon / Prototype Available</span>
+        <span class="status">プレイ可能な開発版 / v0.1</span>
         <p>娘のアイディアから生まれた、しあわせなオムライスゲーム構想。</p>
         <p>ハッピーオムライス (Happy Omurice) v0.1 prototype is now playable.</p>
         <p><a href="happy-omurice-prototype/index.html">PLAY PROTOTYPE</a></p>
@@ -130,7 +138,7 @@
 
       <section>
         <h2>操作イメージ</h2>
-        <p>キーボード / マウス / タッチ操作を想定しています。</p>
+        <p>キーボード / マウス / タッチ操作を想定しています。現在のプロトタイプでは、マウスのドラッグやタッチのなぞりでケチャップの線を引く操作だけで完結しており、複雑なボタン操作は必要ありません。</p>
       </section>
 
       <section>
@@ -142,8 +150,45 @@
       </section>
 
       <section>
+        <h2>開発意図</h2>
+        <p>娘が「オムライスにケチャップで絵を描くゲームがやりたい」と言ったのが最初のきっかけです。難しい操作を覚えなくても、なぞるだけで達成感が得られる、明るく短いミニゲームを目指しています。指でなぞる操作だけで完結するため、ゲーム操作に慣れていない小さな子どもでも遊べます。</p>
+        <p>失敗の概念をできるだけ減らし、なぞった線がそのままケチャップの模様になる、絵日記のような気軽さを意識して作っています。</p>
+      </section>
+
+      <section>
+        <h2>現在の開発状況</h2>
+        <p>v0.1として、マウスやタッチでケチャップの線をなぞってオムライスを完成させる、1画面完結のお絵かきミニゲームが遊べる状態で公開しています。完成ボタンで評価を確認でき、RESETボタンで何度でも描き直せます。画面にはKETCHUPメーターが表示され、描いた量の目安を確認できます。</p>
+      </section>
+
+      <section>
+        <h2>既知の課題</h2>
+        <ul>
+          <li>「たまごを焼くタイミングゲーム」「具材集めアクション」はまだ未着手。</li>
+          <li>完成度を判定する採点基準がまだ簡易的。</li>
+          <li>効果音・BGMが未実装。</li>
+          <li>スマホでの線のなぞりやすさ（指の太さに対する当たり判定）を、今後さらに調整したい。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>このゲームの独自性</h2>
+        <p>失敗してもすぐやり直せる短いループと、描いた線がそのままオムライスの表情になる分かりやすさを重視しています。HAPOMUの中でも特に小さな子ども向けを意識した、明るいトーンの作品です。</p>
+        <p>アクション要素やスコア競争を持ち込まず、お絵かき帳のような気軽さで完結させている点が、HAPOMUの他のゲームとは違うところです。</p>
+      </section>
+
+      <section>
         <p><a href="index.html">Back to Games</a> / <a href="../index.html">Back to Top</a></p>
       </section>
+
+      <footer>
+        <p>© HAPOMU / Happy Omurice Games &nbsp;·&nbsp;
+          <a href="../index.html">HOME</a> &nbsp;·&nbsp;
+          <a href="index.html">GAMES</a> &nbsp;·&nbsp;
+          <a href="../about.html">ABOUT</a> &nbsp;·&nbsp;
+          <a href="../privacy.html">PRIVACY</a> &nbsp;·&nbsp;
+          <a href="../devlog/">DEVLOG</a>
+        </p>
+      </footer>
     </main>
   </body>
 </html>

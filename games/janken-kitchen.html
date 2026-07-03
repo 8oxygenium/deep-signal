@@ -58,11 +58,19 @@
       }
 
       header,
-      section {
+      section,
+      footer {
         margin-top: 18px;
         padding: 22px;
         border: 2px solid var(--gb-dark);
         background: rgba(8, 24, 32, 0.8);
+      }
+
+      footer p {
+        margin: 0;
+        text-align: center;
+        color: var(--gb-mid);
+        font-size: 13px;
       }
 
       header {
@@ -106,9 +114,9 @@
         <p>HAPOMU / Happy Omurice Games</p>
         <h1>じゃんけんキッチン</h1>
         <p>JANKEN KITCHEN</p>
-        <span class="status">Coming Soon / v0.1.2 Prototype Available</span>
+        <span class="status">プレイ可能な開発版 / v0.1.4</span>
         <p>HAPOMUの小さなジャンケン筐体。昔の駄菓子屋・アーケードゲーム風の3ボタンミニゲーム構想。</p>
-        <p>じゃんけんキッチン (JANKEN KITCHEN) v0.1.2 prototype is now playable.</p>
+        <p>じゃんけんキッチン (JANKEN KITCHEN) v0.1.4 prototype is now playable.</p>
         <p><a href="janken-kitchen-prototype/index.html">PLAY PROTOTYPE</a></p>
       </header>
 
@@ -154,14 +162,49 @@
       <section>
         <h2>今後</h2>
         <ul>
-          <li>v0.1.2では選んだ手を押した時点で表示し、CPUルーレット時間を少し長く調整</li>
+          <li>v0.1.4では選んだ手を押した時点で表示し、CPUルーレット時間を少し長く調整</li>
           <li>今後はスコア、連勝、OMU COIN、称号をさらに調整予定</li>
         </ul>
       </section>
 
       <section>
+        <h2>開発意図</h2>
+        <p>昔ながらの駄菓子屋やゲームセンターにあった、3ボタンのジャンケン筐体をブラウザで再現したいという発想から生まれました。ルールを読まなくても、ボタンを押せば誰でもすぐ理解できるシンプルさを大事にしています。ボタンを押すタイミングと演出のテンポだけで勝負が決まるため、小さな子どもでもすぐに参加できることを意識しました。</p>
+      </section>
+
+      <section>
+        <h2>現在の開発状況</h2>
+        <p>v0.1.4まで版を重ね、選んだ手をその場で表示する演出と、CPUルーレットのタイミング調整を行いました。3ボタン操作、OMU COINの獲得、LIFE制、あいこ時の再勝負までは実装済みで、実際に最後まで遊べます。</p>
+      </section>
+
+      <section>
+        <h2>既知の課題</h2>
+        <ul>
+          <li>連勝ボーナスや称号システムはまだ未実装。</li>
+          <li>対戦相手キャラ（オムライスさんなど）のビジュアルはまだ一部のみ。</li>
+          <li>効果音・演出の強弱調整が途中。</li>
+          <li>キーボード操作（1 / 2 / 3キー）とボタン操作の反応タイミングの差を、今後もう少し詰めたい。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>このゲームの独自性</h2>
+        <p>「JAN... KEN... PON!」のランプ演出でテンポを作り、負けてもすぐ次の勝負に移れるアーケード感を重視しています。HAPOMUの食べ物キャラクターたちが対戦相手として順次登場する構成も、このゲームならではの要素です。</p>
+      </section>
+
+      <section>
         <p><a href="index.html">Back to Games</a> / <a href="../index.html">Back to Top</a></p>
       </section>
+
+      <footer>
+        <p>© HAPOMU / Happy Omurice Games &nbsp;·&nbsp;
+          <a href="../index.html">HOME</a> &nbsp;·&nbsp;
+          <a href="index.html">GAMES</a> &nbsp;·&nbsp;
+          <a href="../about.html">ABOUT</a> &nbsp;·&nbsp;
+          <a href="../privacy.html">PRIVACY</a> &nbsp;·&nbsp;
+          <a href="../devlog/">DEVLOG</a>
+        </p>
+      </footer>
     </main>
   </body>
 </html>
