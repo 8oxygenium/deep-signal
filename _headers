@@ -4,7 +4,28 @@
 /current/*
   X-Robots-Tag: noindex, noarchive
 
-/games/*-prototype/*
+/games/cup-ramen-kun-prototype/*
+  X-Robots-Tag: noindex, noarchive
+
+/games/hapomu-guild-prototype/*
+  X-Robots-Tag: noindex, noarchive
+
+/games/happy-omurice-prototype/*
+  X-Robots-Tag: noindex, noarchive
+
+/games/janken-kitchen-prototype/*
+  X-Robots-Tag: noindex, noarchive
+
+/games/nosenose-pudding-prototype/*
+  X-Robots-Tag: noindex, noarchive
+
+/games/pudding-inferno-prototype/*
+  X-Robots-Tag: noindex, noarchive
+
+/games/pudding-inferno-grid-prototype/*
+  X-Robots-Tag: noindex, noarchive
+
+/games/pudding-pinball-prototype/*
   X-Robots-Tag: noindex, noarchive
 
 /docs/*
