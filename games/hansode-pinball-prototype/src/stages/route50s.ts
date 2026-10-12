@@ -20,7 +20,7 @@ export const route50sStage: StageDef = {
   subtitle: '昔のアメリカン',
   tagline: '木目とクローム、ネオンとジュークボックスの台',
   description:
-    '50年代のダイナーとドライブイン。壁ぎわの追加フリッパーと5つのバンパーで暴れるボールを操ろう。ジュークボックスを叩くと曲が変わる。ORDER UP・CRUISE・DRIVE-IN MOVIE・JUKEBOX の4ミッションで DRAG RACE マルチボール。',
+    '壁ぎわの追加フリッパーと5つのバンパー。ジュークボックスを叩くと曲が変わる。4つのミッションで DRAG RACE マルチボール！',
   difficulty: 3,
   ballSave: 9,
   skillShot: 25_000,
