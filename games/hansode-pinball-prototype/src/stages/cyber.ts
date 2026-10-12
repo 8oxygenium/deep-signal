@@ -1,49 +1,57 @@
-// CYBER ―「サイバー系」（仮。担当エージェントがこのファイルを完成させる）
-import { baseLayout, chassis } from '../table/chassis';
+// ⑤ CYBER ―「サイバー系」
+// 黒地にネオンのグリッド、ワイヤーフレーム、グリッチ。難しさ★4。
+// ギミック：ハッキングレーン（光る順に通すとファイアウォールが消えて台が書き換わる）、
+//          ワープチューブ2本、LOW-G（重力ダウン）、OVERCLOCK（得点2倍）、ROOT チャンバー（磁石で掴んで投げる）、
+//          4つのミッション → CORE でマルチボール（ZERO DAY）→ ワープでジャックポット
+import { cyberLayout } from './cyber/layout';
+import { decorate, paint, paintBackboard } from './cyber/look';
+import { createRules } from './cyber/rules';
+import { MUSIC, SFX } from './cyber/sound';
 import type { StageDef } from './types';
 
 export const cyberStage: StageDef = {
   id: 'cyber',
   name: 'CYBER',
   subtitle: 'サイバー系',
-  tagline: '準備中',
-  description: 'このステージは準備中です。',
+  tagline: '光る順に通せ。ファイアウォールを書き換えろ',
+  description:
+    '黒地にネオンのグリッドが走る電脳の台。左バス・上のレーン・右バスを「光っている順」に通すとハッキング成功、中央のファイアウォールが消えて隠しチャンバー ROOT が開く。重力が弱まる LOW-G と、ワープチューブにも注目。ボールセーブは短め。',
   difficulty: 4,
-  ballSave: 10,
-  skillShot: 25_000,
-  ranks: ['ROOKIE', 'PRO'],
-  scores: { bumper: 1_000, sling: 100 },
-  layout: () =>
-    baseLayout([
-      ...chassis({}),
-      { kind: 'bumper', id: 'b1', at: [-1.0, 27.5] },
-      { kind: 'bumper', id: 'b2', at: [2.5, 27.5] },
-      { kind: 'bumper', id: 'b3', at: [0.75, 24.5] },
-    ]),
-  rules: () => ({}),
+  ballSave: 7,
+  skillShot: 30_000,
+  ranks: ['NOOB', 'SCRIPT KIDDIE', 'PHREAKER', 'HACKER', 'NETRUNNER', 'ROOT', 'GHOST'],
+  scores: { bumper: 1_000, sling: 100, drop: 500, standup: 1_500, spinner: 200, rollover: 500, warp: 5_000, scoop: 5_000 },
+  layout: cyberLayout,
+  rules: createRules,
   theme: {
     style: 'cyber',
     wallMaterial: 'neon',
     colors: {
-      bg: '#111118',
-      floor: '#55555f',
-      floor2: '#66666f',
-      wall: '#888899',
-      guide: '#ccccd6',
-      rubber: '#f2f2f2',
-      flipper: '#eeeeee',
+      bg: '#04050c',
+      floor: '#07090f',
+      floor2: '#0b0d18',
+      wall: '#0a1020',
+      guide: '#3d6f8c',
+      rubber: '#ff2a6d',
+      flipper: '#e8f6ff',
       flipperRubber: '#05d9e8',
-      bumper: '#ddddee',
+      bumper: '#101828',
       bumperCap: '#ff2a6d',
-      sling: '#ccccdd',
-      target: '#ffffff',
-      ramp: '#aaccff',
+      sling: '#13203a',
+      target: '#ffe14a',
+      ramp: '#7ee8ff',
       accent: '#05d9e8',
       accent2: '#ff2a6d',
       dmd: '#05d9e8',
-      text: '#ffffff',
+      text: '#bff6ff',
     },
+    paint,
+    paintBackboard,
+    decorate,
+    bloom: 1.05,
+    bloomThreshold: 0.55,
+    light: 0.6,
   },
-  music: { songs: [{ name: 'CYBER', bpm: 104, root: 57, scale: [0, 2, 3, 5, 7, 8, 10], chords: [0, 5, 2, 6], kit: 'synthwave', seed: 1 }] },
-  sfx: { wave: 'sawtooth', pitch: 0.9, bright: 0.9, glitch: true },
+  music: MUSIC,
+  sfx: SFX,
 };
