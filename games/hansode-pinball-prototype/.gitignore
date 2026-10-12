@@ -1,0 +1,18 @@
+# 依存・ビルド成果物・インストーラーはリポジトリに入れない（サイトに公開しない）
+node_modules/
+dist/
+dist-electron/
+release/
+.vite/
+*.exe
+*.blockmap
+*.7z
+*.nsis.*
+# 生成物（scripts/make-icon.mjs がビルド時に生成）
+build/icon.ico
+build/icon.png
+# テスト出力
+screenshots/
+test-results/
+.e2e-userdata/
+public/icon.png

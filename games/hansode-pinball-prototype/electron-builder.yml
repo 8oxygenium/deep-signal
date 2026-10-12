@@ -1,0 +1,39 @@
+appId: com.hansode.pinball
+productName: HANSODE PINBALL
+electronLanguages: [ja, en-US]
+copyright: Copyright (C) HANSODE
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - package.json
+  - "!**/*.map"
+  # koffi は Windows x64 用のバイナリだけ同梱する
+  - "!node_modules/@koromix/koffi-{linux,darwin,freebsd,openbsd,android}*/**"
+asarUnpack:
+  - "node_modules/koffi/**"
+  - "node_modules/@koromix/**"
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.ico
+  artifactName: HANSODE-Pinball-Setup.${ext}
+  legalTrademarks: HANSODE
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: HANSODE PINBALL
+  uninstallDisplayName: HANSODE PINBALL
+  artifactName: HANSODE-Pinball-Setup.${ext}
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  deleteAppDataOnUninstall: false
+  language: "1041"
+  installerLanguages: [ja_JP]
+publish: null
