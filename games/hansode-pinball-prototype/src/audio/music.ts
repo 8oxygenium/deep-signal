@@ -25,6 +25,7 @@ export class MusicPlayer {
   private bar = 0;
   private playing = false;
   private paused = false;
+  private pendingSong: number | null = null;
 
   constructor(private readonly eng: AudioEngine) {}
 
@@ -60,6 +61,7 @@ export class MusicPlayer {
 
   stop(): void {
     this.playing = false;
+    this.pendingSong = null;
     if (this.timer !== null) window.clearInterval(this.timer);
     this.timer = null;
     if (this.bus) {
@@ -80,15 +82,30 @@ export class MusicPlayer {
     if (this.bus && !this.paused) this.bus.gain.setTargetAtTime(n < 0 ? 0.0001 : 1, this.ctx.currentTime, n < 0 ? 0.3 : 0.1);
   }
 
+  /** 曲を切り替える。演奏中なら次の小節の頭で、前の曲をフェードアウトしながら切り替える（ジュークボックス） */
   setSong(i: number): void {
     if (!this.songs.length) return;
-    this.index = ((i % this.songs.length) + this.songs.length) % this.songs.length;
-    if (this.playing) {
-      const wasIntensity = this.intensity;
-      this.stop();
-      this.intensity = wasIntensity;
-      this.start();
+    const next = ((i % this.songs.length) + this.songs.length) % this.songs.length;
+    if (!this.playing) {
+      this.index = next;
+      return;
     }
+    this.pendingSong = next;
+  }
+
+  /** 小節の頭で呼ぶ：予約された曲へ切り替える */
+  private switchSong(): void {
+    if (this.pendingSong === null) return;
+    const old = this.bus;
+    if (old) {
+      old.gain.cancelScheduledValues(this.ctx.currentTime);
+      old.gain.setTargetAtTime(0.0001, this.nextTime, 0.25);
+      window.setTimeout(() => old.disconnect(), Math.max(0, (this.nextTime - this.ctx.currentTime) * 1000) + 2500);
+    }
+    this.index = this.pendingSong;
+    this.pendingSong = null;
+    this.load(this.index);
+    this.bar = 0;
   }
 
   private load(i: number): void {
@@ -183,6 +200,11 @@ export class MusicPlayer {
       if (this.step >= this.stepsPerBar()) {
         this.step = 0;
         this.bar++;
+        if (this.pendingSong !== null) {
+          this.switchSong();
+          // 新しい曲のテンポで続ける
+          return;
+        }
       }
     }
   }
