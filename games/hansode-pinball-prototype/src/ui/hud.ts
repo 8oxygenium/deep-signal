@@ -193,7 +193,7 @@ export class Hud {
 
   showGimmick(text: string, sub: string, phase: 'warn' | 'start' | 'end'): void {
     if (phase === 'end') {
-      this.gimmick.classList.remove('on');
+      this.gimmick.classList.remove('on', 'warn');
       return;
     }
     this.gimmick.innerHTML = `<div class="stripe"></div><div class="t">${phase === 'warn' ? '⚠ 予告 ⚠' : '発動！'}</div><div class="big">${esc(text)}</div><div class="s">${esc(sub)}</div><div class="stripe"></div>`;
