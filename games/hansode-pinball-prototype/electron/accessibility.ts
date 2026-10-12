@@ -3,8 +3,30 @@
 // Microsoft の「Disabling Shortcut Keys in Games」と同じ手法で、SystemParametersInfoW を
 // fWinIni=0（レジストリへ保存しない）で呼ぶため、万一プロセスが落ちても次回ログオンで元に戻る。
 // さらに元の値を userData にバックアップし、異常終了後の次回起動時にも復元する。
+import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+
+/**
+ * ユーザー本来の設定はレジストリにある（このアプリは fWinIni=0 で変更するのでレジストリは書き換えない）。
+ * ここを「元の設定」の正とすることで、異常終了や複数起動が重なっても必ず本来の値へ戻せる。
+ */
+function registryFlags(sub: string): number | null {
+  if (process.platform !== 'win32') return null;
+  try {
+    const out = execFileSync('reg', ['query', `HKCU\\Control Panel\\Accessibility\\${sub}`, '/v', 'Flags'], {
+      encoding: 'latin1',
+      windowsHide: true,
+      timeout: 4000,
+    });
+    const m = /Flags\s+REG_\w+\s+(\S+)/.exec(out);
+    if (!m) return null;
+    const v = /^0x/i.test(m[1]) ? parseInt(m[1], 16) : parseInt(m[1], 10);
+    return Number.isFinite(v) ? v >>> 0 : null;
+  } catch {
+    return null;
+  }
+}
 
 const SPI_GETFILTERKEYS = 0x0032;
 const SPI_SETFILTERKEYS = 0x0033;
@@ -126,22 +148,32 @@ export class AccessibilityShortcuts {
     return this.api !== null;
   }
 
-  /** 起動時に呼ぶ。前回異常終了していたらバックアップから戻してから、現在値を記録する。 */
+  /** 起動時に呼ぶ。元の設定はレジストリ（なければ前回のバックアップ、それもなければ現在値）から決める。 */
   init(): void {
     const api = this.api;
     if (!api) return;
     try {
+      let backup: { flags: A11yFlags } | null = null;
       if (fs.existsSync(this.backupFile)) {
-        const prev = JSON.parse(fs.readFileSync(this.backupFile, 'utf8')) as { flags: A11yFlags; filter: FilterKeys };
-        api.setSticky(prev.flags.sticky);
-        api.setToggle(prev.flags.toggle);
-        api.setFilter(prev.filter);
+        try {
+          backup = JSON.parse(fs.readFileSync(this.backupFile, 'utf8')) as { flags: A11yFlags };
+        } catch {
+          backup = null;
+        }
       }
       const fk = api.getFilter();
-      this.original = { sticky: api.getSticky(), filter: fk.dwFlags, toggle: api.getToggle() };
-      this.originalFilter = fk;
+      this.original = {
+        sticky: registryFlags('StickyKeys') ?? backup?.flags.sticky ?? api.getSticky(),
+        filter: registryFlags('Keyboard Response') ?? backup?.flags.filter ?? fk.dwFlags,
+        toggle: registryFlags('ToggleKeys') ?? backup?.flags.toggle ?? api.getToggle(),
+      };
+      this.originalFilter = { ...fk, dwFlags: this.original.filter };
+      // 前回が異常終了で無効のまま残っていても、ここで本来の値に戻しておく
+      api.setSticky(this.original.sticky);
+      api.setToggle(this.original.toggle);
+      api.setFilter(this.originalFilter);
       fs.mkdirSync(path.dirname(this.backupFile), { recursive: true });
-      fs.writeFileSync(this.backupFile, JSON.stringify({ flags: this.original, filter: fk }));
+      fs.writeFileSync(this.backupFile, JSON.stringify({ flags: this.original }));
     } catch (e) {
       this.lastError = String(e);
       this.original = null;

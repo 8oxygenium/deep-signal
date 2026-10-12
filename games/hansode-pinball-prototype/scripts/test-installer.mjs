@@ -38,8 +38,15 @@ const flags = () => {
   return { sticky: s.dwFlags >>> 0, filter: f.dwFlags >>> 0 };
 };
 
+// 本来の設定（レジストリ）。今のセッションの値がずれていたら警告する
+const regFlag = (sub) => {
+  const out = spawnSync('powershell', ['-NoProfile', '-Command', `(Get-ItemProperty 'HKCU:\\Control Panel\\Accessibility\\${sub}').Flags`], { encoding: 'utf8' }).stdout.trim();
+  return Number(out);
+};
+const reg = { sticky: regFlag('StickyKeys'), filter: regFlag('Keyboard Response') };
 const before = flags();
-console.log('起動前の設定:', JSON.stringify(before));
+console.log('起動前の設定:', JSON.stringify(before), 'レジストリ:', JSON.stringify(reg));
+check('起動前：今の設定が本来の設定（レジストリ）と一致', before.sticky === reg.sticky && before.filter === reg.filter);
 
 const dir = mkdtempSync(join(tmpdir(), 'hp-install-'));
 const installDir = join(dir, 'app');
@@ -50,8 +57,10 @@ let r = spawnSync(EXE, ['/S', `/D=${installDir}`], { stdio: 'inherit', timeout: 
 const installedExe = join(installDir, `${APP}.exe`);
 check('インストール（サイレント）が終わる', r.status === 0, `exit=${r.status}`);
 check('インストール先にアプリが入る', existsSync(installedExe), installedExe);
-const desktopLnk = join(homedir(), 'Desktop', `${APP}.lnk`);
-const oneDriveDesktop = join(homedir(), 'OneDrive', 'Desktop', `${APP}.lnk`);
+// デスクトップの場所は OneDrive や日本語名（デスクトップ）のことがあるので Windows に聞く
+const desktopDir = spawnSync('powershell', ['-NoProfile', '-Command', "[Console]::OutputEncoding=[Text.Encoding]::UTF8; [Environment]::GetFolderPath('Desktop')"], { encoding: 'utf8' }).stdout.trim() || join(homedir(), 'Desktop');
+const desktopLnk = join(desktopDir, `${APP}.lnk`);
+const oneDriveDesktop = desktopLnk;
 const startLnk = join(process.env.APPDATA ?? '', 'Microsoft', 'Windows', 'Start Menu', 'Programs', `${APP}.lnk`);
 check('デスクトップにショートカット', existsSync(desktopLnk) || existsSync(oneDriveDesktop));
 check('スタートメニューにショートカット', existsSync(startLnk), startLnk);
@@ -71,14 +80,14 @@ const smoke = existsSync(join(ud, 'smoke-result.json')) ? JSON.parse(readFileSyn
 check('アプリが動いた記録（smoke-result.json）', !!smoke && smoke.title === APP, smoke ? JSON.stringify(smoke.a11y) : '');
 await sleep(500);
 const after = flags();
-check('終了後に固定キーの設定が元に戻る', after.sticky === before.sticky && after.filter === before.filter, `${JSON.stringify(before)} → ${JSON.stringify(after)}`);
+check('終了後に固定キーの設定が元に戻る（本来の設定と一致）', after.sticky === reg.sticky && after.filter === reg.filter, `${JSON.stringify(before)} → ${JSON.stringify(after)}`);
 
 // 3. アンインストール
 const uninst = join(installDir, `Uninstall ${APP}.exe`);
 check('アンインストーラーがある', existsSync(uninst));
 if (existsSync(uninst)) {
   r = spawnSync(uninst, ['/S'], { stdio: 'inherit', timeout: 300000 });
-  for (let i = 0; i < 60 && existsSync(installedExe); i++) await sleep(1000);
+  for (let i = 0; i < 60 && (existsSync(installedExe) || existsSync(startLnk) || existsSync(desktopLnk)); i++) await sleep(1000);
   check('アンインストールでアプリが消える', !existsSync(installedExe));
   check('デスクトップのショートカットが消える', !existsSync(desktopLnk) && !existsSync(oneDriveDesktop));
   check('スタートメニューのショートカットが消える', !existsSync(startLnk));

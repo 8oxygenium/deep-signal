@@ -5,6 +5,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, existsSync } from 'node:f
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { registryFlags, sessionFlags } from './a11y-flags.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(root, 'screenshots');
@@ -167,6 +168,12 @@ check('再起動後もハイスコアが残る', best.includes('HANSODE'));
 await app.close();
 
 rmSync(ud, { recursive: true, force: true });
+if (process.platform === 'win32') {
+  await new Promise((r) => setTimeout(r, 800));
+  const sf = sessionFlags();
+  const rf = registryFlags();
+  check('終了後、固定キー/フィルターキーの設定が本来の値に戻っている', sf.sticky === rf.sticky && sf.filter === rf.filter, `${JSON.stringify(sf)} / 本来 ${JSON.stringify(rf)}`);
+}
 check('コンソールエラー0件', errors.length === 0, errors.slice(0, 5).join(' | '));
 const failed = results.filter((r) => !r.ok);
 console.log(`\n${results.length - failed.length}/${results.length} passed. screenshots: ${outDir}`);
