@@ -1,49 +1,37 @@
-// ANIME ―「アニメ風」（仮。担当エージェントがこのファイルを完成させる）
-import { baseLayout, chassis } from '../table/chassis';
+// ② ANIME ―「アニメ風」
+// トゥーン塗り＋輪郭線、鮮やかな色、舞い散る桜と星。
+// ギミック：変身ゲージ（満タンでスクープから必殺技カットイン → マルチボール）、コンボで得点倍率アップ、
+//          中央を駆け上がる MAGIC ROAD、広く狙いやすい左右のオービット、右上のミニフリッパー。
+import { C, decorate, paint, paintBackboard } from './anime/art';
+import { animeLayout } from './anime/layout';
+import { animeRules } from './anime/rules';
+import { ANIME_SFX, ANIME_SONGS } from './anime/sound';
 import type { StageDef } from './types';
 
 export const animeStage: StageDef = {
   id: 'anime',
   name: 'ANIME',
   subtitle: 'アニメ風',
-  tagline: '準備中',
-  description: 'このステージは準備中です。',
+  tagline: '変身ゲージを溜めて、必殺技でマルチボール！',
+  description: 'ランプやオービットを続けて決めるとコンボで得点倍率アップ。変身ゲージを満タンにして左のスクープへ入れると、必殺技カットインからマルチボール。右上のミニフリッパーも使いこなそう。',
   difficulty: 2,
-  ballSave: 10,
-  skillShot: 25_000,
-  ranks: ['ROOKIE', 'PRO'],
-  scores: { bumper: 1_000, sling: 100 },
-  layout: () =>
-    baseLayout([
-      ...chassis({}),
-      { kind: 'bumper', id: 'b1', at: [-1.0, 27.5] },
-      { kind: 'bumper', id: 'b2', at: [2.5, 27.5] },
-      { kind: 'bumper', id: 'b3', at: [0.75, 24.5] },
-    ]),
-  rules: () => ({}),
+  ballSave: 11,
+  skillShot: 30_000,
+  ranks: ['ROOKIE', 'APPRENTICE', 'HERO', 'CHAMPION', 'STAR', 'LEGEND', 'MYTHIC'],
+  scores: { bumper: 1_000, sling: 100, standup: 1_500, spinner: 100, rollover: 500, ramp: 10_000, scoop: 5_000, 'ramp-enter': 500 },
+  layout: animeLayout,
+  rules: animeRules,
   theme: {
     style: 'anime',
+    colors: C,
+    paint,
+    paintBackboard,
+    decorate,
+    bloom: 0.45,
+    bloomThreshold: 1.15,
+    light: 0.8,
     wallMaterial: 'toon',
-    colors: {
-      bg: '#111118',
-      floor: '#55555f',
-      floor2: '#66666f',
-      wall: '#888899',
-      guide: '#ccccd6',
-      rubber: '#f2f2f2',
-      flipper: '#eeeeee',
-      flipperRubber: '#ff4fa3',
-      bumper: '#ddddee',
-      bumperCap: '#ffe14f',
-      sling: '#ccccdd',
-      target: '#ffffff',
-      ramp: '#aaccff',
-      accent: '#ff4fa3',
-      accent2: '#ffe14f',
-      dmd: '#ff6fb5',
-      text: '#ffffff',
-    },
   },
-  music: { songs: [{ name: 'ANIME', bpm: 158, root: 60, scale: [0, 2, 4, 5, 7, 9, 11], chords: [0, 5, 3, 4], kit: 'anime', seed: 1 }] },
-  sfx: { wave: 'square', pitch: 1.2, bright: 0.8 },
+  music: { songs: ANIME_SONGS },
+  sfx: ANIME_SFX,
 };
