@@ -279,8 +279,11 @@ export class Renderer {
       const az = Math.sin(this.time * 0.25) * 0.55;
       const el = THREE.MathUtils.degToRad(34);
       const dir = new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
-      this.fit(TABLE_CENTER.clone(), dir, this.corners(), 0.08, 0.12, 0.08);
-      cam.setViewOffset(this.width, this.height, -this.width * 0.2, 0, this.width, this.height);
+      // 左側のカード列を避け、右側の空いた所に台を収める
+      const leftW = Math.min(466, this.width * 0.4);
+      const frac = (this.width - leftW) / this.width;
+      this.fit(TABLE_CENTER.clone(), dir, this.corners(), 1 - frac * 0.92, 0.06, 0.06);
+      cam.setViewOffset(this.width, this.height, -leftW / 2, 0, this.width, this.height);
       return;
     }
     const mode = this.opts.camera;
