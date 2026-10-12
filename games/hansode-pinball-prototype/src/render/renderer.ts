@@ -178,7 +178,7 @@ export class Renderer {
     this.bloom = null;
     if (q !== 'low') {
       const strength = stage.theme.bloom ?? 0.6;
-      this.bloom = new UnrealBloomPass(new THREE.Vector2(this.width, this.height), strength, 0.5, 0.9);
+      this.bloom = new UnrealBloomPass(new THREE.Vector2(this.width, this.height), strength, 0.5, stage.theme.bloomThreshold ?? 0.9);
       composer.addPass(this.bloom);
     }
     this.glitch = null;

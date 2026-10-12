@@ -98,6 +98,7 @@ export class MusicPlayer {
     this.bus.gain.setTargetAtTime(this.intensity < 0 ? 0.0001 : 1, this.ctx.currentTime, 0.2);
     this.bus.connect(this.eng.musicBus);
     this.melody = this.makeMelody(s, s.seed, s.kit === 'anime' || s.kit === 'chaos' ? 0.75 : 0.55, 0);
+    // 関数の編成はメロディ密度を中くらいにする
     this.counter = this.makeMelody(s, s.seed + 99, 0.4, 7);
   }
 
@@ -318,6 +319,31 @@ export class MusicPlayer {
     };
     const melRow = this.melody!.notes[bar % this.melody!.notes.length];
     const pat = (p: string) => p[step % p.length] === 'x';
+
+    if (typeof s.kit === 'function') {
+      s.kit({
+        hot,
+        step,
+        bar,
+        t,
+        stepDur,
+        stepsPerBar: spb,
+        chord,
+        root,
+        mel,
+        melLen: mel >= 0 ? melLen(melRow, step) : 0,
+        counter: cnt,
+        pat,
+        mtof,
+        kick: (tt, gain, punch) => this.kick(tt, gain, punch),
+        snare: (tt, gain, big) => this.snare(tt, gain, big),
+        hat: (tt, gain, open) => this.hat(tt, gain, open),
+        brush: (tt, gain) => this.brush(tt, gain),
+        noise: (tt, dur, o) => this.noise(tt, dur, o),
+        voice: (f, tt, dur, o) => this.voice(f, tt, dur, o),
+      });
+      return;
+    }
 
     switch (s.kit) {
       case 'electro': {

@@ -214,6 +214,12 @@ export class AudioEngine {
     const k = p.pitch;
     const pan = o.pan ?? 0;
     const sp = Math.min(1, (o.speed ?? 40) / 80);
+    const custom = p.custom?.[name];
+    if (custom) {
+      if (!this.gate(`c:${name}`, 25)) return;
+      custom(this, { pan, speed: o.speed ?? 40 });
+      return;
+    }
     switch (name) {
       case 'flipUp':
         this.noiseHit({ dur: 0.05, gain: 0.32, type: 'lowpass', freq: 1400 * p.bright + 400, pan });

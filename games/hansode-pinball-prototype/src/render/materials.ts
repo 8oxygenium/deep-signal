@@ -19,6 +19,7 @@ export interface Mats {
   sling: THREE.Material;
   target: THREE.Material;
   ramp: THREE.Material;
+  rampSide: THREE.Material;
   rampRail: THREE.Material;
   apron: THREE.Material;
   cabinet: THREE.Material;
@@ -208,8 +209,26 @@ export function makeMaterials(theme: ThemeDef, quality: Quality): Mats {
         ? solid(c.ramp, { emissive: c.ramp, ei: 0.25, opacity: 0.35 })
         : toon
           ? solid(c.ramp, { opacity: 0.85 })
-          : new THREE.MeshStandardMaterial({ color: c.ramp, transparent: true, opacity: 0.55, roughness: 0.15, metalness: 0.1, side: THREE.DoubleSide }),
-    rampRail: solid(style === 'cyber' ? c.accent : c.guide, { metal: 0.9, rough: 0.2, emissive: style === 'cyber' ? c.accent : '#000', ei: 1.5 }),
+          : new THREE.MeshStandardMaterial({ color: c.ramp, transparent: true, opacity: 0.38, roughness: 0.12, metalness: 0.1, side: THREE.DoubleSide, depthWrite: false }),
+    rampSide: toon
+      ? solid(c.ramp, { opacity: 0.6 })
+      : new THREE.MeshStandardMaterial({
+          color: c.ramp,
+          transparent: true,
+          opacity: style === 'cyber' ? 0.18 : 0.2,
+          roughness: 0.1,
+          metalness: 0.1,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+          emissive: style === 'cyber' ? c.ramp : '#000000',
+          emissiveIntensity: 0.3,
+        }),
+    rampRail: solid(style === 'cyber' || theme.wallMaterial === 'glass' ? c.accent : c.guide, {
+      metal: 0.9,
+      rough: 0.2,
+      emissive: style === 'cyber' || theme.wallMaterial === 'glass' ? c.accent : '#000',
+      ei: theme.wallMaterial === 'glass' ? 1.6 : 1.5,
+    }),
     apron: solid(c.wall, { rough: 0.5, metal: style === 'route50s' ? 0.7 : 0.1 }),
     cabinet:
       style === 'route50s'

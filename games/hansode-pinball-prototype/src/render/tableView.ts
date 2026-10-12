@@ -56,6 +56,17 @@ export class TableView {
     for (const p of layout.parts) this.buildPart(p);
     this.buildCabinet();
     this.flushStatic();
+    stage.theme.decorate?.({
+      THREE,
+      group: this.group,
+      game,
+      quality,
+      at: (x, y, h = 0) => V(x, y, h),
+      onFrame: (fn) => this.anims.push({ update: (_g, t, dt) => fn(t, dt) }),
+      glow: (c) => this.mats.glow(c),
+      metal: () => this.mats.metal,
+      canvasTexture: (w, h, draw) => canvasTexture(w, h, draw),
+    });
   }
 
   // ───────── 静的な形（まとめて1メッシュにする） ─────────
@@ -536,8 +547,7 @@ export class TableView {
       rg.setAttribute('position', new THREE.Float32BufferAttribute(rp, 3));
       rg.setIndex(ri);
       rg.computeVertexNormals();
-      const rm = new THREE.Mesh(rg, this.mats.ramp);
-      (rm.material as THREE.Material).side = THREE.DoubleSide;
+      const rm = new THREE.Mesh(rg, this.mats.rampSide);
       this.group.add(rm);
       // 上の縁（金属の棒）
       const curvePts = side.map((q, i) => V(q[0], q[1], hs[i] + railH));

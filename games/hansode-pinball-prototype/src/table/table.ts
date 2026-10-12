@@ -580,7 +580,7 @@ export class RampRT extends PartRT {
   accel(ball: Ball): void {
     const loc = this.locate(ball);
     // 坂を登るほど減速、下りで加速
-    const k = 300;
+    const k = 220;
     ball.ax -= loc.dx * loc.slope * k;
     ball.ay -= loc.dy * loc.slope * k;
   }
@@ -774,6 +774,11 @@ export class Table {
     const p = this.parts.get(id);
     if (!p) throw new Error(`part not found: ${id}`);
     return p as T;
+  }
+
+  /** id（タグ）で物理の形を探す（壁を消す・動かすとき用） */
+  shapesByTag(tag: string): Shape[] {
+    return this.world.shapes.filter((s) => s.tag === tag);
   }
 
   light(id: string): LightRT | undefined {

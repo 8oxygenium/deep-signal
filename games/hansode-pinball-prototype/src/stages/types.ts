@@ -1,5 +1,6 @@
 // 1ステージ = 配置データ + ルール + 見た目テーマ + 音楽。
 // stages/ にこの型のファイルを1つ追加し、stages/index.ts に並べるだけで増やせる。
+import type * as THREE_NS from 'three';
 import type { Game } from '../core/game';
 import type { TableEvent, TableEventType } from '../table/table';
 import type { TableLayout } from '../table/types';
@@ -74,6 +75,25 @@ export interface PaintApi {
   layout: TableLayout;
 }
 
+/** ステージ専用の3D装飾を作るときに渡される道具（three は直接 import しなくてよい） */
+export interface DecorateApi {
+  THREE: typeof THREE_NS;
+  /** 台のグループ。座標は (x, 高さ, -y) */
+  group: THREE_NS.Group;
+  game: Game;
+  quality: 'low' | 'mid' | 'high';
+  /** 台の座標 (x, y, 高さ) → three の座標 */
+  at(x: number, y: number, h?: number): THREE_NS.Vector3;
+  /** 毎フレーム呼ばれる処理を登録 */
+  onFrame(fn: (t: number, dt: number) => void): void;
+  /** テーマ色の光る素材 */
+  glow(color: string): THREE_NS.MeshStandardMaterial;
+  /** 金属（クローム）の素材 */
+  metal(): THREE_NS.Material;
+  /** キャンバスに描いてテクスチャを作る */
+  canvasTexture(w: number, h: number, draw: (g: CanvasRenderingContext2D) => void): THREE_NS.CanvasTexture;
+}
+
 export interface ThemeDef {
   style: ThemeStyle;
   colors: ThemeColors;
@@ -83,18 +103,58 @@ export interface ThemeDef {
   paintBackboard?(g: CanvasRenderingContext2D, w: number, h: number): void;
   /** ブルームの強さ */
   bloom?: number;
+  /** ブルームのしきい値（明るい台は高くして、発光部品だけ光らせる） */
+  bloomThreshold?: number;
   /** 照明の強さ（0..2） */
   light?: number;
   /** 得点表示の形式 */
   scoreDisplay?: 'dmd' | 'reels';
   /** 壁の素材 */
   wallMaterial?: 'glass' | 'metal' | 'toon' | 'wood' | 'neon' | 'hazard' | 'plain';
+  /** ステージ専用の3D装飾（ボス、ジュークボックス等） */
+  decorate?(api: DecorateApi): void;
 }
 
 export interface MusicDef {
   /** 曲の候補（ジュークボックスで切り替え） */
   songs: SongDef[];
 }
+
+/** BGMの1ステップ分を鳴らすときに渡される道具（ステージ専用の編成を書くとき用） */
+export interface KitApi {
+  /** 0 = 通常、1 = マルチボール中（盛り上げる） */
+  hot: boolean;
+  step: number;
+  bar: number;
+  /** 発音時刻（AudioContext の時間） */
+  t: number;
+  stepDur: number;
+  stepsPerBar: number;
+  /** 今の小節のコード（MIDI）とルート（1オクターブ下） */
+  chord: number[];
+  root: number;
+  /** メロディ（MIDI。-1=休み） */
+  mel: number;
+  /** メロディの長さ（ステップ数） */
+  melLen: number;
+  counter: number;
+  /** パターン文字列の x の位置で true（例 'x...x...'） */
+  pat(p: string): boolean;
+  mtof(m: number): number;
+  kick(t: number, gain?: number, punch?: number): void;
+  snare(t: number, gain?: number, big?: boolean): void;
+  hat(t: number, gain?: number, open?: boolean): void;
+  brush(t: number, gain?: number): void;
+  noise(t: number, dur: number, o: { gain: number; type: BiquadFilterType; freq: number; q?: number; reverb?: number }): void;
+  voice(
+    freq: number,
+    t: number,
+    dur: number,
+    o: { type?: OscillatorType; gain?: number; attack?: number; release?: number; filter?: number; filterEnv?: number; detune?: number; vibrato?: number; reverb?: number; pan?: number; glideFrom?: number },
+  ): void;
+}
+
+export type KitFn = (k: KitApi) => void;
 
 export interface SongDef {
   name: string;
@@ -106,12 +166,19 @@ export interface SongDef {
   scale: number[];
   /** コード進行（スケール内の度数、0 起点）1小節ずつ */
   chords: number[];
-  /** 音色の組み合わせ */
-  kit: 'electro' | 'anime' | 'brass' | 'rockabilly' | 'synthwave' | 'chaos';
+  /** 音色の組み合わせ（用意された編成の名前、またはステージ専用の関数） */
+  kit: 'electro' | 'anime' | 'brass' | 'rockabilly' | 'synthwave' | 'chaos' | KitFn;
   /** メロディ生成の種 */
   seed: number;
   /** 拍子（1小節の16分音符の数） */
   steps?: number;
+}
+
+/** 効果音を自作するときに渡される道具 */
+export interface SynthApi {
+  tone(o: { freq: number; to?: number; type?: OscillatorType; dur: number; gain?: number; attack?: number; at?: number; pan?: number; filter?: number; q?: number; reverb?: number; detune?: number; curve?: 'exp' | 'lin' }): void;
+  noiseHit(o: { dur: number; gain?: number; type?: BiquadFilterType; freq?: number; to?: number; q?: number; at?: number; pan?: number; reverb?: number; attack?: number }): void;
+  bell(freq: number, dur: number, gain: number, at?: number, pan?: number): void;
 }
 
 export interface SfxPalette {
@@ -127,6 +194,8 @@ export interface SfxPalette {
   glitch?: boolean;
   /** マンガの擬音っぽい派手な音 */
   punchy?: boolean;
+  /** ステージ専用の効果音（名前 → 鳴らし方）。同じ名前なら標準の音より優先 */
+  custom?: Record<string, (s: SynthApi, o: { pan: number; speed: number }) => void>;
 }
 
 export interface StageDef {
@@ -153,6 +222,8 @@ export interface StageDef {
   ominous?: boolean;
   /** 自動で入る基本点 */
   scores?: Partial<Record<TableEventType, number>>;
+  /** 到達テストで「届かなくてよい」部品のID */
+  reachExempt?: string[];
   layout(): TableLayout;
   rules(): StageRules;
   theme: ThemeDef;

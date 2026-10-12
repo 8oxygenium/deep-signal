@@ -99,7 +99,7 @@ export function lower(o: ChassisOptions, sepX: number): PartDef[] {
     const guideEnd: P = [-fx - 0.45, fy + 0.7];
     parts.push({ kind: 'wall', id: `inlaneGuide${side}`, pts: [m([-sepX, 10.8]), m([-sepX, 7.0]), m(guideEnd)], style: 'guide', h: 1.0 });
     parts.push({ kind: 'post', at: m([-sepX, 10.8]), r: 0.3, style: 'rubber' });
-    if (o.outlanePosts) parts.push({ kind: 'post', at: m([-8.15, 11.6]), r: 0.32, style: 'rubber' });
+    if (o.outlanePosts) parts.push({ kind: 'post', at: m([-8.1, 12.5]), r: 0.26, style: 'rubber' });
 
     // スリングショット（三角形。内側の斜めの辺が蹴る）
     const C: P = m([-5.7, 7.9]);
