@@ -658,8 +658,12 @@ export class TableView {
     this.lightMeshes.push({ mesh: m, light: rt, mat });
   }
 
+  private dynamicTags = new Set<string>();
+
   private dynamicWall(id: string, pts: P[], style: WallStyle): void {
-    // IMPOSSIBLE の動く壁：物理の形の位置に追従
+    // 動く・消える壁：物理の形の位置に追従（同じIDの定義が複数あっても1回だけ作る）
+    if (this.dynamicTags.has(id)) return;
+    this.dynamicTags.add(id);
     const shapes = this.game.world.shapes.filter((s) => s.tag === id && s.kind === 'seg');
     const meshes = shapes.map(() => {
       const m = new THREE.Mesh(new THREE.BoxGeometry(1, style === 'guide' ? 0.75 : 1.1, 0.2), style === 'guide' ? this.mats.guide : this.mats.wall);

@@ -1,6 +1,6 @@
 // 1回のプレイ（3球制）を管理する。描画・音・DOMには依存しない（テストで早送りできる）。
 import type { Ball } from '../physics/ball';
-import { FLOOR, MAX_STEPS_PER_FRAME, STEP } from '../physics/constants';
+import { FLOOR, GRAVITY, MAX_STEPS_PER_FRAME, STEP } from '../physics/constants';
 import type { Flipper } from '../physics/flipper';
 import type { BonusLine, StageDef, StageRules } from '../stages/types';
 import { Table, type LightState, type PartRT, type TableEvent } from '../table/table';
@@ -344,6 +344,12 @@ export class Game {
   // ───────── 内部 ─────────
 
   private startBall(): void {
+    // ギミックで変えた重力・フリッパー・操作の入れ替えは、ボールごとに元へ戻す（必要ならルールの onBallStart でまた変える）
+    this.table.world.gravityScale = 1;
+    this.table.world.gx = 0;
+    this.table.world.gy = -(this.table.layout.gravity ?? GRAVITY);
+    this.swapFlippers = false;
+    for (const f of this.flippers) f.scale = 1;
     this.tilted = false;
     this.table.tilted = false;
     this.tiltMeter = 0;
@@ -435,6 +441,13 @@ export class Game {
     this.emit({ t: 'drain' });
     if (this.state !== 'play') return;
     if (this.attract) {
+      // デモでもマルチボールは残り1球で終わらせる（終わらないと次のマルチボールが始まらない）
+      const left = this.balls.filter((x) => x.active).length + this.serveQueue;
+      if (this.multiballActive && left <= 1) {
+        this.multiballActive = false;
+        this.emit({ t: 'multiball-end' });
+        this.rules.onMultiballEnd?.(this);
+      }
       if (this.balls.length === 0) this.serve(1, true);
       return;
     }
@@ -462,7 +475,12 @@ export class Game {
   }
 
   private endOfBall(): void {
-    this.multiballActive = false;
+    // マルチボール中に全部落ちたときも、マルチボールの後始末を呼ぶ
+    if (this.multiballActive) {
+      this.multiballActive = false;
+      this.emit({ t: 'multiball-end' });
+      this.rules.onMultiballEnd?.(this);
+    }
     this.rules.onBallEnd?.(this);
     this.state = 'bonus';
     this.ballSaveTimer = 0;

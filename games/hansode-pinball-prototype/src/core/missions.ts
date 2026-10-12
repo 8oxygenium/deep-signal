@@ -54,6 +54,14 @@ export class Missions {
     if (this.progress >= this.goal(m)) this.complete(g);
   }
 
+  /** テーブルのイベント以外（ハッキング成功など）でミッションを進める */
+  advance(g: Game, n = 1): void {
+    const m = this.current;
+    if (!m || n <= 0) return;
+    this.progress += n;
+    if (this.progress >= this.goal(m)) this.complete(g);
+  }
+
   complete(g: Game): void {
     const m = this.current;
     if (!m) return;
