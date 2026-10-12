@@ -60,12 +60,12 @@ export function layoutParts(): PartDef[] {
 
     // 左の外周：スピナーとループ判定、パワー的2枚（ガイドの壁に埋め込み）
     { kind: 'spinner', id: 'spin', at: [-7.9, 21.6], angle: 90, w: 1.3 },
-    { kind: 'trigger', id: 'loopL', a: [-8.6, 24.2], b: [-7.2, 24.2], dir: [0, 1] },
+    { kind: 'trigger', id: 'loopL', a: [-8.6, 24.2], b: [-7.2, 24.2] },
     { kind: 'standup', id: 'powA', at: [-6.8, 22.4], angle: 0 },
     { kind: 'standup', id: 'powB', at: [-6.8, 24.1], angle: 0 },
 
     // 右の外周：ループ判定
-    { kind: 'trigger', id: 'loopR', a: [7.2, 23.8], b: [8.6, 23.8], dir: [0, 1] },
+    { kind: 'trigger', id: 'loopR', a: [7.2, 23.8], b: [8.6, 23.8] },
 
     // ───── 右：本部スクープ「HQ」─────
     { kind: 'scoop', id: 'hq', at: [4.9, 18.6], eject: 106, speed: 38, hold: 1.0, r: 0.72 },

@@ -1,5 +1,6 @@
 // COMIC 専用の3D装飾：立体の悪役ボス（揺れる・赤く光る・やられ顔）、盾、手下の顔、吹き出し、頭上のHPバー
 import type * as T from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { TargetRT } from '../../table/table';
 import type { DecorateApi } from '../types';
 import { bossLook, SAYINGS } from './boss';
@@ -24,6 +25,64 @@ export function decorateComic(api: DecorateApi): void {
   const shadow = (m: T.Mesh) => {
     m.castShadow = !low;
     return m;
+  };
+
+  // 描画の呼び出し回数を減らす：同じ素材の部品を1つのメッシュに焼き込む（輪郭線・影で呼び出しが倍になるため）
+  const bakeGeo = (m: T.Mesh): T.BufferGeometry => {
+    m.updateMatrix();
+    const geo = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone();
+    geo.applyMatrix4(m.matrix);
+    return geo;
+  };
+  const bakeGroup = (g: T.Object3D): void => {
+    const buckets = new Map<T.Material, T.Mesh[]>();
+    for (const c of [...g.children]) {
+      const m = c as T.Mesh;
+      if (!m.isMesh || m.userData.keep || Array.isArray(m.material)) continue;
+      const list = buckets.get(m.material) ?? [];
+      list.push(m);
+      buckets.set(m.material, list);
+    }
+    for (const [mat, list] of buckets) {
+      if (list.length < 2) continue;
+      const merged = mergeGeometries(list.map(bakeGeo), false);
+      if (!merged) continue;
+      const mesh = new THREE.Mesh(merged, mat);
+      mesh.castShadow = list[0].castShadow;
+      for (const m of list) {
+        g.remove(m);
+        m.geometry.dispose();
+      }
+      g.add(mesh);
+    }
+  };
+  /** 頂点色で素材をひとつにまとめて焼き込む（手下の顔など、色違いの小さな部品が多いもの用） */
+  const bakeColored = (g: T.Object3D, mat: T.Material): void => {
+    const list: T.Mesh[] = [];
+    for (const c of [...g.children]) {
+      const m = c as T.Mesh;
+      if (m.isMesh && !m.userData.keep && !Array.isArray(m.material)) list.push(m);
+    }
+    const geos = list.map((m) => {
+      const geo = bakeGeo(m);
+      const col = (m.material as T.MeshToonMaterial).color;
+      const n = geo.getAttribute('position').count;
+      const arr = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) {
+        arr[i * 3] = col.r;
+        arr[i * 3 + 1] = col.g;
+        arr[i * 3 + 2] = col.b;
+      }
+      geo.setAttribute('color', new THREE.BufferAttribute(arr, 3));
+      return geo;
+    });
+    const merged = mergeGeometries(geos, false);
+    if (!merged) return;
+    for (const m of list) {
+      g.remove(m);
+      m.geometry.dispose();
+    }
+    g.add(new THREE.Mesh(merged, mat));
   };
 
   // ───────── ボスの体 ─────────
@@ -163,6 +222,13 @@ export function decorateComic(api: DecorateApi): void {
   const oMouth = sph(0.2, mDark, 0, -0.5, 0.9, 1, 1.2, 0.5);
   oMouth.visible = false;
   head.add(oMouth);
+  // 切り替えて使う口は焼き込まない。残りは素材ごとに1メッシュへ
+  grin.userData.keep = true;
+  oMouth.userData.keep = true;
+  bakeGroup(eyes);
+  bakeGroup(xEyes);
+  bakeGroup(head);
+  bakeGroup(body);
 
   // 目を回す星（やられたとき）
   const stars = new THREE.Group();
@@ -254,6 +320,7 @@ export function decorateComic(api: DecorateApi): void {
   const goonSkin = toon('#ffb347');
   const goonMask = toon('#15131f');
   const goonCap = toon(look0.coat);
+  const goonVC = new THREE.MeshToonMaterial({ color: '#ffffff', vertexColors: true, gradientMap: gradient });
   const goons: { grp: T.Group; rt: TargetRT; base: T.Vector3 }[] = [];
   for (const id of DROPS) {
     const rt = game.table.get<TargetRT>(id);
@@ -271,9 +338,12 @@ export function decorateComic(api: DecorateApi): void {
     for (const s of [-1, 1]) grp.add(sph(0.1, mEyeWhite, s * 0.19, 0.12, 0.47, 1, 1.3, 0.6));
     grp.add(box(0.36, 0.09, 0.2, mDark, 0, -0.24, 0.42));
     // 頭の上のバンド（ボスの色）
-    const band = shadow(new THREE.Mesh(new THREE.CylinderGeometry(0.43, 0.5, 0.2, 14), goonCap));
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(0.43, 0.5, 0.2, 14), goonCap);
     band.position.set(0, 0.34, 0);
+    band.userData.keep = true;
     grp.add(band);
+    bakeColored(grp, goonVC);
+    for (const c of grp.children) c.castShadow = false;
     group.add(grp);
     goons.push({ grp, rt, base });
   }
@@ -295,8 +365,17 @@ export function decorateComic(api: DecorateApi): void {
     goonCap.color.set(l.coat);
   }
 
+  const showBubble = (idx: number) => {
+    if (idx < 0 || idx >= bubbleTex.length) return;
+    bubbleMat.map = bubbleTex[idx];
+    bubbleMat.needsUpdate = true;
+    bubbleT = 0;
+  };
+
   game.on((e) => {
     if (e.t === 'table' && e.e.type === 'standup' && e.e.id === 'boss') hit = Math.max(hit, 0.7);
+    // ボールを落とすとボスが笑う
+    if (e.t === 'drain' && (game.vars.bossKo ?? 0) < 0.5 && !game.attract) showBubble(2);
   });
 
   api.onFrame((t, dt) => {
@@ -376,12 +455,7 @@ export function decorateComic(api: DecorateApi): void {
     const sn = v.sayN ?? 0;
     if (sn !== lastSayN) {
       lastSayN = sn;
-      const idx = Math.round(v.say ?? -1);
-      if (idx >= 0 && idx < bubbleTex.length) {
-        bubbleMat.map = bubbleTex[idx];
-        bubbleMat.needsUpdate = true;
-        bubbleT = 0;
-      }
+      showBubble(Math.round(v.say ?? -1));
     }
     bubbleT += dt;
     bubble.visible = bubbleT < 1.5;

@@ -36,6 +36,7 @@ export function comicRules(): StageRules {
   let lastJack = -9;
   let sayCount = 0;
   let song = 0;
+  let demoKo = 0;
 
   // ジャックポット・エクストラボール
   let jackpotValue = 250_000;
@@ -53,7 +54,7 @@ export function comicRules(): StageRules {
 
   /** 曲の切り替え（同じ曲なら何もしない：曲が頭から鳴り直さないように） */
   const setSong = (g: Game, i: number) => {
-    if (song === i) return;
+    if (song === i || g.attract) return; // タイトルのデモでは曲を変えない
     song = i;
     g.song(i);
   };
@@ -194,9 +195,9 @@ export function comicRules(): StageRules {
   }
 
   function hitBoss(g: Game, e: TableEvent): void {
-    bossHits++;
     if (g.time - lastDmg < 0.18) return; // 同じ接触の二重カウント防止
     lastDmg = g.time;
+    bossHits++;
     const bx = BOSS_AT[0], by = BOSS_AT[1] - 1.3;
     if (ko) {
       if (g.multiballActive) {
@@ -326,7 +327,7 @@ export function comicRules(): StageRules {
           break;
         case 'trigger':
           loops++;
-          g.addScore(5_000 * (g.multiballActive ? 3 : 1));
+          g.addScore(3_000 * (g.multiballActive ? 3 : 1));
           g.fx('burst', e.x, e.y, { color: YELLOW });
           break;
         case 'ramp':
@@ -369,6 +370,15 @@ export function comicRules(): StageRules {
       }
     },
     update(g, dt) {
+      // タイトル/ステージ選択のデモはマルチボールが終わらない仕組みなので、倒れたボスを少しして復活させる
+      if (g.attract && ko) {
+        demoKo += dt;
+        if (demoKo > 6) {
+          demoKo = 0;
+          g.multiballActive = false;
+          nextBoss(g);
+        }
+      }
       if (!ko) {
         if (!shL) {
           regenL -= dt;
@@ -417,7 +427,7 @@ export function comicRules(): StageRules {
         { label: 'HENCHMEN', count: hunted, each: 1_500 },
         { label: 'BOSS HITS', count: bossHits, each: 4_000 },
         { label: 'SKYWAYS', count: skyways, each: 8_000 },
-        { label: 'LOOPS', count: loops, each: 3_000 },
+        { label: 'ORBITS', count: loops, each: 3_000 },
         { label: 'HQ', count: hqVisits, each: 5_000 },
         { label: 'SPINS', count: spins, each: 100 },
         { label: 'MISSIONS', count: missionsThisBall, each: 25_000 },
