@@ -181,7 +181,10 @@ export class Hud {
   }
 
   showCutin(text: string, color?: string): void {
-    this.cutin.innerHTML = `<div class="band"><span>${esc(text)}</span></div><div class="band b2"><span>${esc(text)}</span></div>`;
+    // 長い技名でも画面からはみ出さないように文字の大きさを自動で決める
+    const n = Math.max(4, [...text].length);
+    const size = `min(${(78 / n).toFixed(2)}vw, 8vw, 110px)`;
+    this.cutin.innerHTML = `<div class="band"><span style="font-size:${size}">${esc(text)}</span></div><div class="band b2"><span>${esc(text)}</span></div>`;
     if (color) this.cutin.style.setProperty('--cut', color);
     this.cutin.classList.remove('on');
     void this.cutin.offsetWidth;

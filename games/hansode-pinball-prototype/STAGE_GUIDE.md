@@ -47,7 +47,9 @@
   `g.sfx(名前)`、`g.music(0|1|-1)`、`g.song(番号)`（ジュークボックス）、
   `g.emit({ t: 'gimmick', name, text, sub, phase: 'warn'|'start'|'end' })`（予告の帯）
 - 描画に効く値：`g.vars.rot`（台の回転, rad）`g.vars.pitch` `g.vars.darkness`（0..1 停電）`g.vars.alarm`（赤い非常灯）`g.vars.glitch`
-- 共通部品：`Missions`（ミッション→ランク）、`LaneSet`（そろえるレーン＋レーンチェンジ）… `src/core/missions.ts`
+- 共通部品：`Missions`（ミッション→ランク。テーブル以外のきっかけで進めるときは `advance(g, n)`）、`LaneSet`（そろえるレーン＋レーンチェンジ）… `src/core/missions.ts`
+- 注意：`g.fx('cutin')` は絵だけ。音は `g.sfx('cutin')` を一緒に呼ぶ。技名は長くても自動で縮むが、7〜10文字くらいが見栄えがよい。
+- 注意：重力・フリッパーの長さ・左右入れ替えはボール開始時に自動で元に戻る。マルチボール中に全部落ちたときも `onMultiballEnd` が呼ばれる。
 
 ## 見た目（`ThemeDef`）
 
