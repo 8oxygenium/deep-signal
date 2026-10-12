@@ -42,6 +42,7 @@ export function rules(): StageRules {
   let jackpotValue = 100_000;
   let jackpots = 0;
   let songIndex = 0;
+  let lastSongAt = -99;
   const menu: Record<MenuId, boolean> = { burger: false, shake: false, fries: false };
   const buttons = { btnL: false, btnR: false };
 
@@ -192,7 +193,11 @@ export function rules(): StageRules {
           if (id === 'juke') {
             jukes++;
             award(g, 2_000, e.x, e.y);
-            playSong(g, songIndex + 1);
+            // 連続で当たっても曲が切り替わりすぎないよう、4秒に1回だけ曲を変える
+            if (g.time - lastSongAt >= 4) {
+              lastSongAt = g.time;
+              playSong(g, songIndex + 1);
+            }
             g.fx('burst', e.x, e.y, { color: '#ffd23f' });
             g.shake(0.25);
             break;

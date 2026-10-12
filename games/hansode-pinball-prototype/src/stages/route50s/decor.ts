@@ -2,7 +2,7 @@
 // アーチと側壁をぐるっと走る電球のチェイサー、ネオンの「NOW PLAYING」電光板。
 import type * as THREE_NS from 'three';
 import type { DecorateApi } from '../types';
-import { JUKE } from './layout';
+import { JUKE, MOVIE_AT } from './layout';
 
 const MENU_TEXT: Record<string, string> = { burger: 'BURGER', shake: 'SHAKE', fries: 'FRIES' };
 
@@ -161,6 +161,13 @@ export function decorate(api: DecorateApi): void {
   const hot = new THREE.Color(3.2, 0.9, 0.9);
   let party = 0;
 
+  // ───────── ドライブインの映写機の光（スクープに入ると上へ光が伸びる）─────────
+  const beamMat = new THREE.MeshBasicMaterial({ color: '#fff0b0', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.95, 3.2, 20, 1, true), beamMat);
+  beam.position.copy(api.at(MOVIE_AT[0], MOVIE_AT[1], 1.7));
+  group.add(beam);
+  let movie = 0;
+
   // ───────── 手前の電光板「NOW PLAYING」─────────
   const boardCanvas = document.createElement('canvas');
   boardCanvas.width = 512;
@@ -203,6 +210,7 @@ export function decorate(api: DecorateApi): void {
       const te = e.e;
       if (te.type === 'standup' && te.id === 'juke') juke = 1;
       if (te.type === 'bumper') bumperPulse.set(te.id, 1);
+      if (te.type === 'scoop') movie = 1.6;
       if (te.type === 'standup' && MENU_TEXT[te.id]) drawBoard(MENU_TEXT[te.id], '♪ ORDER ♪');
     } else if (e.t === 'song') {
       drawBoard(songs[((e.index % songs.length) + songs.length) % songs.length]?.name ?? '');
@@ -218,6 +226,8 @@ export function decorate(api: DecorateApi): void {
   api.onFrame((t, dt) => {
     juke = Math.max(0, juke - dt * 1.8);
     party = Math.max(0, party - dt);
+    movie = Math.max(0, movie - dt);
+    beamMat.opacity = Math.min(0.5, movie * 0.5) * (0.75 + 0.25 * Math.sin(t * 40));
     // ジュークボックス：普段はゆっくり色が流れ、当たると光って揺れる
     record.rotation.z = -t * (1.2 + juke * 10);
     winMat.emissiveIntensity = 0.75 + 0.15 * Math.sin(t * 2) + juke * 2.2;
