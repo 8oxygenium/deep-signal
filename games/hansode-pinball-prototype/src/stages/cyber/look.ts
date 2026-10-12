@@ -24,9 +24,9 @@ export function paint({ g, map, scale, width: W, height: H }: PaintApi): void {
 
   // 下地：奥ほど紫がかった黒
   const bg = g.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, '#12062a');
-  bg.addColorStop(0.35, '#080a1c');
-  bg.addColorStop(1, '#03050c');
+  bg.addColorStop(0, '#220a52');
+  bg.addColorStop(0.35, '#101a44');
+  bg.addColorStop(1, '#0a1230');
   g.fillStyle = bg;
   g.fillRect(0, 0, W, H);
 
@@ -302,7 +302,7 @@ export function paint({ g, map, scale, width: W, height: H }: PaintApi): void {
     }
     g.restore();
     text(id.toUpperCase(), x, y - 1.9, 0.4, c, { alpha: 0.85 });
-    text(id === 'w1' ? '>> TOP-R' : '>> TOP-L', x, y - 2.45, 0.28, c, { alpha: 0.6 });
+    text('>> UP', x, y - 2.45, 0.28, c, { alpha: 0.6 });
   }
 
   // CORE スクープ・PORT ドロップ
@@ -468,9 +468,15 @@ export function decorate(api: DecorateApi): void {
     g.fillRect(0, 60, 256, 4);
   });
   fwTex.wrapT = THREE.RepeatWrapping;
-  const fwMat = new THREE.MeshBasicMaterial({ map: fwTex, color: '#ff4f86', transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+  const fwMat = new THREE.MeshBasicMaterial({ map: fwTex, color: '#ff2a6d', transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
   const fwMeshes = fwShapes.map(() => {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1.05), fwMat);
+    add(m);
+    return m;
+  });
+  const fwEdgeMat = new THREE.MeshBasicMaterial({ color: '#ffd0e0', transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false });
+  const fwEdges = fwShapes.map(() => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(1, 0.07, 0.1), fwEdgeMat);
     add(m);
     return m;
   });
@@ -506,6 +512,58 @@ export function decorate(api: DecorateApi): void {
     add(m);
     return { ...b, mesh: m, mat, pulse: 0 };
   });
+
+  // ── ワープチューブ：ワイヤーフレームの管と、通るときに走る光の玉 ──
+  type Warp = { id: string; curve: import('three').CatmullRomCurve3; mat: import('three').LineBasicMaterial; orb: import('three').Mesh; trail: import('three').Mesh[]; t: number; rings: import('three').Mesh[]; flash: number };
+  const mkWarp = (id: string, pts: [number, number, number][], color: string): Warp => {
+    const curve = new THREE.CatmullRomCurve3(pts.map(([x, y, h]) => api.at(x, y, h)), false, 'catmullrom', 0.4);
+    const segs = 56, ringN = 10, r = 0.5;
+    const frames = curve.computeFrenetFrames(segs, false);
+    const ringPts: import('three').Vector3[][] = [];
+    for (let i = 0; i <= segs; i++) {
+      const c = curve.getPointAt(i / segs);
+      const n = frames.normals[i], b = frames.binormals[i];
+      ringPts.push(
+        Array.from({ length: ringN }, (_, k) => {
+          const a = (k / ringN) * Math.PI * 2;
+          return new THREE.Vector3(c.x + r * (Math.cos(a) * n.x + Math.sin(a) * b.x), c.y + r * (Math.cos(a) * n.y + Math.sin(a) * b.y), c.z + r * (Math.cos(a) * n.z + Math.sin(a) * b.z));
+        }),
+      );
+    }
+    const verts: number[] = [];
+    const seg = (a: import('three').Vector3, b: import('three').Vector3) => verts.push(a.x, a.y, a.z, b.x, b.y, b.z);
+    for (let i = 0; i <= segs; i++) {
+      if (i % 2 === 0) for (let k = 0; k < ringN; k++) seg(ringPts[i][k], ringPts[i][(k + 1) % ringN]);
+      if (i < segs) for (let k = 0; k < ringN; k += 2) seg(ringPts[i][k], ringPts[i + 1][k]);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+    const mat = lineMat(color, 0.45);
+    add(new THREE.LineSegments(geo, mat));
+    const orbMat = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false });
+    const orb = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), orbMat);
+    orb.visible = false;
+    add(orb);
+    const trail = [0, 1, 2, 3].map((i) => {
+      const m = new THREE.Mesh(new THREE.SphereGeometry(0.22 - i * 0.04, 10, 8), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.6 - i * 0.12, blending: THREE.AdditiveBlending, depthWrite: false }));
+      m.visible = false;
+      add(m);
+      return m;
+    });
+    // 入口と出口に浮かぶリング
+    const rings = [pts[0], pts[pts.length - 1]].map((p) => {
+      const m = new THREE.Mesh(new THREE.TorusGeometry(0.8, 0.045, 6, 36), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
+      m.position.copy(api.at(p[0], p[1], 0.55));
+      m.rotation.x = Math.PI / 2;
+      add(m);
+      return m;
+    });
+    return { id, curve, mat, orb, trail, t: 9, rings, flash: 0 };
+  };
+  const warpFx = [
+    mkWarp('w1', [[-5.7, 21.4, 0.5], [-5.5, 24.5, 2.2], [-3.5, 29.0, 3.2], [1.0, 31.0, 3.4], [4.5, 30.8, 2.8], [5.9, 30.2, 0.6]], CYAN),
+    mkWarp('w2', [[5.7, 21.8, 0.5], [5.6, 24.8, 2.0], [3.6, 28.8, 2.6], [-1.0, 29.6, 2.5], [-3.6, 30.0, 2.3], [-4.8, 30.2, 0.6]], PINK),
+  ];
 
   // ── ハッキングバスを流れるパケット ──
   type Bus = { pts: [number, number][]; node: number; items: import('three').Mesh[]; len: number };
@@ -563,6 +621,13 @@ export function decorate(api: DecorateApi): void {
       const b = bumperHolos.find((h) => h.id === e.e.id);
       if (b) b.pulse = 1;
     }
+    if (e.t === 'table' && e.e.type === 'warp') {
+      const w = warpFx.find((x) => x.id === e.e.id);
+      if (w) {
+        w.t = 0;
+        w.flash = 1;
+      }
+    }
     if (e.t === 'jackpot' || e.t === 'multiball' || e.t === 'mission') flash = 1.5;
   });
 
@@ -598,12 +663,39 @@ export function decorate(api: DecorateApi): void {
       const len = Math.hypot(sh.bx - sh.ax, sh.by - sh.ay);
       m.scale.set(len + 0.1, 1, 1);
       m.position.set((sh.ax + sh.bx) / 2, 0.55, -(sh.ay + sh.by) / 2);
-      m.rotation.y = -Math.atan2(sh.by - sh.ay, sh.bx - sh.ax);
+      m.rotation.y = Math.atan2(sh.by - sh.ay, sh.bx - sh.ax);
       m.visible = fwLevel > 0.02;
+      const e2 = fwEdges[i];
+      e2.scale.set(len + 0.1, 1, 1);
+      e2.position.set((sh.ax + sh.bx) / 2, 1.1, -(sh.ay + sh.by) / 2);
+      e2.rotation.y = Math.atan2(sh.by - sh.ay, sh.bx - sh.ax);
+      e2.visible = fwLevel > 0.02;
     });
+    fwEdgeMat.opacity = fwLevel;
     fwMat.opacity = fwLevel * (0.75 + Math.sin(t * 9) * 0.12 + (Math.random() < 0.04 ? 0.25 : 0));
     fwTex.offset.y = (t * 0.6) % 1;
     fwSign.visible = fwLevel > 0.3;
+
+    // ワープチューブ
+    for (const w of warpFx) {
+      w.flash = Math.max(0, w.flash - dt * 1.4);
+      w.mat.opacity = 0.4 + w.flash * 0.5 + Math.sin(t * 4 + (w.id === 'w1' ? 0 : 2)) * 0.08;
+      const travelling = w.t <= 1;
+      if (travelling) w.t += dt / 0.9;
+      w.orb.visible = travelling;
+      if (travelling) {
+        const u = Math.min(1, w.t);
+        w.orb.position.copy(w.curve.getPointAt(u));
+        w.trail.forEach((m, i) => {
+          m.visible = true;
+          m.position.copy(w.curve.getPointAt(Math.max(0, u - (i + 1) * 0.035)));
+        });
+      } else w.trail.forEach((m) => (m.visible = false));
+      w.rings.forEach((m, i) => {
+        m.rotation.z = t * (i ? -1.2 : 1.2);
+        m.scale.setScalar(1 + w.flash * 0.35 + Math.sin(t * 3 + i) * 0.04);
+      });
+    }
 
     // バンパー
     for (const b of bumperHolos) {

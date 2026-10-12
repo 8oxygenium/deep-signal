@@ -13,8 +13,8 @@ export const ROOT = { x: -1.8, y0: 17.0, y1: 21.2, w: 1.1 };
 
 /** ワープ（入口 → 出口） */
 export const WARPS = {
-  w1: { at: [-5.7, 21.4] as P, to: [6.3, 30.0] as P },
-  w2: { at: [5.7, 21.8] as P, to: [-5.5, 30.0] as P },
+  w1: { at: [-5.7, 21.4] as P, to: [5.9, 30.2] as P },
+  w2: { at: [5.7, 21.8] as P, to: [-4.8, 30.2] as P },
 };
 
 export function layoutParts(): PartDef[] {
@@ -49,9 +49,9 @@ export function layoutParts(): PartDef[] {
   // ── ROOT チャンバー（ファイアウォールが入口をふさぐ）──
   const { x: rx, y0, y1, w } = ROOT;
   add(
-    { kind: 'wall', id: 'chamberL', pts: [[rx - w, y0 + 0.2], [rx - w, y1]], style: 'wall', h: 1.1 },
-    { kind: 'wall', id: 'chamberR', pts: [[rx + w, y0 + 0.2], [rx + w, y1]], style: 'wall', h: 1.1 },
-    { kind: 'wall', id: 'chamberRoof', pts: [[rx - w, y1], [rx, y1 + 0.75], [rx + w, y1]], style: 'wall', h: 1.1 },
+    { kind: 'wall', id: 'chamberL', pts: [[rx - w, y0 + 0.2], [rx - w, y1]], style: 'guide', h: 0.9 },
+    { kind: 'wall', id: 'chamberR', pts: [[rx + w, y0 + 0.2], [rx + w, y1]], style: 'guide', h: 0.9 },
+    { kind: 'wall', id: 'chamberRoof', pts: [[rx - w, y1], [rx, y1 + 0.75], [rx + w, y1]], style: 'guide', h: 0.9 },
     { kind: 'post', at: [rx - w, y0 + 0.1], r: 0.22, style: 'rubber' },
     { kind: 'post', at: [rx + w, y0 + 0.1], r: 0.22, style: 'rubber' },
     // ファイアウォール（ハッキングで消える）
@@ -63,8 +63,8 @@ export function layoutParts(): PartDef[] {
 
   // ── ワープ入口（ガイド付き）──
   add(
-    { kind: 'warp', id: 'w1', at: WARPS.w1.at, to: WARPS.w1.to, eject: 245, speed: 13, travel: 0.9, tube: [WARPS.w1.at, [-5.4, 24.4], [-3.6, 29.6], [1.0, 31.3], [5.0, 31.2], WARPS.w1.to], tubeH: [0.6, 1.8, 2.8, 3.1, 2.4, 0.8] },
-    { kind: 'warp', id: 'w2', at: WARPS.w2.at, to: WARPS.w2.to, eject: 295, speed: 13, travel: 0.9, tube: [WARPS.w2.at, [5.5, 24.4], [3.4, 28.9], [-1.2, 29.1], [-4.2, 29.6], WARPS.w2.to], tubeH: [0.6, 1.6, 2.2, 2.1, 1.8, 0.8] },
+    { kind: 'warp', id: 'w1', at: WARPS.w1.at, to: WARPS.w1.to, eject: 250, speed: 13, travel: 0.9 },
+    { kind: 'warp', id: 'w2', at: WARPS.w2.at, to: WARPS.w2.to, eject: 290, speed: 13, travel: 0.9 },
   );
 
   // ── 右：ドロップ3枚（斜めの一本線。上に乗ったボールは左へ転がり落ち、下端の CORE スクープに入る）──

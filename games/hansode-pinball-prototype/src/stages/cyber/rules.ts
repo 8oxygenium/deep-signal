@@ -66,6 +66,7 @@ export function createRules(): StageRules {
   // ── 進行 ──
   let roots = 0;
   let mbReady = false;
+  let inMb = false;
   let extraLit = false;
   let extraGiven = false;
   let jackpotValue = 300_000;
@@ -101,7 +102,7 @@ export function createRules(): StageRules {
         mbReady = true;
         g.light('core', 'fast');
         g.msg('ZERO DAY READY', 'CORE（右のスクープ）に入れてマルチボール！', 3, 'big');
-        g.fx('glitch', 0.75, 20, { value: 1.4 });
+        g.fx('glitch', 0.75, 20, { value: 0.8 });
       },
     },
   );
@@ -202,9 +203,9 @@ export function createRules(): StageRules {
     syncNodes(g);
     g.addScore(40_000);
     g.sfx('hackDone');
-    g.fx('glitch', 0.75, 20, { value: 1.6 });
+    g.fx('glitch', 0.75, 20, { value: 0.9 });
     g.fx('cutin', 0.75, 20, { text: 'FIREWALL DOWN', color: '#ff2a6d' });
-    g.msg('FIREWALL DOWN', `ハッキング成功！ ROOT チャンバーが開いた … ${kit.name}`, 3, 'big');
+    g.msg('FIREWALL DOWN', `ハッキング成功！ ROOT チャンバーが開いた … ${kit.name}`, 3, 'flash');
     g.shake(0.6);
     g.rumble(0.6, 0.8, 300);
     glitchKick = 1;
@@ -240,7 +241,7 @@ export function createRules(): StageRules {
       if (superLit) {
         superLit = false;
         g.jackpot(jackpotValue * 3, e.x, e.y);
-        g.msg('SUPER JACKPOT', `${(jackpotValue * 3).toLocaleString()} 点！`, 2.6, 'big');
+        g.msg('SUPER JACKPOT', `${(jackpotValue * 3).toLocaleString()} 点！`, 2.6, 'normal');
       } else {
         g.addScore(75_000, e.x, e.y);
         g.msg('ROOT ACCESS', 'スーパージャックポット点灯中に ROOT へ！', 1.6, 'small');
@@ -254,7 +255,6 @@ export function createRules(): StageRules {
     rootsBall++;
     const v = g.addScore(100_000 + roots * 50_000, e.x, e.y);
     g.msg('ROOT ACCESS', `管理者権限を奪取！ +${v.toLocaleString()}`, 2.6, 'big');
-    g.fx('cutin', e.x, e.y, { text: 'ROOT ACCESS', color: '#05d9e8' });
     g.ballSave(6);
     if (roots >= 2 && !extraGiven && !extraLit) {
       extraLit = true;
@@ -264,6 +264,19 @@ export function createRules(): StageRules {
     // 使い終わったら壁を戻す（ボールが出てから）
     wantUp = true;
     syncCoreLights(g);
+  }
+
+  function endMultiball(g: Game, announce: boolean) {
+    inMb = false;
+    superLit = false;
+    jpNext = null;
+    fwForced = false;
+    wantUp = true;
+    missions.restart();
+    syncMissionLights(g);
+    syncCoreLights(g);
+    g.song(0);
+    if (announce) g.msg('MULTIBALL END', '次のミッションへ（目標アップ）', 2);
   }
 
   // ───────── ルール本体 ─────────
@@ -320,7 +333,8 @@ export function createRules(): StageRules {
       oc = low = 0;
       g.world.gravityScale = 1;
       g.vars.glitch = 0;
-      void g;
+      // マルチボールの途中でボールが尽きたとき：後始末（onMultiballEnd が呼ばれない経路）
+      if (inMb) endMultiball(g, false);
     },
 
     onFlip(g: Game, side: 'left' | 'right') {
@@ -408,13 +422,14 @@ export function createRules(): StageRules {
           const scoop = g.part<ScoopRT>('core');
           if (mbReady && !g.multiballActive) {
             mbReady = false;
+            inMb = true;
             jackpots = 0;
             jpNext = null;
             superLit = false;
             scoop.holdFor(2.2);
-            g.msg('ZERO DAY', 'マルチボール！ 光るワープでジャックポット！', 3, 'big');
+            g.msg('ZERO DAY', 'マルチボール！ 光るワープでジャックポット！', 3, 'flash');
             g.fx('cutin', e.x, e.y, { text: 'ZERO DAY', color: '#b967ff' });
-            g.fx('glitch', e.x, e.y, { value: 1.8 });
+            g.fx('glitch', e.x, e.y, { value: 1.0 });
             g.song(1);
             openFirewall(g, 9999, true);
             g.after(1.2, () => g.startMultiball(2, 12));
@@ -469,7 +484,7 @@ export function createRules(): StageRules {
       g.vars.hackStep = step;
       g.vars.hackNext = step < seq().length ? ['L', 'T', 'R'].indexOf(seq()[step]) : -1;
       g.vars.mb = g.multiballActive ? 1 : 0;
-      g.vars.glitch = Math.min(1.6, (low > 0 ? 0.22 + 0.1 * Math.sin(g.time * 3) : 0) + (oc > 0 ? 0.16 : 0) + (g.multiballActive ? 0.14 : 0) + glitchKick * 0.9 + (step > 0 ? 0.04 : 0));
+      g.vars.glitch = Math.min(1.6, (low > 0 ? 0.22 + 0.1 * Math.sin(g.time * 3) : 0) + (oc > 0 ? 0.16 : 0) + (g.multiballActive ? 0.14 : 0) + glitchKick * 0.55 + (step > 0 ? 0.04 : 0));
       lanesBonusMult = g.bonusMult;
 
       // HUD
@@ -486,15 +501,7 @@ export function createRules(): StageRules {
     },
 
     onMultiballEnd(g: Game) {
-      superLit = false;
-      jpNext = null;
-      fwForced = false;
-      wantUp = true;
-      missions.restart();
-      syncMissionLights(g);
-      syncCoreLights(g);
-      g.song(0);
-      g.msg('MULTIBALL END', '次のミッションへ（目標アップ）', 2);
+      endMultiball(g, true);
     },
 
     bonus(): BonusLine[] {
