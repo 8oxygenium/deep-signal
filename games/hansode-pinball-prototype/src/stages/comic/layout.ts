@@ -7,7 +7,7 @@ import type { PartDef, TableLayout } from '../../table/types';
 export const BOSS_AT: [number, number] = [0.75, 33.0];
 
 export const COMIC_COLORS = {
-  bg: '#14122b',
+  bg: '#2a3fb0',
   floor: '#fff1c9',
   floor2: '#ffe8a3',
   wall: '#ffd21f',

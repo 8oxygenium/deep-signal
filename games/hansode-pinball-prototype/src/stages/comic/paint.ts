@@ -9,7 +9,7 @@ const RED = '#f0392f';
 const BLUE = '#3f86ff';
 const SKY = '#8fd2ff';
 const PINK = '#ff9bc4';
-const NAVY = '#27327a';
+const NAVY = '#3a56c8';
 
 type P2 = [number, number];
 
@@ -182,8 +182,8 @@ export function paintComic({ g, map, scale, width, height }: PaintApi): void {
       speedLines(bx, by + 0.6, 9.6, 26, 70, 'rgba(21,19,31,0.55)', 1.0, 4);
     },
   );
-  word('KA-BOOM!', bx - 0.4, 38.4, 2.1, -0.08, '#fff36a', '#c4281f');
-  word('VILLAIN!', -5.4, 36.6, 0.95, -0.2, '#ffffff', INK, 0.9);
+  word('KRAK!', -4.5, 36.6, 1.25, -0.2, '#fff36a', '#c4281f');
+  word('POW!', 6.1, 35.6, 1.1, 0.22, '#ffffff', BLUE, 0.95);
 
   // ───── コマ② 左：スカイウェイの空 ─────
   panel(

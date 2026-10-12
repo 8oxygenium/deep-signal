@@ -2,8 +2,11 @@
 // 網点・太い黒線・原色。台全体がコマ割りの誌面。奥の中央に悪役ボス（HP付き）、手下を倒すと盾が外れる。
 // ボスを倒すとヒーローマルチボール（ボスを殴るたびにジャックポット）、次のボスはHPが増えて復活。
 import { COMIC_COLORS, comicLayout } from './comic/layout';
+import { paintComicBackboard } from './comic/backboard';
+import { decorateComic } from './comic/decorate';
 import { paintComic } from './comic/paint';
 import { comicRules } from './comic/rules';
+import { comicSfx, comicSongs } from './comic/sound';
 import type { StageDef } from './types';
 
 export const comicStage: StageDef = {
@@ -24,10 +27,12 @@ export const comicStage: StageDef = {
     wallMaterial: 'toon',
     colors: COMIC_COLORS,
     paint: paintComic,
+    paintBackboard: paintComicBackboard,
+    decorate: decorateComic,
     bloom: 0.25,
     bloomThreshold: 1.6,
-    light: 0.85,
+    light: 1.0,
   },
-  music: { songs: [{ name: 'HERO THEME', bpm: 124, root: 55, scale: [0, 2, 4, 5, 7, 9, 11], chords: [0, 3, 4, 0], kit: 'brass', seed: 1 }] },
-  sfx: { wave: 'sawtooth', pitch: 1.0, bright: 0.7, punchy: true },
+  music: { songs: comicSongs },
+  sfx: comicSfx,
 };

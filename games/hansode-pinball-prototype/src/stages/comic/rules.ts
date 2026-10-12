@@ -35,6 +35,7 @@ export function comicRules(): StageRules {
   let lastDmg = -9;
   let lastJack = -9;
   let sayCount = 0;
+  let song = 0;
 
   // ジャックポット・エクストラボール
   let jackpotValue = 250_000;
@@ -48,6 +49,13 @@ export function comicRules(): StageRules {
     sayCount++;
     g.vars.say = id;
     g.vars.sayN = sayCount;
+  };
+
+  /** 曲の切り替え（同じ曲なら何もしない：曲が頭から鳴り直さないように） */
+  const setSong = (g: Game, i: number) => {
+    if (song === i) return;
+    song = i;
+    g.song(i);
   };
 
   const broken = () => (shL ? 0 : 1) + (shR ? 0 : 1);
@@ -150,6 +158,7 @@ export function comicRules(): StageRules {
       if (!ko || lv !== level) return;
       if (g.state === 'play' && !g.tilted && !g.multiballActive) {
         g.startMultiball(2, 14);
+        setSong(g, 1);
         g.msg('HERO MULTIBALL', 'ボスを殴ってジャックポット！', 3, 'big');
       }
     });
@@ -166,6 +175,7 @@ export function comicRules(): StageRules {
     g.table.resetBank('hl', 0.4);
     g.table.resetBank('hr', 0.4);
     const look = bossLook(level);
+    setSong(g, 0);
     g.msg('NEW BOSS', `${look.name} 登場！ HP ${hp}`, 2.8, 'big');
     say(g, SAY.CANNOT);
   }
@@ -394,10 +404,12 @@ export function comicRules(): StageRules {
     onBallEnd(g) {
       // マルチボールが始まる前/最中にボールが尽きたとき：次のボスへ
       if (ko) nextBoss(g);
+      setSong(g, 0);
       g.vars.say = -1;
     },
     onMultiballEnd(g) {
       if (ko) nextBoss(g);
+      setSong(g, 0);
       g.msg('MULTIBALL END', 'ヒーローの勝利！ 次のボスが来るぞ', 2);
     },
     bonus() {
