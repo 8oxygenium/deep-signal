@@ -16,3 +16,4 @@ screenshots/
 test-results/
 .e2e-userdata/
 public/icon.png
+tests/scratch/
