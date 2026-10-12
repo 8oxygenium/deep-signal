@@ -1,5 +1,7 @@
 // ROUTE 50s ―「昔のアメリカン」（仮。担当エージェントがこのファイルを完成させる）
-import { baseLayout, chassis } from '../table/chassis';
+import { baseLayout } from '../table/chassis';
+import { layoutParts } from './route50s/layout';
+import { rules } from './route50s/rules';
 import type { StageDef } from './types';
 
 export const route50sStage: StageDef = {
@@ -11,16 +13,10 @@ export const route50sStage: StageDef = {
   difficulty: 3,
   ballSave: 10,
   skillShot: 25_000,
-  ranks: ['ROOKIE', 'PRO'],
-  scores: { bumper: 1_000, sling: 100 },
-  layout: () =>
-    baseLayout([
-      ...chassis({}),
-      { kind: 'bumper', id: 'b1', at: [-1.0, 27.5] },
-      { kind: 'bumper', id: 'b2', at: [2.5, 27.5] },
-      { kind: 'bumper', id: 'b3', at: [0.75, 24.5] },
-    ]),
-  rules: () => ({}),
+  ranks: ['BUS BOY', 'SODA JERK', 'CAR HOP', 'SHORT ORDER COOK', 'HOT RODDER', 'ROCK & ROLLER', 'KING OF THE ROAD'],
+  scores: { bumper: 100, sling: 10, standup: 0, rollover: 100 },
+  layout: () => baseLayout(layoutParts(), { safeSpot: [0.75, 36.6] }),
+  rules,
   theme: {
     style: 'route50s',
     wallMaterial: 'wood',
