@@ -11,6 +11,9 @@ export const TOP_LANES = [-2.1, -0.2, 1.7, 3.6];
 /** ROOT チャンバーの位置（ファイアウォールの壁が入口をふさぐ） */
 export const ROOT = { x: -1.8, y0: 17.0, y1: 21.2, w: 1.1 };
 
+/** ファイアウォールの壁の id（入口の壁＋中の格子）。ルールが全部まとめて出し入れする */
+export const FIREWALL_TAGS = ['firewall', 'firewall2', 'firewall3', 'firewall4'];
+
 /** ワープ（入口 → 出口） */
 export const WARPS = {
   w1: { at: [-5.7, 21.4] as P, to: [5.9, 30.2] as P },
@@ -57,7 +60,7 @@ export function layoutParts(): PartDef[] {
     // ファイアウォール（ハッキングで消える）
     { kind: 'wall', id: 'firewall', pts: [[rx - w, y0], [rx, y0 + 0.55], [rx + w, y0]], style: 'wall', dynamic: true },
     // チャンバーの中を埋める格子（壁が消えると中が空っぽになり、ボールが入れる）
-    ...[18.75, 19.95, 21.15].map((yy): PartDef => ({ kind: 'wall', id: 'firewall', pts: [[rx - w, yy], [rx + w, yy]], style: 'wall', dynamic: true })),
+    ...[18.75, 19.95, 21.15].map((yy, i): PartDef => ({ kind: 'wall', id: `firewall${i + 2}`, pts: [[rx - w, yy], [rx + w, yy]], style: 'wall', dynamic: true })),
     { kind: 'magnet', id: 'root', at: [rx, (y0 + y1) / 2 + 0.2], r: 2.9, strength: 55 },
   );
 

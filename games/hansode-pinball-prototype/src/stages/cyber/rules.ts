@@ -7,7 +7,7 @@ import { LaneSet, Missions } from '../../core/missions';
 import type { Game } from '../../core/game';
 import type { KickbackRT, MagnetRT, ScoopRT, TableEvent, TableEventType } from '../../table/table';
 import type { BonusLine, StageRules } from '../types';
-import { ROOT } from './layout';
+import { FIREWALL_TAGS, ROOT } from './layout';
 
 export type Node = 'L' | 'T' | 'R';
 
@@ -91,10 +91,9 @@ export function createRules(): StageRules {
       { id: 'root', name: 'ROOT ACCESS', desc: 'ファイアウォールが消えたら、中央の ROOT チャンバーへ入れ', goal: 1, count: (e) => (e.type === 'magnet' && e.id === 'root' ? 1 : 0), reward: 150_000 },
     ],
     {
-      onComplete(m, g) {
+      onComplete(_m, g) {
         missionsBall++;
         syncMissionLights(g);
-        void m;
       },
       onAllComplete(g) {
         missionsBall++;
@@ -134,7 +133,7 @@ export function createRules(): StageRules {
   // ───────── ファイアウォール ─────────
 
   function applyFirewall(g: Game) {
-    for (const s of g.table.shapesByTag('firewall')) s.enabled = !fwDown;
+    for (const tag of FIREWALL_TAGS) for (const s of g.table.shapesByTag(tag)) s.enabled = !fwDown;
     const m = g.part<MagnetRT>('root');
     m.active = fwDown;
     m.mode = 'grab';
@@ -281,6 +280,7 @@ export function createRules(): StageRules {
 
   // ───────── ルール本体 ─────────
 
+  let lanesBonusMult = 1;
   function hudExtra(): string {
     const s = seq();
     const seqHtml = s
@@ -299,8 +299,6 @@ export function createRules(): StageRules {
     lines.push(`<div>ジャックポット ${jackpotValue.toLocaleString()}</div><div>ボーナス倍率 x${lanesBonusMult}</div>`);
     return lines.join('');
   }
-  let lanesBonusMult = 1;
-
   return {
     init(g: Game) {
       g.vars.glitch = 0;

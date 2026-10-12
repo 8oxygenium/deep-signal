@@ -1,6 +1,6 @@
 // CYBER の見た目：床の絵（ネオンのグリッド・回路・データの流れ）、バックボード、ステージ専用の3D（ワイヤーフレーム・ホログラム）
 import type { DecorateApi, PaintApi } from '../types';
-import { ROOT, TOP_LANES, WARPS } from './layout';
+import { FIREWALL_TAGS, ROOT, TOP_LANES, WARPS } from './layout';
 
 const CYAN = '#05d9e8';
 const PINK = '#ff2a6d';
@@ -456,7 +456,7 @@ export function decorate(api: DecorateApi): void {
   add(beam);
 
   // ── ファイアウォールの赤いネオンの壁 ──
-  const fwShapes = game.world.shapes.filter((s) => s.tag === 'firewall' && s.kind === 'seg');
+  const fwShapes = game.world.shapes.filter((s) => FIREWALL_TAGS.includes(s.tag) && s.kind === 'seg');
   const fwTex = api.canvasTexture(256, 64, (g) => {
     g.fillStyle = 'rgba(255,42,109,0.30)';
     g.fillRect(0, 0, 256, 64);

@@ -50,7 +50,7 @@ export const cyberStage: StageDef = {
     decorate,
     bloom: 0.42,
     bloomThreshold: 1.2,
-    light: 0.9,
+    light: 0.8,
   },
   music: MUSIC,
   sfx: SFX,
