@@ -50,6 +50,9 @@ export class App {
   private lastName = '';
   private debug = false;
   private suppressBack = 0;
+  private mountedAt = 0;
+  private pendingGameOver: number | null = null;
+  private appliedFullscreen: boolean | null = null;
   private frameCount = 0;
   fps = 0;
   private fpsAcc = 0;
@@ -74,13 +77,20 @@ export class App {
 
     window.addEventListener('resize', () => this.hud.resize());
     window.addEventListener('blur', () => {
-      if (this.screen === 'play' && !bridge.info.e2e) this.pause();
+      if (bridge.info.e2e) return;
+      if (this.screen === 'play') this.pause();
+      else this.game?.cancelLaunch();
+      // 他のアプリを使っている間は音を止める
+      void this.audio.ctx.suspend();
     });
+    window.addEventListener('focus', () => this.audio.resume());
     window.addEventListener('pointerdown', () => this.audio.resume());
     bridge.onFullscreenChange?.((on) => {
+      this.appliedFullscreen = on;
       if (this.settings.fullscreen !== on) {
         this.settings.fullscreen = on;
         void saveSettings(this.settings);
+        this.ctl?.refresh?.(this.settings);
       }
     });
 
@@ -104,14 +114,23 @@ export class App {
     this.input.setBindings(s.bindings);
     this.hud.bindings = s.bindings;
     this.renderer.setOptions({ quality: s.quality, camera: s.camera, shake: s.shake });
-    void bridge.isFullscreen().then((on) => {
-      if (on !== s.fullscreen) void bridge.setFullscreen(s.fullscreen);
-    });
+    if (this.appliedFullscreen !== s.fullscreen) {
+      this.appliedFullscreen = s.fullscreen;
+      void bridge.isFullscreen().then((on) => {
+        if (on !== s.fullscreen) void bridge.setFullscreen(s.fullscreen);
+      });
+    }
   }
 
   // ───────── 画面の切り替え ─────────
 
   private mount(name: ScreenName, ctl: ScreenCtl | null): void {
+    // ステージ選択を離れたら、プレビュー切り替えの待ちタイマーを捨てる（プレイ画面がデモにすり替わるのを防ぐ）
+    if (name !== 'select' && this.previewTimer !== null) {
+      window.clearTimeout(this.previewTimer);
+      this.previewTimer = null;
+    }
+    this.mountedAt = performance.now();
     this.ctl?.destroy?.();
     this.uiRoot.querySelectorAll('.screen').forEach((e) => e.remove());
     this.screen = name;
@@ -171,6 +190,8 @@ export class App {
     this.selectIndex = i;
     if (this.previewTimer !== null) window.clearTimeout(this.previewTimer);
     const run = () => {
+      this.previewTimer = null;
+      if (this.screen !== 'select') return;
       const st = STAGES[i];
       this.setDemo(st, true);
       this.audio.setStage(st);
@@ -209,6 +230,8 @@ export class App {
     if (this.gameOverTimer !== null) window.clearTimeout(this.gameOverTimer);
     this.gameOverTimer = null;
     this.audio.pull(false);
+    this.pendingGameOver = null;
+    this.hud.setPaused(false);
     this.game = null;
   }
 
@@ -217,9 +240,17 @@ export class App {
     this.input.releaseAll();
     this.game.setFlipper('left', false);
     this.game.setFlipper('right', false);
-    this.game.setLaunch(false);
+    // 押しっぱなしの発射は撃たずに取り消す
+    this.game.cancelLaunch();
     this.audio.pull(false);
     this.audio.music.setPaused(true);
+    this.hud.setPaused(true);
+    this.showPauseMenu();
+  }
+
+  /** ポーズ画面を出す（設定から戻るときもこれ） */
+  private showPauseMenu(): void {
+    if (!this.game) return;
     this.mount(
       'pause',
       pauseScreen(this.sound, {
@@ -234,8 +265,15 @@ export class App {
 
   resume(): void {
     this.audio.music.setPaused(false);
+    this.hud.setPaused(false);
     this.mount('play', null);
     this.renderer.topReserve = this.hud.topFraction;
+    // ポーズ中にゲームオーバーになっていたら、ここで出す
+    if (this.pendingGameOver !== null) {
+      const sc = this.pendingGameOver;
+      this.pendingGameOver = null;
+      this.onGameOver(sc);
+    }
   }
 
   showSettings(from: ScreenName): void {
@@ -250,7 +288,7 @@ export class App {
         },
         guide: () => this.showGuide('settings'),
         back: () => {
-          if (this.returnTo === 'pause') this.pause();
+          if (this.returnTo === 'pause') this.showPauseMenu();
           else this.toTitle();
         },
       }),
@@ -268,7 +306,7 @@ export class App {
         else this.toTitle();
       }),
     );
-    if (!this.demo) this.setDemo(STAGES[0], false);
+    if (!this.demo && !this.game) this.setDemo(STAGES[0], false);
   }
 
   private onGameOver(score: number): void {
@@ -314,8 +352,10 @@ export class App {
     this.audio.resume();
     if (a === 'fullscreen') {
       this.settings.fullscreen = !this.settings.fullscreen;
+      this.appliedFullscreen = this.settings.fullscreen;
       void bridge.setFullscreen(this.settings.fullscreen);
       void saveSettings(this.settings);
+      this.ctl?.refresh?.(this.settings);
       return;
     }
     if (a === 'debug') {
@@ -358,14 +398,14 @@ export class App {
     }
     if (!down) return;
     if (a === 'back' && performance.now() < this.suppressBack) return;
+    // 画面が出た直後の誤決定を防ぐ
+    if (performance.now() - this.mountedAt < 220) return;
     // キーボードの Esc は pause と back の両方で届くので、メニューでは back だけ使う
     if (a === 'pause' && src === 'key') return;
     // メニュー：ゲームパッドの A は ok として届くので、launch は無視
     if (a === 'launch' && src === 'pad') return;
-    if (a === 'launch' || a === 'left' || a === 'right' || a.startsWith('nudge')) {
-      // キーボードの Space/Enter は ok と launch の両方で来るので、ok だけ使う
-      if (this.screen !== 'entry') return;
-    }
+    // キーボードの Space/Enter は ok と launch の両方で来るので、メニューでは ok だけ使う
+    if (a === 'launch' || a === 'left' || a === 'right' || a.startsWith('nudge')) return;
     this.ctl?.onAction(a);
   }
 
@@ -374,7 +414,11 @@ export class App {
     if (e.t === 'rumble') this.input.rumble(e.strong, e.weak, e.ms);
     if (e.t === 'tilt') this.input.rumble(1, 1, 700);
     if (e.t === 'gameover') {
-      this.gameOverTimer = window.setTimeout(() => this.onGameOver(e.score), 1600);
+      this.gameOverTimer = window.setTimeout(() => {
+        this.gameOverTimer = null;
+        if (this.screen === 'play') this.onGameOver(e.score);
+        else this.pendingGameOver = e.score;
+      }, 1600);
     }
   }
 

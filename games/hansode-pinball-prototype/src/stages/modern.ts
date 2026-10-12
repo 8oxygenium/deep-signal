@@ -64,11 +64,11 @@ function layoutParts(): PartDef[] {
     { kind: 'bumper', id: 'b3', at: [0.75, 25.6] },
 
     // 中央：ドロップターゲット3枚（ゆるいアーチ状。上に乗ったボールは左右へ転がり落ちる）
-    { kind: 'drop', id: 'd1', bank: 'core', at: [-0.45, 19.2], angle: -98, w: 0.95 },
-    { kind: 'drop', id: 'd2', bank: 'core', at: [0.75, 19.4], angle: -90, w: 0.95 },
-    { kind: 'drop', id: 'd3', bank: 'core', at: [1.95, 19.2], angle: -82, w: 0.95 },
+    { kind: 'drop', id: 'd1', bank: 'core', at: [-1.25, 19.2], angle: -84, w: 0.95 },
+    { kind: 'drop', id: 'd2', bank: 'core', at: [-0.05, 19.4], angle: -88, w: 0.95 },
+    { kind: 'drop', id: 'd3', bank: 'core', at: [1.15, 19.2], angle: -96, w: 0.95 },
     // 奥の CORE スクープ（真ん中の的の上に乗ったボールも吸い込む大きさ）
-    { kind: 'scoop', id: 'core', at: [0.75, 20.55], eject: 104, speed: 30, hold: 1.0, r: 0.72 },
+    { kind: 'scoop', id: 'core', at: [-0.05, 20.55], eject: 100, speed: 30, hold: 1.0, r: 0.72 },
 
     // 右：スタンドアップターゲット2枚（右オービットの壁に埋め込み。両方当てるとキックバック再点灯）
     { kind: 'standup', id: 'standA', at: [6.8, 20.25], angle: 180 },
@@ -90,7 +90,7 @@ function layoutParts(): PartDef[] {
     {
       kind: 'ramp',
       id: 'rampR',
-      path: [[3.85, 17.0], [3.95, 22.0], ...uturn(5.95, 27.2, 1.9, 180, 0), [7.95, 22.0], [7.9, 18.5], [7.35, 15.2], [6.45, 12.4]],
+      path: [[3.95, 17.0], [4.0, 22.0], ...uturn(5.97, 27.2, 1.92, 180, 0), [7.95, 22.0], [7.9, 18.5], [7.35, 15.2], [6.45, 12.4]],
       h: [0, 1.2, ...flat(9, 2.5), 2.3, 1.85, 1.35, 0.8],
     },
     // 左ランプの入口とオービットの間をふさぐ（ボールが挟まらないように）
@@ -98,12 +98,12 @@ function layoutParts(): PartDef[] {
 
     // ライト
     { kind: 'light', id: 'rampL', at: [-4.6, 14.9], shape: 'arrow', rot: 93, size: 0.6, color: '#3fc4ff' },
-    { kind: 'light', id: 'rampR', at: [3.85, 15.1], shape: 'arrow', rot: 87, size: 0.6, color: '#3fc4ff' },
+    { kind: 'light', id: 'rampR', at: [3.9, 15.1], shape: 'arrow', rot: 88, size: 0.6, color: '#3fc4ff' },
     { kind: 'light', id: 'orbitL', at: [-5.6, 14.3], shape: 'arrow', rot: 122, size: 0.45, color: '#9ef0ff' },
     { kind: 'light', id: 'orbitR', at: [5.5, 14.5], shape: 'arrow', rot: 58, size: 0.45, color: '#9ef0ff' },
-    { kind: 'light', id: 'core', at: [0.75, 18.0], shape: 'arrow', rot: 90, size: 0.55, color: '#ff4fa3', label: 'CORE' },
-    { kind: 'light', id: 'extraBall', at: [0.75, 16.3], shape: 'circle', size: 0.42, color: '#ff4040', label: 'EXTRA' },
-    { kind: 'light', id: 'jackpot', at: [-1.3, 16.0], shape: 'star', size: 0.55, color: '#ffd23f' },
+    { kind: 'light', id: 'core', at: [-0.05, 18.0], shape: 'arrow', rot: 90, size: 0.55, color: '#ff4fa3', label: 'CORE' },
+    { kind: 'light', id: 'extraBall', at: [-0.05, 16.3], shape: 'circle', size: 0.42, color: '#ff4040', label: 'EXTRA' },
+    { kind: 'light', id: 'jackpot', at: [-1.6, 16.0], shape: 'star', size: 0.55, color: '#ffd23f' },
     { kind: 'light', id: 'm1', at: [-1.2, 13.4], shape: 'diamond', size: 0.4, color: '#3fc4ff', label: 'BOOT' },
     { kind: 'light', id: 'm2', at: [0.0, 13.8], shape: 'diamond', size: 0.4, color: '#3fc4ff', label: 'STREAM' },
     { kind: 'light', id: 'm3', at: [1.2, 13.4], shape: 'diamond', size: 0.4, color: '#3fc4ff', label: 'SPIN' },
@@ -379,8 +379,8 @@ function paint({ g, map, scale }: PaintApi): void {
 
   // フリッパーからランプへ向かう光のライン
   glowLine([[-1.6, 7.2], [-3.2, 11.5], [-4.5, 15.6]], 'rgba(63, 196, 255, 0.75)', 0.12);
-  glowLine([[1.6, 7.2], [2.9, 11.5], [3.8, 15.8]], 'rgba(63, 196, 255, 0.75)', 0.12);
-  glowLine([[-0.2, 8.5], [0.3, 13], [0.75, 17.6]], 'rgba(255, 79, 163, 0.55)', 0.1);
+  glowLine([[1.6, 7.2], [3.0, 11.5], [3.9, 15.8]], 'rgba(63, 196, 255, 0.75)', 0.12);
+  glowLine([[-0.2, 8.5], [-0.1, 13], [-0.05, 17.6]], 'rgba(255, 79, 163, 0.55)', 0.1);
   // 外周の発光ライン
   glowLine([[-8.45, 2], [-8.45, 13]], 'rgba(158, 240, 255, 0.9)', 0.08);
   glowLine([[8.45, 2], [8.45, 13]], 'rgba(158, 240, 255, 0.9)', 0.08);
@@ -404,7 +404,7 @@ function paint({ g, map, scale }: PaintApi): void {
     g.restore();
   };
   label('DATA', -4.5, 13.9);
-  label('STREAM', 3.85, 14.1);
+  label('STREAM', 3.9, 14.1);
   label('LOOP', -6.3, 13.4, -0.5);
   label('LOOP', 6.2, 13.6, 0.5);
   label('SPIN', -6.4, 22.5, -Math.PI / 2);
@@ -413,7 +413,7 @@ function paint({ g, map, scale }: PaintApi): void {
   g.restore();
 
   // スクープの周りの枠
-  const [sx, sy] = map(0.75, 20.55);
+  const [sx, sy] = map(-0.05, 20.55);
   g.save();
   g.strokeStyle = 'rgba(255, 79, 163, 0.6)';
   g.shadowColor = '#ff4fa3';

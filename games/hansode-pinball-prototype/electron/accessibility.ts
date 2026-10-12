@@ -187,7 +187,8 @@ export class AccessibilityShortcuts {
       const ok1 = api.setSticky(withoutHotkey(this.original.sticky));
       const ok2 = api.setToggle(withoutHotkey(this.original.toggle));
       const ok3 = api.setFilter({ ...this.originalFilter, dwFlags: withoutHotkey(this.originalFilter.dwFlags) });
-      this.disabled = ok1 && ok2 && ok3;
+      // 一部だけ成功しても戻せるように、どれか1つでも変えたら disabled 扱い（restore は全部を元の値に書き戻す）
+      this.disabled = ok1 || ok2 || ok3;
       if (!this.disabled) this.lastError = 'SystemParametersInfoW の設定に失敗しました';
     } catch (e) {
       this.lastError = String(e);

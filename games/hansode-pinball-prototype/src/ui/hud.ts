@@ -94,6 +94,10 @@ export class Hud {
     parent.appendChild(this.root);
   }
 
+  setPaused(on: boolean): void {
+    this.root.classList.toggle('paused', on);
+  }
+
   show(on: boolean): void {
     this.root.classList.toggle('hidden', !on);
   }

@@ -128,7 +128,7 @@ export class Input {
   }
 
   private onKey(e: KeyboardEvent, isDown: boolean): void {
-    if (this.capture && isDown) {
+    if (this.capture && isDown && !e.repeat) {
       e.preventDefault();
       e.stopPropagation();
       const cb = this.capture;
@@ -171,7 +171,8 @@ export class Input {
   }
 
   private onPoll(vk: number, isDown: boolean): void {
-    if (!document.hasFocus()) return;
+    // 補正は「離した」方向だけ（keyup の取りこぼし対策）。押した方向は keydown に任せる
+    if (isDown || !document.hasFocus() || this.textHandler || this.capture || !this.inGame) return;
     for (const [code, v] of Object.entries(VK)) {
       if (v !== vk) continue;
       if (this.actionsFor(code).length === 0) continue;
@@ -198,6 +199,12 @@ export class Input {
       }
     }
     if (!pad) {
+      // 切断：押されたままの操作を全部離す（フリッパーが上がりっぱなしにならないように）
+      if (this.padIndex >= 0) {
+        for (const [a, v] of this.padPrev) if (v) this.handler(a, false, 'pad');
+        this.padPrev.clear();
+        this.padAxisPrev = { x: 0, y: 0 };
+      }
       this.padIndex = -1;
       return;
     }
@@ -229,9 +236,10 @@ export class Input {
     // スティック：ゲーム中は揺らし、メニューでは移動
     const ax = pad.axes[0] ?? 0;
     const ay = pad.axes[1] ?? 0;
-    const th = 0.65;
-    const sx = ax > th ? 1 : ax < -th ? -1 : 0;
-    const sy = ay > th ? 1 : ay < -th ? -1 : 0;
+    // ヒステリシス：0.65 で入り、0.4 を下回るまで戻らない（境目での連発を防ぐ）
+    const stick = (v: number, prev: number) => (Math.abs(v) > 0.65 ? Math.sign(v) : prev !== 0 && Math.abs(v) > 0.4 ? prev : 0);
+    const sx = stick(ax, this.padAxisPrev.x);
+    const sy = stick(ay, this.padAxisPrev.y);
     if (sx !== this.padAxisPrev.x) {
       if (sx !== 0) {
         if (this.inGame) this.handler(sx < 0 ? 'nudgeLeft' : 'nudgeRight', true, 'pad');

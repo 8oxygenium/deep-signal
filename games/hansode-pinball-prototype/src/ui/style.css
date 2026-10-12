@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark;
   --accent: #6cf;
   --accent2: #9ff;
   --dmd: #ff8a1e;
@@ -32,8 +33,8 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; margin: 0 2px; 
 /* ───────── タイトル ───────── */
 .title { background: radial-gradient(ellipse at center, rgba(0,0,0,0.15), rgba(0,0,0,0.65)); }
 .title .logo { display: flex; flex-direction: column; align-items: center; line-height: 0.92; margin-bottom: 10px; }
-.title .logo span { font: 900 clamp(48px, 9vw, 120px) var(--disp); letter-spacing: 0.04em; background: linear-gradient(180deg, #ffffff 0%, #cfe8ff 38%, #4a6c96 52%, #e9f4ff 70%, #ffffff 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 0 #0a1830) drop-shadow(0 0 24px rgba(110, 200, 255, 0.55)); }
-.title .logo .l2 { font-size: clamp(56px, 11vw, 150px); }
+.title .logo span { font: 900 clamp(36px, min(9vw, 12vh), 120px) var(--disp); letter-spacing: 0.04em; background: linear-gradient(180deg, #ffffff 0%, #cfe8ff 38%, #4a6c96 52%, #e9f4ff 70%, #ffffff 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 0 #0a1830) drop-shadow(0 0 24px rgba(110, 200, 255, 0.55)); }
+.title .logo .l2 { font-size: clamp(42px, min(11vw, 15vh), 150px); }
 .title .tag { font-size: 20px; margin-bottom: 34px; text-shadow: 0 2px 8px #000; letter-spacing: 0.2em; }
 .title .press { margin-top: 26px; font-size: 14px; opacity: 0.8; animation: blink 1.4s infinite; }
 .title .ver { position: absolute; right: 14px; bottom: 10px; font-size: 12px; opacity: 0.5; }
@@ -112,6 +113,7 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; margin: 0 2px; 
 .ranking td { padding: 6px 10px; border-top: 1px solid var(--line); }
 .ranking td.r { width: 3em; opacity: 0.7; }
 .ranking td.s, .ranking td.t { text-align: right; }
+.ranking tr.me td.r { opacity: 1; }
 .ranking tr.me td { background: rgba(255, 216, 74, 0.2); color: #ffe27a; font-weight: 900; }
 .ranking h2 small { font-size: 15px; opacity: 0.8; margin-left: 10px; }
 .ranking h2 { color: var(--c); }
@@ -215,6 +217,29 @@ canvas.dmd.small { width: 300px !important; height: auto; }
 .reel { width: 34px; height: 50px; overflow: hidden; border-radius: 4px; background: #f4ecd6; box-shadow: inset 0 8px 10px rgba(0,0,0,0.55), inset 0 -8px 10px rgba(0,0,0,0.55); }
 .reel-strip { display: flex; flex-direction: column; }
 .reel-strip span { height: 50px; display: flex; align-items: center; justify-content: center; font: 900 34px 'Georgia', serif; color: #1a1a1a; }
+
+.hud.paused .plunger-gauge { display: none; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.04); }
+::-webkit-scrollbar-thumb { background: rgba(140, 180, 230, 0.35); border-radius: 6px; }
+
+/* 低い画面（最小 800x560 など）では詰めて全部が見えるように */
+@media (max-height: 640px) {
+  .title .tag { margin-bottom: 14px; font-size: 16px; }
+  .title .press { margin-top: 10px; }
+  .menu { gap: 6px; }
+  .menu button { padding: 8px 18px; font-size: 16px; min-width: 260px; }
+  .panel { padding: 16px 22px; }
+  .screen h2 { font-size: 22px; margin-bottom: 10px; }
+  .guide .panel { line-height: 1.5; font-size: 13px; }
+  .guide h3 { margin: 8px 0 2px; font-size: 15px; }
+  .guide .check { margin: 8px 0; }
+  .ranking table { font-size: 14px; }
+  .ranking td { padding: 2px 10px; }
+  .hint { margin-top: 8px; }
+  .gameover .go { font-size: 44px; }
+  .gameover .sc { font-size: 34px; }
+}
 
 @media (max-width: 1000px) {
   .hud-panel { font-size: 12px; padding: 10px; }

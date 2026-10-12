@@ -48,6 +48,7 @@ export class MusicPlayer {
 
   start(): void {
     if (!this.songs.length) return;
+    if (this.bus || this.playing) this.stop();
     this.load(this.index);
     this.playing = true;
     this.paused = false;

@@ -187,6 +187,16 @@ export class Game {
     else this.releasePlunger(false);
   }
 
+  /** 引いている発射を、撃たずに取り消す（ポーズ・ウィンドウ切り替え時） */
+  cancelLaunch(): void {
+    this.input.launch = false;
+    const pl = this.table.plunger;
+    if (pl) {
+      pl.pulling = false;
+      pl.pull = 0;
+    }
+  }
+
   /** 台を揺らす。dir: 'left' = 左から揺らす（ボールは右へ押される） */
   nudge(dir: 'left' | 'right' | 'up'): void {
     if (this.state !== 'play' || this.nudgeCool > 0 || this.attract) return;
@@ -595,6 +605,17 @@ export class Game {
       const before = b.stillTime;
       b.stillTime += dt;
       if (before < 5 && b.stillTime >= 5) {
+        // 前回の自動揺らしと同じ場所（1.5以内）で40秒以内にまた詰まったら、揺らしても同じ穴に戻るだけなので即リセット
+        if (b.lastAutoNudgeT > -1e8 && this.time - b.lastAutoNudgeT < 40 && Math.hypot(b.x - b.lastAutoNudgeX, b.y - b.lastAutoNudgeY) < 1.5) {
+          this.stats.autoResets++;
+          b.lastAutoNudgeT = -1e9;
+          this.resetBall(b);
+          this.emit({ t: 'autosave', kind: 'reset' });
+          continue;
+        }
+        b.lastAutoNudgeX = b.x;
+        b.lastAutoNudgeY = b.y;
+        b.lastAutoNudgeT = this.time;
         this.stats.autoNudges++;
         const a = this.rng.range(0.3, Math.PI - 0.3);
         b.vx += Math.cos(a) * 14;

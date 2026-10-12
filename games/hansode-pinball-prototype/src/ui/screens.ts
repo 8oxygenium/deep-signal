@@ -11,6 +11,8 @@ export interface ScreenCtl {
   onAction(a: Action): void;
   update?(dt: number): void;
   destroy?(): void;
+  /** 外から設定が変わったとき（F11 など） */
+  refresh?(s: Settings): void;
 }
 
 export interface UiSound {
@@ -246,17 +248,23 @@ export function settingsScreen(
     capture((code) => {
       capturing = false;
       rowEl.classList.remove('capturing');
-      if (code !== 'Escape' || r.action === 'pause') {
-        // 他の操作に同じキーがあれば外す
-        for (const a of Object.keys(s.bindings) as GameAction[]) {
-          if (a === r.action) continue;
-          s.bindings[a] = s.bindings[a].filter((c) => c !== code);
-          if (!s.bindings[a].length) s.bindings[a] = [DEFAULT_BINDINGS[a][0]];
-        }
-        const rest = s.bindings[r.action].filter((c) => c !== code);
-        s.bindings[r.action] = [code, ...rest.slice(1)].slice(0, 3);
-        sound('uiOk');
+      // F2・F11 は固定の操作（デバッグ・全画面）なので割り当てない。Esc はポーズ以外ではキャンセル扱い
+      if (code === 'F2' || code === 'F11' || (code === 'Escape' && r.action !== 'pause')) {
+        sound('uiBack');
+        commit();
+        return;
       }
+      const prev = s.bindings[r.action][0];
+      // 他の操作で使っているキーなら「入れ替え」：相手には自分の元のキーを渡す
+      for (const a of Object.keys(s.bindings) as GameAction[]) {
+        if (a === r.action || !s.bindings[a].includes(code)) continue;
+        const swapped = s.bindings[a].map((c) => (c === code ? prev : c));
+        s.bindings[a] = swapped.filter((c, i) => c && swapped.indexOf(c) === i);
+        if (!s.bindings[a].length) s.bindings[a] = [prev];
+      }
+      const rest = s.bindings[r.action].filter((c) => c !== code);
+      s.bindings[r.action] = [code, ...rest.slice(1)].slice(0, 3);
+      sound('uiOk');
       commit();
     });
   };
@@ -267,6 +275,20 @@ export function settingsScreen(
     else change(r, 1);
   });
   els.forEach((e, i) => {
+    // スライダーのバーをクリックした位置の値にする
+    e.addEventListener(
+      'click',
+      (ev) => {
+        const r = rows[i];
+        const bar = (ev.target as HTMLElement).closest('.bar') as HTMLElement | null;
+        if (r.kind !== 'slider' || !bar) return;
+        ev.stopPropagation();
+        const rect = bar.getBoundingClientRect();
+        s[r.key] = Math.min(1, Math.max(0, Math.round(((ev.clientX - rect.left) / rect.width) * 10) / 10));
+        commit();
+      },
+      true,
+    );
     e.addEventListener('wheel', (ev) => {
       const r = rows[i];
       if (r.kind === 'slider' || r.kind === 'choice') {
@@ -279,6 +301,10 @@ export function settingsScreen(
   render();
   return {
     el,
+    refresh(next) {
+      s.fullscreen = next.fullscreen;
+      render();
+    },
     onAction(a) {
       if (capturing) return;
       const r = rows[menu.index];
@@ -390,7 +416,7 @@ export function entryScreen(score: number, initial: string, sound: UiSound, setT
     render();
   };
   setText((e) => {
-    if (e.repeat && e.key.length !== 1) return true;
+    if (e.repeat) return true;
     if (/^[a-zA-Z0-9]$/.test(e.key)) {
       type(e.key.toUpperCase());
       return true;
@@ -417,7 +443,7 @@ export function entryScreen(score: number, initial: string, sound: UiSound, setT
         name.splice(cur + 1, Infinity, ...name.slice(cur + 1).filter((x) => x !== undefined));
         sound('uiMove');
         render();
-      } else if (a === 'uiRight' || a === 'launch') {
+      } else if (a === 'uiRight' || a === 'ok') {
         if (name[cur] === undefined) name[cur] = 'A';
         cur = Math.min(7, cur + 1, name.length);
         render();

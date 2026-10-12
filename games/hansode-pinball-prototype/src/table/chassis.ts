@@ -104,7 +104,7 @@ export function lower(o: ChassisOptions, sepX: number): PartDef[] {
     // スリングショット（三角形。内側の斜めの辺が蹴る）
     const C: P = m([-5.7, 7.9]);
     const T: P = m([-5.7, 11.0]);
-    const B: P = m([-3.35, 6.7]);
+    const B: P = m([-3.35, 6.95]);
     parts.push({ kind: 'sling', id: `sling${side}`, pts: s === 1 ? [C, T, B] : [C, B, T], kickEdge: s === 1 ? 1 : 1, kick: o.slingKick ?? 30 });
 
     // ロールオーバー（インレーン/アウトレーン）

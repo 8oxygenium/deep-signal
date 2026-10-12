@@ -9,8 +9,8 @@ export const MAX_STEPS_PER_FRAME = 48;
 export const BALL_RADIUS = 0.5;
 /** 台の傾きによる重力（平面方向の成分、単位/秒²）。実機は約29だが少しキビキビさせる */
 export const GRAVITY = 42;
-/** ボールの最高速度。1ステップの移動量 = 118/480 ≈ 0.25 で、ボール半径0.5を超えない */
-export const MAX_SPEED = 118;
+/** ボールの最高速度。1ステップの移動量 = 132/480 ≈ 0.28 で、ボール半径0.5を超えない */
+export const MAX_SPEED = 132;
 /** 転がり抵抗（指数減衰 /秒） */
 export const LINEAR_DAMPING = 0.06;
 /** これより遅い衝突は跳ね返さない（静止接触のガタつき防止） */

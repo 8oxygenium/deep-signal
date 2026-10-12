@@ -35,6 +35,10 @@ export class Ball {
   stillY: number;
   /** このステップで何かに接触したか（フリッパー上で抱えているか判定用） */
   touchingFlipper: string | null = null;
+  /** 前回の自動揺らしの場所と時刻（同じ穴で繰り返し詰まるのを見分ける） */
+  lastAutoNudgeX = 0;
+  lastAutoNudgeY = 0;
+  lastAutoNudgeT = -1e9;
   /** 何かの壁に触れているか */
   touching = false;
   /** ボール同士の衝突で押し出された */

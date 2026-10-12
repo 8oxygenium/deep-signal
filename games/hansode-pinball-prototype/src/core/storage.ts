@@ -53,7 +53,15 @@ export async function loadSettings(): Promise<Settings> {
   if (raw.bindings && typeof raw.bindings === 'object') {
     for (const k of Object.keys(DEFAULT_BINDINGS) as GameAction[]) {
       const v = (raw.bindings as Bindings)[k];
-      if (Array.isArray(v) && v.every((x) => typeof x === 'string') && v.length) b[k] = v.slice(0, 3);
+      if (Array.isArray(v)) {
+        const ok = v.filter((x) => typeof x === 'string' && /^[A-Za-z0-9]{2,20}$/.test(x) && x !== 'F2' && x !== 'F11');
+        if (ok.length) b[k] = ok.slice(0, 3);
+      }
+    }
+    // 左右のフリッパーが同じキーなら初期値に戻す
+    if (b.left.some((c) => b.right.includes(c))) {
+      b.left = [...DEFAULT_BINDINGS.left];
+      b.right = [...DEFAULT_BINDINGS.right];
     }
   }
   return {
@@ -80,7 +88,14 @@ export async function loadScores(): Promise<HighScores> {
       if (!Array.isArray(list)) continue;
       out[k] = list
         .filter((e) => e && typeof e.name === 'string' && typeof e.score === 'number')
-        .map((e) => ({ name: String(e.name).slice(0, 8), score: Math.max(0, Math.floor(e.score)), time: typeof e.time === 'number' ? e.time : undefined, date: String(e.date ?? '') }))
+        .filter((e) => Number.isFinite(e.score))
+        .map((e) => ({
+          name: String(e.name).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || '???',
+          score: Math.min(999_999_999_999, Math.max(0, Math.floor(e.score))),
+          time: typeof e.time === 'number' && Number.isFinite(e.time) ? e.time : undefined,
+          date: String(e.date ?? ''),
+        }))
+        .sort((a, b) => b.score - a.score)
         .slice(0, 10);
     }
   }

@@ -50,9 +50,17 @@ function storePath(name: string): string {
 
 function readStore(name: string): unknown {
   if (!STORE_NAMES.has(name)) return null;
+  const file = storePath(name);
+  if (!fs.existsSync(file)) return null;
   try {
-    return JSON.parse(fs.readFileSync(storePath(name), 'utf8'));
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch {
+    // 壊れたファイルは上書きされる前に退避しておく
+    try {
+      fs.copyFileSync(file, `${file}.broken-${Date.now()}.bak`);
+    } catch {
+      /* noop */
+    }
     return null;
   }
 }

@@ -72,8 +72,8 @@ export class Flipper {
     this.prevAngle = this.rest;
     this.omegaUp = p.omegaUp ?? 30;
     this.accelUp = p.accelUp ?? 2600;
-    this.omegaDown = p.omegaDown ?? 22;
-    this.accelDown = p.accelDown ?? 1800;
+    this.omegaDown = p.omegaDown ?? 16;
+    this.accelDown = p.accelDown ?? 1300;
     this.restitution = p.restitution ?? 0.42;
     this.friction = p.friction ?? 0.08;
     this.layer = p.layer ?? FLOOR;

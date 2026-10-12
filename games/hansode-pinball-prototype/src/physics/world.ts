@@ -261,7 +261,9 @@ export class World {
       const tx = rvx - nx * vn;
       const ty = rvy - ny * vn;
       const tl = Math.hypot(tx, ty);
-      if (tl > 1e-9) {
+      // 摩擦は「ぶつかったとき」だけ。ゆっくり接しているだけのとき（転がり）は掛けない
+      // （掛けると静止摩擦のようにゆるい坂でボールが止まってしまう）
+      if (tl > 1e-9 && speed >= RESTING_SPEED) {
         const dec = Math.min(tl, s.friction * jn);
         nvx -= (tx / tl) * dec;
         nvy -= (ty / tl) * dec;
@@ -351,7 +353,7 @@ export class World {
       const tx = rvx - nx * vn;
       const ty = rvy - ny * vn;
       const tl = Math.hypot(tx, ty);
-      if (tl > 1e-9) {
+      if (tl > 1e-9 && speed >= RESTING_SPEED) {
         const dec = Math.min(tl, f.friction * jn);
         nvx -= (tx / tl) * dec;
         nvy -= (ty / tl) * dec;

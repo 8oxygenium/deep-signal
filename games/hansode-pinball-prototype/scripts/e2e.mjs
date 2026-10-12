@@ -130,9 +130,51 @@ await page.keyboard.press('Escape');
 await wait(page, 400);
 check('Esc でポーズ', (await screen(page)) === 'pause');
 await shot(page, '07_pause');
+// ポーズ → 設定 → Esc でポーズ画面に戻れる
+await page.keyboard.press('ArrowDown');
+await page.keyboard.press('ArrowDown');
+await page.keyboard.press('ArrowDown');
+await wait(page, 300);
+await page.keyboard.press('Enter');
+await wait(page, 400);
+check('ポーズ → 設定', (await screen(page)) === 'settings');
+await page.keyboard.press('Escape');
+await wait(page, 400);
+check('設定 → Esc でポーズに戻る', (await screen(page)) === 'pause');
+check('ポーズ中も描画は本物のゲームのまま', await ev(page, () => window.__pinball.app.renderer.game === window.__pinball.app.game && !window.__pinball.app.renderer.preview));
 await page.keyboard.press('Escape');
 await wait(page, 300);
 check('Esc でポーズから再開', (await screen(page)) === 'play');
+
+// ステージ選択で ↓ の直後に Enter：プレイ画面がプレビューのデモにすり替わらない
+await ev(page, () => window.__pinball.app.toSelect());
+await wait(page, 600);
+await page.keyboard.press('ArrowDown');
+await wait(page, 30);
+await page.keyboard.press('Enter');
+await wait(page, 600);
+check('↓直後のEnterでも、表示は本物のゲーム', await ev(page, () => window.__pinball.screen === 'play' && window.__pinball.app.renderer.game === window.__pinball.app.game && !window.__pinball.app.renderer.preview));
+
+// キー割り当て：左フリッパーに右Shiftを割り当てると左右が入れ替わる（重複しない）
+await ev(page, () => window.__pinball.app.showSettings('title'));
+await wait(page, 400);
+for (let i = 0; i < 7; i++) await page.keyboard.press('ArrowDown');
+await wait(page, 300);
+await page.keyboard.press('Enter');
+await wait(page, 300);
+await page.keyboard.press('ShiftRight');
+await wait(page, 300);
+const binds = await ev(page, () => window.__pinball.app.settings.bindings);
+check('割り当ての入れ替え（左右Shiftが重複しない）', binds.left[0] === 'ShiftRight' && binds.right.includes('ShiftLeft') && !binds.right.includes('ShiftRight'), JSON.stringify([binds.left, binds.right]));
+// 元に戻す（「キー割り当てを最初に戻す」行）
+await page.keyboard.press('Enter');
+await wait(page, 300);
+await page.keyboard.press('ShiftLeft');
+await wait(page, 300);
+await page.keyboard.press('Escape');
+await wait(page, 300);
+await startStage(page, stages[0]);
+await wait(page, 500);
 
 // ゲームオーバー → 名前入力 → ランキング
 await ev(page, () => window.__pinball.app.debugGameOver(123456));

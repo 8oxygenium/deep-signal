@@ -177,3 +177,93 @@ describe('物理：すり抜け防止', () => {
     expect(t).toBeLessThan(0.055);
   });
 });
+
+describe('物理：すり抜け防止の2段目（速度上限に頼らない）', () => {
+  // 速度上限を大きく外しても、「前ステップの位置から反対側へ抜けたら戻す」判定だけで壁とフリッパーを抜けないこと
+  it('速度600（1歩でボール半径の2.5倍）でも薄い壁の箱から出ない', () => {
+    const rng = new Rng(21);
+    let escapes = 0;
+    for (let trial = 0; trial < 200; trial++) {
+      const w = new World();
+      w.maxSpeed = 600;
+      box(w, -4, 0, 4, 8, rng.pick([0, 0.05, 0.1]));
+      const b = w.addBall(rng.range(-3, 3), rng.range(1, 7));
+      for (let i = 0; i < 1200; i++) {
+        if (i % 60 === 0) {
+          const a = rng.range(0, Math.PI * 2);
+          b.vx = Math.cos(a) * 600;
+          b.vy = Math.sin(a) * 600;
+        }
+        w.step(STEP);
+        if (b.x < -4 || b.x > 4 || b.y < 0 || b.y > 8) {
+          escapes++;
+          break;
+        }
+      }
+    }
+    expect(escapes).toBe(0);
+  });
+
+  it('速度600で動いているフリッパーに当ててもすり抜けない', () => {
+    const rng = new Rng(22);
+    let tunnels = 0;
+    for (let trial = 0; trial < 300; trial++) {
+      const w = new World();
+      w.maxSpeed = 600;
+      const f = w.addFlipper(new Flipper({ id: 'f', side: 'left', pivotX: -2, pivotY: 4, length: 3.3, r0: 0.55, r1: 0.28, restDeg: -30, upDeg: 28 }));
+      box(w, -8, -4, 8, 12);
+      const from = rng.range(0.2, Math.PI - 0.2);
+      const tx = f.pivotX + Math.cos(f.rest) * rng.range(0.4, 3.2);
+      const ty = f.pivotY + Math.sin(f.rest) * rng.range(0.4, 3.2);
+      const b = w.addBall(tx + Math.cos(from) * 4, ty + Math.sin(from) * 4);
+      b.vx = -Math.cos(from) * 600;
+      b.vy = -Math.sin(from) * 600;
+      const flipAt = rng.int(0, 10);
+      let side0 = 0;
+      for (let i = 0; i < 200; i++) {
+        if (i === flipAt) f.pressed = true;
+        w.step(STEP);
+        const rx = b.x - f.pivotX, ry = b.y - f.pivotY;
+        const c = Math.cos(f.angle), s = Math.sin(f.angle);
+        const u = rx * c + ry * s;
+        const wv = -rx * s + ry * c;
+        if (u > 0.05 * f.length && u < 0.95 * f.length && Math.abs(wv) < 1.4) {
+          const sg = wv > 0 ? 1 : -1;
+          if (side0 !== 0 && sg !== side0) tunnels++;
+          side0 = sg;
+        } else side0 = 0;
+      }
+    }
+    expect(tunnels).toBe(0);
+  });
+
+  it('上げたフリッパーにボールを落とすと、付け根側で止めて抱えられる（キャッチ）', async () => {
+    const { Game } = await import('../src/core/game');
+    const { modernStage } = await import('../src/stages/modern');
+    let held = 0;
+    let total = 0;
+    for (const side of ['left', 'right'] as const) {
+      for (const dx of [0.6, 1.2, 1.8]) {
+        for (const vy of [-5, -20, -40]) {
+          total++;
+          const g = new Game(modernStage, { seed: 1 });
+          g.balls.forEach((b) => g.world.removeBall(b));
+          (g as unknown as { serveQueue: number }).serveQueue = 0;
+          const f = g.flippers.find((x) => x.side === side)!;
+          g.setFlipper(side, true);
+          const run = (sec: number) => {
+            for (let i = 0; i < sec / STEP; i++) (g as unknown as { fixedStep(): void }).fixedStep();
+          };
+          run(0.1);
+          const sx = side === 'left' ? 1 : -1;
+          const b = g.world.addBall(f.pivotX + sx * dx, f.pivotY + 2.6);
+          b.vy = vy;
+          run(2.5);
+          const onIt = b.active && b.touchingFlipper === f.id && b.speed < 1;
+          if (onIt) held++;
+        }
+      }
+    }
+    expect(held / total).toBeGreaterThan(0.6);
+  });
+});

@@ -11,8 +11,12 @@ const ONLY = process.env.STAGE;
 
 describe.each(STAGES.filter((s) => !ONLY || s.id === ONLY).map((s) => [s.id, s] as const))('ステージ %s', (_id, stage) => {
   it(`${SIM_SECONDS}秒の自動プレイ：台の外に出ない・NaN無し・例外0件・詰まり解消・全部の的とランプに届く`, () => {
-    const { g, maxStill, exceptions, firstError } = simulate(stage, SIM_SECONDS);
-    const missing = reachTargets(stage).filter((k) => !g.stats.hits.has(k));
+    // シードを2つ回し、どちらかで届けばよい（1つのシードの偶然に頼らない）
+    const r1 = simulate(stage, SIM_SECONDS, 7);
+    const r2 = simulate(stage, SIM_SECONDS, 31);
+    const { g, maxStill, exceptions, firstError } = r1;
+    const missing = reachTargets(stage).filter((k) => !g.stats.hits.has(k) && !r2.g.stats.hits.has(k));
+    const autos = g.stats.autoNudges + g.stats.autoResets + r2.g.stats.autoNudges + r2.g.stats.autoResets;
     const summary = {
       drains: g.stats.drains,
       lost: g.stats.lost,
@@ -23,13 +27,19 @@ describe.each(STAGES.filter((s) => !ONLY || s.id === ONLY).map((s) => [s.id, s] 
       score: g.score,
       rank: g.rank,
       missing,
+      seed2: { drains: r2.g.stats.drains, lost: r2.g.stats.lost, invalid: r2.g.stats.invalid, autoNudges: r2.g.stats.autoNudges, autoResets: r2.g.stats.autoResets },
     };
     console.log(stage.id, JSON.stringify(summary));
     expect(firstError).toBe('');
-    expect(exceptions).toBe(0);
-    expect(g.stats.lost).toBe(0);
-    expect(g.stats.invalid).toBe(0);
-    expect(maxStill).toBeLessThan(10);
+    expect(r2.firstError).toBe('');
+    expect(exceptions + r2.exceptions).toBe(0);
+    expect(g.stats.lost + r2.g.stats.lost).toBe(0);
+    expect(g.stats.invalid + r2.g.stats.invalid).toBe(0);
+    expect(Math.max(maxStill, r2.maxStill)).toBeLessThan(10);
+    // 止まって自動で揺らす/戻すことがほとんど無い（ポケットが無い）
+    expect(autos).toBeLessThanOrEqual(8);
+    // ちゃんとボールが落ちて次へ進んでいる（どこかに閉じ込められていない）
+    expect(g.stats.drains + r2.g.stats.drains).toBeGreaterThan(6);
     expect(missing).toEqual([]);
   });
 });
