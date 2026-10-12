@@ -16,6 +16,8 @@ export class AudioEngine {
   readonly music: MusicPlayer;
   private lastPlay = new Map<string, number>();
   private pullOsc: { osc: OscillatorNode; gain: GainNode } | null = null;
+  private readonly analyser: AnalyserNode;
+  private levelBuf = new Float32Array(2048);
 
   constructor() {
     this.ctx = new AudioContext({ latencyHint: 'interactive' });
@@ -29,6 +31,10 @@ export class AudioEngine {
     this.master = ctx.createGain();
     this.master.gain.value = 0.9;
     this.master.connect(comp).connect(ctx.destination);
+    // 音が出ているかを測る（自動テスト・デバッグ用）
+    this.analyser = ctx.createAnalyser();
+    this.analyser.fftSize = 2048;
+    comp.connect(this.analyser);
     this.sfxBus = ctx.createGain();
     this.musicBus = ctx.createGain();
     this.sfxBus.connect(this.master);
@@ -60,6 +66,14 @@ export class AudioEngine {
       for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
     }
     return b;
+  }
+
+  /** 今の音量（RMS）。0 なら無音 */
+  level(): number {
+    this.analyser.getFloatTimeDomainData(this.levelBuf);
+    let sum = 0;
+    for (const v of this.levelBuf) sum += v * v;
+    return Math.sqrt(sum / this.levelBuf.length);
   }
 
   get noiseBuffer(): AudioBuffer {

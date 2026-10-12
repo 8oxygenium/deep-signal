@@ -22,5 +22,11 @@ if (bridge.info.e2e || bridge.info.isDev) {
     get fps() {
       return app.fps;
     },
+    get audioLevel() {
+      return app.audio.level();
+    },
+    get audioState() {
+      return app.audio.ctx.state;
+    },
   };
 }

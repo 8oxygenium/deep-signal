@@ -100,6 +100,14 @@ for (let i = 0; i < stages.length; i++) {
   await shot(page, `05_play_${i + 1}_${stages[i]}`);
   const fps = await ev(page, () => window.__pinball.fps);
   check(`${stages[i]}: 描画が動いている`, fps > 20, `${fps.toFixed(0)}fps`);
+  // BGM と効果音が実際に鳴っているか（音量を何回か測って最大を見る）
+  let lv = 0;
+  for (let k = 0; k < 8; k++) {
+    lv = Math.max(lv, await ev(page, () => window.__pinball.audioLevel));
+    await wait(page, 120);
+  }
+  const st = await ev(page, () => window.__pinball.audioState);
+  check(`${stages[i]}: 音が鳴っている（BGM/効果音）`, st === 'running' && lv > 0.002, `${st} level=${lv.toFixed(4)}`);
 }
 
 // 揺らしすぎで TILT
