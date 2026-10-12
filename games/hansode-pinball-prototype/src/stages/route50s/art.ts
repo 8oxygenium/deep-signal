@@ -253,10 +253,21 @@ export function paint({ g, map, scale, width: W, height: H }: PaintApi): void {
   line([[8.0, 1.4], [8.0, 26.5]], 'rgba(255, 244, 214, 0.9)', 0.1);
   line([[7.75, 1.4], [7.75, 26.5]], 'rgba(226, 48, 58, 0.8)', 0.07);
 
-  // ── 文字：DRIVE-IN / ROAD ──
+  // ── 文字：ミッションの名前（ハイウェイの上は暗いので、明るい文字で自前で描く）/ ROAD ──
   g.save();
   g.textAlign = 'center';
   g.textBaseline = 'middle';
+  g.font = `800 ${Math.round(scale * 0.36)}px "Segoe UI", "Arial Black", sans-serif`;
+  g.fillStyle = 'rgba(255, 236, 170, 0.95)';
+  for (const [t, x, y] of [
+    ['ORDER', -2.25, 10.75],
+    ['CRUISE', -0.75, 11.35],
+    ['MOVIE', 0.75, 11.35],
+    ['JUKE', 2.25, 10.75],
+    ['DRIVE-IN', 0.75, 16.75],
+  ] as const) {
+    g.fillText(t, ...map(x, y));
+  }
   g.font = `900 ${Math.round(scale * 0.52)}px "Arial Black", "Segoe UI", sans-serif`;
   g.fillStyle = 'rgba(255, 244, 214, 0.75)';
   g.fillText('R O A D', ...map(0.75, 36.4));

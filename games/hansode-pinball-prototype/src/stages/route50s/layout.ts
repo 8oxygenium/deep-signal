@@ -9,7 +9,7 @@ export const ROAD_IDS = ['laneR', 'laneO', 'laneA', 'laneD'] as const;
 export const MENU_IDS = ['burger', 'shake', 'fries'] as const;
 
 /** ジュークボックス（大きな的）の位置と向き。3D の筐体はこの後ろに立てる */
-export const JUKE = { at: [-5.3, 32.8] as [number, number], angle: -45 };
+export const JUKE = { at: [-5.5, 32.4] as [number, number], angle: -60 };
 /** ドライブインシアター（スクープ）の位置 */
 export const MOVIE_AT: [number, number] = [0.75, 19.4];
 
@@ -28,9 +28,10 @@ export function layoutParts(): PartDef[] {
   );
 
   // ── 上のレーン R・O・A・D ──
-  const guideX = [-3.75, -1.5, 0.75, 3.0, 5.25];
+  // 左端の仕切りは立てない（ジュークボックスの的とのすき間にボールがはまるため）
+  const guideX = [-1.5, 0.75, 3.0, 5.25];
   guideX.forEach((x, i) => {
-    const top = i === 0 || i === 4 ? 34.2 : 34.9;
+    const top = i === 3 ? 34.2 : 34.9;
     parts.push({ kind: 'wall', pts: [[x, 32.5], [x, top]], style: 'guide' });
   });
   const laneX = [-2.625, -0.375, 1.875, 4.125];
@@ -50,7 +51,7 @@ export function layoutParts(): PartDef[] {
 
   // ── ジュークボックス（大きな的）──
   parts.push({ kind: 'standup', id: 'juke', at: JUKE.at, angle: JUKE.angle, w: 2.2, big: true });
-  parts.push({ kind: 'light', id: 'juke', at: [-3.6, 31.4], shape: 'star', size: 0.42, color: '#ffd23f', label: 'JUKE' });
+  parts.push({ kind: 'light', id: 'juke', at: [-4.7, 30.3], shape: 'star', size: 0.42, color: '#ffd23f', label: 'JUKE' });
 
   // ── メニューの的（壁に埋め込み）：BURGER / SHAKE は左、FRIES は右 ──
   parts.push(
@@ -64,7 +65,7 @@ export function layoutParts(): PartDef[] {
 
   // ── ドライブインシアター（スクープ）──
   parts.push({ kind: 'scoop', id: 'movie', at: MOVIE_AT, eject: 92, speed: 30, hold: 1.2, r: 0.72 });
-  parts.push({ kind: 'light', id: 'movie', at: [MOVIE_AT[0], 17.7], shape: 'arrow', rot: 90, size: 0.5, color: '#ff3b3b', label: 'DRIVE-IN' });
+  parts.push({ kind: 'light', id: 'movie', at: [MOVIE_AT[0], 17.7], shape: 'arrow', rot: 90, size: 0.5, color: '#ff3b3b' });
 
   // ── ボタン（ロールオーバー）：両方踏むとキックバック復活 ──
   parts.push(
@@ -76,10 +77,10 @@ export function layoutParts(): PartDef[] {
 
   // ── ミッション・エクストラボール・ジャックポットのライト ──
   parts.push(
-    { kind: 'light', id: 'm1', at: [-2.25, 11.8], shape: 'diamond', size: 0.4, color: '#ffc83a', label: 'ORDER' },
-    { kind: 'light', id: 'm2', at: [-0.75, 12.4], shape: 'diamond', size: 0.4, color: '#ffc83a', label: 'CRUISE' },
-    { kind: 'light', id: 'm3', at: [0.75, 12.4], shape: 'diamond', size: 0.4, color: '#ffc83a', label: 'MOVIE' },
-    { kind: 'light', id: 'm4', at: [2.25, 11.8], shape: 'diamond', size: 0.4, color: '#ffc83a', label: 'JUKE' },
+    { kind: 'light', id: 'm1', at: [-2.25, 11.8], shape: 'diamond', size: 0.4, color: '#ffc83a' },
+    { kind: 'light', id: 'm2', at: [-0.75, 12.4], shape: 'diamond', size: 0.4, color: '#ffc83a' },
+    { kind: 'light', id: 'm3', at: [0.75, 12.4], shape: 'diamond', size: 0.4, color: '#ffc83a' },
+    { kind: 'light', id: 'm4', at: [2.25, 11.8], shape: 'diamond', size: 0.4, color: '#ffc83a' },
     { kind: 'light', id: 'extraBall', at: [2.9, 18.2], shape: 'circle', size: 0.42, color: '#ff4040', label: 'EXTRA' },
     { kind: 'light', id: 'jackpot', at: [-1.4, 18.2], shape: 'star', size: 0.5, color: '#ffd23f' },
   );

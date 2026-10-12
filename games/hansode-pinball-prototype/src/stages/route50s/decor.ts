@@ -15,9 +15,10 @@ export function decorate(api: DecorateApi): void {
   const jb = new THREE.Group();
   const nx = Math.cos((JUKE.angle * Math.PI) / 180), ny = Math.sin((JUKE.angle * Math.PI) / 180);
   // 的（光る板）の後ろに立てる。+z が正面
-  const back = 0.95;
+  const back = 1.1;
   jb.position.copy(api.at(JUKE.at[0] - nx * back, JUKE.at[1] - ny * back, 0));
   jb.rotation.y = Math.atan2(nx, -ny);
+  jb.scale.setScalar(1.15);
   group.add(jb);
 
   const archShape = (wd: number, straight: number, inset = 0) => {
@@ -117,18 +118,19 @@ export function decorate(api: DecorateApi): void {
   const jukeBase = jb.position.clone();
 
   // ───────── バンパーのクロームの輪 ─────────
+  const guardMat = new THREE.MeshStandardMaterial({ color: '#aab0ba', metalness: 0.85, roughness: 0.4 });
   const bumpers = game.table.layout.parts.filter((p) => p.kind === 'bumper');
   const ringMats = new Map<string, THREE_NS.MeshStandardMaterial>();
   for (const p of bumpers) {
     if (p.kind !== 'bumper') continue;
     const r = p.r ?? 0.95;
-    const guard = new THREE.Mesh(new THREE.TorusGeometry(r * 1.3, 0.07, 8, 36), chrome);
+    const guard = new THREE.Mesh(new THREE.TorusGeometry(r * 1.3, 0.055, 8, 36), guardMat);
     guard.rotation.x = -Math.PI / 2;
     guard.position.copy(api.at(p.at[0], p.at[1], 0.12));
     group.add(guard);
     const glowMat = api.glow('#ff3b4a');
     ringMats.set(p.id, glowMat);
-    const glowRing = new THREE.Mesh(new THREE.TorusGeometry(r * 1.3, 0.03, 6, 36), glowMat);
+    const glowRing = new THREE.Mesh(new THREE.TorusGeometry(r * 1.3, 0.025, 6, 36), glowMat);
     glowRing.rotation.x = -Math.PI / 2;
     glowRing.position.copy(api.at(p.at[0], p.at[1], 0.2));
     group.add(glowRing);
@@ -229,7 +231,7 @@ export function decorate(api: DecorateApi): void {
     for (const [id, m] of ringMats) {
       const k = Math.max(0, (bumperPulse.get(id) ?? 0) - dt * 4);
       bumperPulse.set(id, k);
-      m.emissiveIntensity = 0.5 + 0.2 * Math.sin(t * 3) + k * 4;
+      m.emissiveIntensity = 0.25 + 0.1 * Math.sin(t * 3) + k * 3;
     }
     // 電球：3つに1つが走る。マルチボールや大きな得点のときは速く赤く
     slowT += dt * (party > 0 ? 18 : 7);
