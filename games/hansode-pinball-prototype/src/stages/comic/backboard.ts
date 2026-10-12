@@ -55,6 +55,9 @@ export function paintComicBackboard(g: CanvasRenderingContext2D, w: number, h: n
   };
   title('COMIC', cy - 18, 118, RED);
   title('THE VILLAIN STRIKES BACK!', cy + 62, 34, '#2f6bff');
+  // 看板は自分でも光る素材なので、少し暗くして周りがにじまないように（ブルームの暴走防止）
+  g.fillStyle = 'rgba(30, 20, 60, 0.3)';
+  g.fillRect(0, 0, w, h);
   // 枠と角の文字
   g.lineWidth = 18;
   g.strokeStyle = INK;
