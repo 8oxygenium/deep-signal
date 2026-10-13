@@ -677,6 +677,12 @@ export class PlungerRT extends PartRT {
     this.tip.ay = y;
     this.tip.by = y;
     this.tip.vy = Math.min(0, this.tip.vy);
+    // マルチボールで押し込まれるなどして先端の下にボールが入ったら、先端の上へ戻す
+    // （そのまま引くと先端がボールを床の下へ押し出してしまう）
+    for (const b of this.table.world.balls) {
+      if (!b.active || b.captured || b.layer !== FLOOR) continue;
+      if (Math.abs(b.x - this.def.at[0]) < 0.62 && b.y < y && b.y > y - 2.5) b.place(b.x, y + 0.1 + BALL_RADIUS + 0.01, b.vx, Math.max(0, b.vy));
+    }
   }
 }
 

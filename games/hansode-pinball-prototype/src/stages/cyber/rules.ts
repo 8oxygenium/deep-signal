@@ -88,12 +88,14 @@ export function createRules(): StageRules {
       { id: 'breach', name: 'BREACH', desc: 'ハッキングレーンを光る順に通して、ファイアウォールを破れ', goal: 1, count: (e) => (e.type === 'trigger' && e.id === 'hack' ? 1 : 0), reward: 60_000 },
       { id: 'tunnel', name: 'TUNNELING', desc: 'ワープチューブを通り抜けろ', goal: 2, count: (e) => (e.type === 'warp' ? 1 : 0), reward: 80_000 },
       { id: 'scan', name: 'PORT SCAN', desc: '右のドロップターゲット3枚を倒し切れ', goal: 2, count: (e) => (e.type === 'bank' ? 1 : 0), reward: 100_000 },
-      { id: 'root', name: 'ROOT ACCESS', desc: 'ファイアウォールが消えたら、中央の ROOT チャンバーへ入れ', goal: 1, count: (e) => (e.type === 'magnet' && e.id === 'root' ? 1 : 0), reward: 150_000 },
+      { id: 'root', name: 'ROOT ACCESS', desc: '開いた ROOT チャンバー（中央左）へボールを入れろ', goal: 1, count: (e) => (e.type === 'magnet' && e.id === 'root' ? 1 : 0), reward: 150_000 },
     ],
     {
-      onComplete(_m, g) {
+      onComplete(m, g) {
         missionsBall++;
         syncMissionLights(g);
+        // PORT SCAN で開いているポートが見つかった：ROOT に入るまでファイアウォールを開けておく
+        if (m.id === 'scan') openRootPort(g);
       },
       onAllComplete(g) {
         missionsBall++;
@@ -156,6 +158,10 @@ export function createRules(): StageRules {
       if (b.x > x0 && b.x < x1 && b.y > y0 && b.y < y1) return false;
     }
     return g.part<MagnetRT>('root').held.length === 0;
+  }
+  function openRootPort(g: Game) {
+    openFirewall(g, FIREWALL_OPEN);
+    g.after(1.2, () => g.msg('PORT OPEN', 'ROOT チャンバーが開いた！ 中央左の入口を狙え', 2.4, 'normal'));
   }
   function closeFirewall(g: Game) {
     fwDown = false;
@@ -291,7 +297,7 @@ export function createRules(): StageRules {
     const lines = [`<div>HACK&nbsp; ${seqHtml}${step > 0 ? ` <small style="opacity:.7">${Math.ceil(seqTimer)}s</small>` : ''}</div>`];
     lines.push(
       fwDown
-        ? `<div style="color:#ff2a6d">FIREWALL DOWN${fwForced ? '' : ` <small>${Math.ceil(fwTimer)}s</small>`}</div>`
+        ? `<div style="color:#ff2a6d">FIREWALL DOWN${fwForced || missions.current?.id === 'root' ? '' : ` <small>${Math.ceil(fwTimer)}s</small>`}</div>`
         : `<div style="opacity:.7">FIREWALL <small>ACTIVE</small></div>`,
     );
     if (oc > 0) lines.push(`<div style="color:#ffe14a">OVERCLOCK x2 <small>${Math.ceil(oc)}s</small></div>`);
@@ -315,6 +321,7 @@ export function createRules(): StageRules {
       oc = low = 0;
       fwForced = false;
       closeFirewall(g);
+      if (missions.current?.id === 'root') openRootPort(g);
       g.world.gravityScale = 1;
       lanes.reset(g);
       syncBonusLights(g);
@@ -452,8 +459,9 @@ export function createRules(): StageRules {
         seqTimer -= dt;
         if (seqTimer <= 0) resetSeq(g, true);
       }
-      // ファイアウォール：時間が来たら（チャンバーが空になってから）閉じる
-      if (fwDown && !fwForced) {
+      // ファイアウォール：時間が来たら（チャンバーが空になってから）閉じる。
+      // ROOT ACCESS に挑戦中は、一度開けたら ROOT に入るまで閉じない（ハッキングをやり直させ続けない）
+      if (fwDown && !fwForced && missions.current?.id !== 'root') {
         fwTimer -= dt;
         if (fwTimer <= 0) wantUp = true;
       }
