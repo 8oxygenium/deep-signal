@@ -14,7 +14,20 @@ const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 const tag = `v${pkg.version}`;
 
 const run = (cmd) => execSync(cmd, { cwd: root, stdio: 'inherit' });
-const gh = (args, opts = {}) => spawnSync('gh', args, { cwd: root, encoding: 'utf8', shell: process.platform === 'win32', ...opts });
+// gh の場所：PATH にあればそれ、無ければ標準のインストール先（入れた直後で PATH が古いままのとき用）。
+// シェルを通さずに直接起動する（シェル経由だと空白を含む引数が分割されてしまう）
+function findGh() {
+  if (process.platform !== 'win32') return 'gh';
+  const w = spawnSync('where', ['gh'], { encoding: 'utf8' });
+  const hit = w.status === 0 ? w.stdout.split(/\r?\n/).find((l) => l.trim().toLowerCase().endsWith('.exe')) : null;
+  if (hit) return hit.trim();
+  for (const base of [process.env.ProgramFiles, process.env['ProgramFiles(x86)'], process.env.LOCALAPPDATA && join(process.env.LOCALAPPDATA, 'Programs')]) {
+    if (base && existsSync(join(base, 'GitHub CLI', 'gh.exe'))) return join(base, 'GitHub CLI', 'gh.exe');
+  }
+  return 'gh';
+}
+const GH = findGh();
+const gh = (args, opts = {}) => spawnSync(GH, args, { cwd: root, encoding: 'utf8', ...opts });
 
 console.log('■ 1/3 ビルドとインストーラー作成');
 if (!process.argv.includes('--skip-build')) run('npm run dist');
