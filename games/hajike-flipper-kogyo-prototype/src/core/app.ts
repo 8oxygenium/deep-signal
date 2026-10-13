@@ -1,5 +1,6 @@
 // アプリ全体：画面の流れ（タイトル → ステージ選択 → プレイ → ゲームオーバー → 名前入力 → ランキング）、
 // ゲームループ、保存、入力の振り分け。
+import { TITLE_SONG } from '../audio/titleSong';
 import { AudioEngine } from '../audio/audio';
 import { Renderer } from '../render/renderer';
 import { STAGES } from '../stages';
@@ -160,7 +161,12 @@ export class App {
   toTitle(): void {
     this.endGame();
     this.hud.show(false);
-    this.audio.music.stop();
+    // 呼び込みの祭囃子（設定や案内から戻ったときは鳴らし直さない）
+    if (this.audio.music.current !== TITLE_SONG) {
+      this.audio.music.setSongs([TITLE_SONG]);
+      this.audio.music.setIntensity(0);
+      this.audio.music.start();
+    }
     this.setDemo(STAGES[this.demoIndex % STAGES.length], false);
     this.demoTimer = 0;
     this.mount(

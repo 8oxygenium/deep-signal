@@ -29,6 +29,11 @@ export class MusicPlayer {
 
   constructor(private readonly eng: AudioEngine) {}
 
+  /** いま鳴らしている曲の一覧の先頭（同じ曲の掛け直しを避ける用） */
+  get current(): SongDef | null {
+    return this.playing ? (this.songs[0] ?? null) : null;
+  }
+
   private get ctx() {
     return this.eng.ctx;
   }
