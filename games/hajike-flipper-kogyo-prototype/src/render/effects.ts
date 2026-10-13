@@ -143,7 +143,62 @@ export class Particles {
   }
 }
 
-export type PopupStyle = 'score' | 'comic' | 'glitch' | 'anime' | 'warn' | 'chrome';
+export type PopupStyle = 'score' | 'comic' | 'glitch' | 'anime' | 'warn' | 'chrome' | 'brush';
+
+/** 筆文字（行書体があれば使い、無ければ Windows 標準の教科書体・明朝） */
+export const BRUSH_FONT = '"HGS行書体", "HG行書体", "HGGyoshotai", "HG正楷書体-PRO", "UD デジタル 教科書体 NK-B", "UD Digi Kyokasho NK-B", "游明朝 Demibold", "Yu Mincho", "YuMincho", serif';
+
+/** 墨のかすれ・にじみ・飛び散りのある筆文字を描く（中心 (x, y)、高さ px） */
+export function drawBrushText(g: CanvasRenderingContext2D, text: string, x: number, y: number, px: number, ink = '#17110c', halo = '#fffaf0', seed = 1): void {
+  let r = seed * 9301 + 49297;
+  const rnd = () => ((r = (r * 9301 + 49297) % 233280) / 233280);
+  g.save();
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.font = `900 ${px}px ${BRUSH_FONT}`;
+  // 長い文字列は幅に収める
+  const w = g.measureText(text).width;
+  const max = g.canvas.width * 0.92;
+  if (w > max) {
+    g.translate(x, y);
+    g.scale(max / w, 1);
+    g.translate(-x, -y);
+  }
+  // 紙の白いふち（暗い台でも読めるように）
+  g.lineJoin = 'round';
+  g.strokeStyle = halo;
+  g.globalAlpha = 0.9;
+  g.lineWidth = px * 0.16;
+  g.strokeText(text, x, y);
+  // 墨：少しずつずらして重ね、太く・ムラのある線にする
+  g.fillStyle = ink;
+  g.strokeStyle = ink;
+  g.lineWidth = px * 0.05;
+  for (let i = 0; i < 6; i++) {
+    g.globalAlpha = i === 0 ? 1 : 0.45;
+    const dx = (rnd() - 0.5) * px * 0.04, dy = (rnd() - 0.5) * px * 0.04;
+    g.fillText(text, x + dx, y + dy);
+    if (i < 2) g.strokeText(text, x + dx, y + dy);
+  }
+  // かすれ：横方向の細い筋で墨を少し抜く
+  g.globalCompositeOperation = 'destination-out';
+  for (let i = 0; i < 26; i++) {
+    g.globalAlpha = 0.25 + rnd() * 0.5;
+    const yy = y + (rnd() - 0.5) * px * 0.9;
+    g.fillRect(x - px * 2 + rnd() * px, yy, px * (1.5 + rnd() * 2.5), 1 + rnd() * 2);
+  }
+  // 飛び散り
+  g.globalCompositeOperation = 'source-over';
+  g.fillStyle = ink;
+  for (let i = 0; i < 14; i++) {
+    g.globalAlpha = 0.6 + rnd() * 0.4;
+    const a = rnd() * Math.PI * 2, d = px * (0.55 + rnd() * 0.5);
+    g.beginPath();
+    g.arc(x + Math.cos(a) * d * 1.6, y + Math.sin(a) * d * 0.7, 1 + rnd() * px * 0.035, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.restore();
+}
 
 interface Popup {
   sprite: THREE.Sprite;
@@ -203,6 +258,11 @@ function popupTexture(text: string, style: PopupStyle, color: string): THREE.Can
     g.strokeText(text, 256, 128);
     g.fillStyle = color;
     g.fillText(text, 256, 128);
+  } else if (style === 'brush') {
+    // 筆文字（浮世絵の台の「ドン！」「カーン！」、得点）。color は墨の色（省略時は黒）
+    let seed = 0;
+    for (const ch of text) seed = (seed * 31 + ch.charCodeAt(0)) % 9973;
+    drawBrushText(g, text, 256, 132, 118, color || '#17110c', '#fffaf0', seed + 1);
   } else if (style === 'warn') {
     g.font = '900 90px "Impact", "Arial Black", sans-serif';
     g.lineWidth = 12;
@@ -232,13 +292,13 @@ export class Popups {
     const tex = popupTexture(text, style, color);
     const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false });
     const s = new THREE.Sprite(mat);
-    const w = (style === 'comic' ? 5.2 : 3.6) * scale;
+    const w = (style === 'comic' || style === 'brush' ? 5.2 : 3.6) * scale;
     s.scale.set(w, w / 2, 1);
     s.position.set(tx, h, -ty);
     s.renderOrder = 50;
     s.userData.outlineParameters = { visible: false };
     this.group.add(s);
-    this.items.push({ sprite: s, life, max: life, vy: style === 'comic' ? 1.2 : 2.4, base: w });
+    this.items.push({ sprite: s, life, max: life, vy: style === 'comic' || style === 'brush' ? 1.2 : 2.4, base: w });
     if (this.items.length > 24) this.remove(0);
   }
 

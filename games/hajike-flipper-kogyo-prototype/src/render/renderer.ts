@@ -9,9 +9,10 @@ import type { Game, GameEvent } from '../core/game';
 import type { StageDef } from '../stages/types';
 import type { Quality } from './materials';
 import { TableView } from './tableView';
-import { AlarmPass, ComicPass, GlitchPass, GradePass, OutlineRenderPass } from './passes';
+import { AlarmPass, ComicPass, GlitchPass, GradePass, OutlineRenderPass, UkiyoePass } from './passes';
 import { Particles, Popups, type ParticleKind, type PopupStyle } from './effects';
 import { CH } from '../table/chassis';
+import { kanjiNumber } from '../ui/kanji';
 
 export type CameraMode = 'fixed' | 'follow' | 'top';
 
@@ -36,6 +37,7 @@ export class Renderer {
   private bloom: UnrealBloomPass | null = null;
   private glitch: GlitchPass | null = null;
   private alarm: AlarmPass | null = null;
+  private ukiyoe: UkiyoePass | null = null;
   private pivot = new THREE.Group();
   private view: TableView | null = null;
   private particles: Particles;
@@ -260,8 +262,8 @@ export class Renderer {
     this.composer?.dispose();
     const composer = new EffectComposer(this.gl);
     composer.setPixelRatio(this.gl.getPixelRatio());
-    if (style === 'anime' || style === 'comic') {
-      composer.addPass(new OutlineRenderPass(this.scene, this.camera, this.gl, style === 'comic' ? 0.006 : 0.0035));
+    if (style === 'anime' || style === 'comic' || style === 'ukiyoe') {
+      composer.addPass(new OutlineRenderPass(this.scene, this.camera, this.gl, style === 'comic' ? 0.006 : style === 'ukiyoe' ? 0.0055 : 0.0035));
     } else {
       composer.addPass(new RenderPass(this.scene, this.camera));
     }
@@ -274,6 +276,11 @@ export class Renderer {
     this.glitch = null;
     this.alarm = null;
     if (style === 'comic') composer.addPass(new ComicPass());
+    if (style === 'ukiyoe') {
+      this.ukiyoe = new UkiyoePass();
+      if (stage.theme.bokashi) this.ukiyoe.material.uniforms.bokashi.value.set(stage.theme.bokashi);
+      composer.addPass(this.ukiyoe);
+    } else this.ukiyoe = null;
     if (style === 'cyber') {
       this.glitch = new GlitchPass();
       composer.addPass(this.glitch);
@@ -500,7 +507,8 @@ export class Renderer {
         break;
       case 'score':
         if (e.points >= 25000 && e.x !== undefined && e.y !== undefined) {
-          this.popup(e.x, e.y, e.points.toLocaleString(), style === 'cyber' ? 'glitch' : style === 'anime' ? 'anime' : 'score', this.color('accent'), 0.6, 0.9);
+          if (style === 'ukiyoe') this.popups.add(e.x, e.y, 2.5, `${kanjiNumber(e.points)}点`, 'brush', '#7a1712', 1.0, 1.0);
+          else this.popup(e.x, e.y, e.points.toLocaleString(), style === 'cyber' ? 'glitch' : style === 'anime' ? 'anime' : 'score', this.color('accent'), 0.6, 0.9);
         }
         break;
     }
@@ -527,10 +535,15 @@ export class Renderer {
         }
         break;
       case 'text':
-        this.popup(x, y, e.text ?? '', this.stage!.theme.style === 'comic' ? 'comic' : this.stage!.theme.style === 'cyber' ? 'glitch' : this.stage!.theme.style === 'impossible' ? 'warn' : 'anime', e.color ?? this.color('accent'), 1, 1.4);
+        if (this.stage!.theme.style === 'ukiyoe') this.popups.add(x, y, 2.8, e.text ?? '', 'brush', e.color ?? '#17110c', 1.5, 1.4);
+        else this.popup(x, y, e.text ?? '', this.stage!.theme.style === 'comic' ? 'comic' : this.stage!.theme.style === 'cyber' ? 'glitch' : this.stage!.theme.style === 'impossible' ? 'warn' : 'anime', e.color ?? this.color('accent'), 1, 1.4);
         break;
       case 'comic':
         this.popups.add(x, y, 2.6, e.text ?? 'POW!', 'comic', e.color ?? '#ff3b30', 1.1, 1.0);
+        break;
+      case 'brush':
+        // 筆文字（color は墨の色。value で大きさ）
+        this.popups.add(x, y, 2.8, e.text ?? 'ドン！', 'brush', e.color ?? '#17110c', e.value ?? 1.6, 1.1);
         break;
       case 'glitch':
         if (this.glitch) this.glitch.amount = Math.max(this.glitch.amount, e.value ?? 1);

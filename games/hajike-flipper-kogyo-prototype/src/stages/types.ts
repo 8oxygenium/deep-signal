@@ -28,7 +28,7 @@ export interface StageRules {
   bonus?(g: Game): BonusLine[];
 }
 
-export type ThemeStyle = 'modern' | 'anime' | 'comic' | 'route50s' | 'cyber' | 'impossible' | 'test';
+export type ThemeStyle = 'modern' | 'anime' | 'comic' | 'route50s' | 'cyber' | 'ukiyoe' | 'impossible' | 'test';
 
 export interface ThemeColors {
   /** 背景（空間） */
@@ -107,8 +107,10 @@ export interface ThemeDef {
   bloomThreshold?: number;
   /** 照明の強さ（0..2） */
   light?: number;
-  /** 得点表示の形式 */
-  scoreDisplay?: 'dmd' | 'reels';
+  /** 得点表示の形式（dmd = ドットマトリクス、reels = 機械式リール、fuda = 木札に漢数字） */
+  scoreDisplay?: 'dmd' | 'reels' | 'fuda';
+  /** 浮世絵の「ぼかし摺り」の色（画面上部の帯。style: 'ukiyoe' のとき） */
+  bokashi?: string;
   /** 壁の素材 */
   wallMaterial?: 'glass' | 'metal' | 'toon' | 'wood' | 'neon' | 'hazard' | 'plain';
   /** ステージ専用の3D装飾（ボス、ジュークボックス等） */

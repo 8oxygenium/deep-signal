@@ -48,14 +48,18 @@
   `g.emit({ t: 'gimmick', name, text, sub, phase: 'warn'|'start'|'end' })`（予告の帯）
 - 描画に効く値：`g.vars.rot`（台の回転, rad）`g.vars.pitch` `g.vars.darkness`（0..1 停電）`g.vars.alarm`（赤い非常灯）`g.vars.glitch`
 - 共通部品：`Missions`（ミッション→ランク。テーブル以外のきっかけで進めるときは `advance(g, n)`）、`LaneSet`（そろえるレーン＋レーンチェンジ）… `src/core/missions.ts`
+- 浮世絵用（style: 'ukiyoe'）：`g.fx('brush', x, y, { text: 'ドン！', color: 墨の色, value: 大きさ(1.6) })`（筆文字の擬音）、
+  `g.fx('mie', 0, 0, { text: '大技名', color: 隈の色 })`（歌舞伎の見得：定式幕＋隈取＋縦書き。音の「ツケ」は `g.sfx('…')` で自分で鳴らす）。
+  `theme.scoreDisplay: 'fuda'` で得点が木札の漢数字に、`theme.bokashi` でぼかし摺りの色。25,000点以上の得点表示は自動で漢数字の筆文字。
+  漢数字の変換は `src/ui/kanji.ts`（`kanjiNumber(25000)` → 二万五千、`kanjiDigits`）。筆文字を自分のキャンバスに描くなら `drawBrushText`（`src/render/effects.ts`）。
 - 注意：`g.fx('cutin')` は絵だけ。音は `g.sfx('cutin')` を一緒に呼ぶ。技名は長くても自動で縮むが、7〜10文字くらいが見栄えがよい。
 - 注意：重力・フリッパーの長さ・左右入れ替えはボール開始時に自動で元に戻る。マルチボール中に全部落ちたときも `onMultiballEnd` が呼ばれる。
 
 ## 見た目（`ThemeDef`）
 
-`style`（modern/anime/comic/route50s/cyber/impossible：ポストエフェクトが変わる）、`colors`、`wallMaterial`（glass/metal/toon/wood/neon/hazard）、
+`style`（modern/anime/comic/route50s/cyber/ukiyoe/impossible：ポストエフェクトが変わる。ukiyoe は太い輪郭線＋平塗り＋和紙＋ぼかし摺り）、`colors`、`wallMaterial`（glass/metal/toon/wood/neon/hazard）、
 `paint(api)`（床の絵をキャンバスに描く）、`paintBackboard`、`decorate(api)`（ステージ専用の3D：`api.THREE` `api.group` `api.at(x,y,h)` `api.onFrame` `api.glow(color)`）、
-`bloom` `bloomThreshold`（明るい台は高く）`light` `scoreDisplay:'reels'`（スコアリール）。
+`bloom` `bloomThreshold`（明るい台は高く）`light` `scoreDisplay:'reels'`（スコアリール）/`'fuda'`（木札に漢数字）。
 
 ## 音
 

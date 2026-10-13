@@ -3,6 +3,7 @@ import type { Game, GameEvent, MsgStyle } from '../core/game';
 import { keyLabel, type Bindings } from '../core/input';
 import type { StageDef } from '../stages/types';
 import { Dmd, DMD_H, DMD_W, fmt } from './dmd';
+import { kanjiDigit } from './kanji';
 
 interface Msg {
   text: string;
@@ -58,10 +59,75 @@ class Reels {
   }
 }
 
+/** 浮世絵の台：木札に漢数字で得点（1枚1桁、右から4桁ごとに「万」「億」の区切り） */
+class Fuda {
+  readonly root = el('div', 'fuda-row');
+  private chars: HTMLElement[] = [];
+  private tags: HTMLElement[] = [];
+  private shown: string[] = [];
+  constructor(n = 9) {
+    for (let i = 0; i < n; i++) {
+      const tag = el('div', 'fuda');
+      const ch = el('span', '');
+      tag.appendChild(ch);
+      const fromRight = n - 1 - i;
+      if (fromRight === 8) tag.dataset.unit = '億';
+      else if (fromRight === 4) tag.dataset.unit = '万';
+      this.root.appendChild(tag);
+      this.tags.push(tag);
+      this.chars.push(ch);
+      this.shown.push('');
+    }
+    this.set(0);
+  }
+  set(value: number): void {
+    const n = this.chars.length;
+    const s = Math.max(0, Math.floor(value)).toString().slice(-n);
+    const pad = n - s.length;
+    for (let i = 0; i < n; i++) {
+      const c = i < pad ? '' : kanjiDigit(Number(s[i - pad]));
+      if (c === this.shown[i]) continue;
+      this.shown[i] = c;
+      this.chars[i].textContent = c;
+      this.tags[i].classList.toggle('blank', !c);
+      // 札が揺れて書き換わる
+      const tag = this.tags[i];
+      tag.classList.remove('flip');
+      void tag.offsetWidth;
+      tag.classList.add('flip');
+    }
+  }
+}
+
+/** 歌舞伎の見得のカットイン用の顔（隈取）。color は隈の色 */
+function kumadori(color: string): string {
+  return `<svg viewBox="0 0 200 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs><radialGradient id="mf" cx="50%" cy="42%" r="60%"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#efe6d6"/></radialGradient></defs>
+  <path d="M100 8 C150 8 182 52 180 112 C178 176 146 228 100 232 C54 228 22 176 20 112 C18 52 50 8 100 8 Z" fill="url(#mf)" stroke="#111" stroke-width="5"/>
+  <path d="M30 20 C40 8 70 2 100 4 C130 2 160 8 170 20 C150 14 128 16 100 18 C72 16 50 14 30 20 Z" fill="#111"/>
+  <g fill="none" stroke="${color}" stroke-linecap="round">
+    <path d="M86 92 C70 70 52 58 26 52" stroke-width="9"/><path d="M114 92 C130 70 148 58 174 52" stroke-width="9"/>
+    <path d="M82 104 C64 96 46 98 30 112" stroke-width="6"/><path d="M118 104 C136 96 154 98 170 112" stroke-width="6"/>
+    <path d="M70 128 C58 150 52 168 54 190" stroke-width="8"/><path d="M130 128 C142 150 148 168 146 190" stroke-width="8"/>
+    <path d="M100 30 L100 70" stroke-width="7"/>
+  </g>
+  <path d="M60 84 C72 72 88 74 94 86" fill="none" stroke="#111" stroke-width="8" stroke-linecap="round"/>
+  <path d="M140 84 C128 72 112 74 106 86" fill="none" stroke="#111" stroke-width="8" stroke-linecap="round"/>
+  <ellipse cx="76" cy="104" rx="15" ry="8" fill="#fff" stroke="#111" stroke-width="4"/><ellipse cx="124" cy="104" rx="15" ry="8" fill="#fff" stroke="#111" stroke-width="4"/>
+  <circle cx="84" cy="104" r="5.5" fill="#111"/><circle cx="116" cy="104" r="5.5" fill="#111"/>
+  <path d="M100 112 C96 132 92 140 100 146 C108 140 104 132 100 112" fill="none" stroke="#111" stroke-width="4"/>
+  <path d="M74 178 C88 168 112 168 126 178 C112 186 88 186 74 178 Z" fill="${color}" stroke="#111" stroke-width="4"/>
+  <path d="M72 178 L64 186 M128 178 L136 186" stroke="#111" stroke-width="4" stroke-linecap="round"/>
+</svg>`;
+}
+
 export class Hud {
   readonly root = el('div', 'hud hidden');
   private dmd = new Dmd();
   private reels: Reels | null = null;
+  private fuda: Fuda | null = null;
+  private fudaAcc = 0;
+  private mie = el('div', 'mie');
   private top = el('div', 'hud-top');
   private display = el('div', 'hud-display');
   private sub = el('div', 'hud-sub');
@@ -89,7 +155,7 @@ export class Hud {
   constructor(parent: HTMLElement) {
     this.display.appendChild(this.dmd.canvas);
     this.top.append(this.display, this.sub);
-    this.root.append(this.top, this.left, this.right, this.gauge, this.banner, this.cutin, this.gimmick);
+    this.root.append(this.top, this.left, this.right, this.gauge, this.banner, this.cutin, this.mie, this.gimmick);
     this.gauge.append(this.gaugeSweet, this.gaugeFill, el('span', 'label', '発射'));
     parent.appendChild(this.root);
   }
@@ -116,7 +182,16 @@ export class Hud {
     this.root.style.setProperty('--accent2', st.theme.colors.accent2);
     this.dmd.setColor(st.theme.colors.dmd);
     this.display.innerHTML = '';
-    if (st.theme.scoreDisplay === 'reels') {
+    this.fuda = null;
+    if (st.theme.scoreDisplay === 'fuda') {
+      this.reels = null;
+      this.fuda = new Fuda(9);
+      const box = el('div', 'fuda-box');
+      box.append(el('div', 'fuda-title', st.subtitle || st.name), this.fuda.root);
+      this.display.appendChild(box);
+      this.display.appendChild(this.dmd.canvas);
+      this.dmd.canvas.classList.add('small');
+    } else if (st.theme.scoreDisplay === 'reels') {
       this.reels = new Reels(8);
       const box = el('div', 'reel-box');
       box.append(el('div', 'reel-title', st.name), this.reels.root);
@@ -156,6 +231,7 @@ export class Hud {
         break;
       case 'fx':
         if (e.name === 'cutin') this.showCutin(e.text ?? '', e.color);
+        else if (e.name === 'mie') this.showMie(e.text ?? '', e.color);
         break;
       case 'gimmick':
         this.showGimmick(e.text, e.sub, e.phase);
@@ -191,6 +267,16 @@ export class Hud {
     this.cutin.classList.add('on');
   }
 
+  /** 歌舞伎の「見得」：定式幕が走り、隈取の顔と縦書きの大技名がドンと決まる（音の「ツケ」はステージ側で鳴らす） */
+  showMie(text: string, color = '#c8161d'): void {
+    const n = Math.max(3, [...text].length);
+    const size = `min(${(54 / n).toFixed(2)}vh, 9vw, 104px)`;
+    this.mie.innerHTML = `<div class="maku"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="face">${kumadori(color)}</div><div class="txt" style="font-size:${size}">${esc(text)}</div>`;
+    this.mie.classList.remove('on');
+    void this.mie.offsetWidth;
+    this.mie.classList.add('on');
+  }
+
   showGimmick(text: string, sub: string, phase: 'warn' | 'start' | 'end'): void {
     if (phase === 'end') {
       this.gimmick.classList.remove('on', 'warn');
@@ -214,6 +300,14 @@ export class Hud {
     this.displayScore += diff > 0 ? Math.max(1, diff * Math.min(1, dt * 8)) : diff;
     if (Math.abs(g.score - this.displayScore) < 1) this.displayScore = g.score;
     this.reels?.set(this.displayScore);
+    if (this.fuda) {
+      // 札は書き換わるたびに揺れるので、少し間引く
+      this.fudaAcc += dt;
+      if (this.fudaAcc >= 0.07 || this.displayScore === g.score) {
+        this.fudaAcc = 0;
+        this.fuda.set(this.displayScore);
+      }
+    }
 
     this.dmdAcc += dt;
     if (this.dmdAcc >= 1 / 30) {
@@ -302,7 +396,7 @@ export class Hud {
         d.fitText(msg.text, 8, 2, v);
         d.text(fmt(this.displayScore), DMD_W / 2, 30, 1, 'center', 0.6);
       }
-    } else if (this.reels) {
+    } else if (this.reels || this.fuda) {
       // ROUTE 50s：上の小さい表示はミッション
       d.text(`BALL ${Math.min(g.ball, g.ballsPerGame)}`, 2, 2, 1);
       d.text(`x${g.pfMult}`, DMD_W - 2, 2, 1, 'right');

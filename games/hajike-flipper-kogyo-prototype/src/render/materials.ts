@@ -121,8 +121,9 @@ function woodTexture(dark = false): THREE.CanvasTexture {
 export function makeMaterials(theme: ThemeDef, quality: Quality): Mats {
   const c = theme.colors;
   const style = theme.style;
-  const toon = style === 'anime' || style === 'comic';
-  const grad = style === 'comic' ? toonGradient2() : toonGradient();
+  const toon = style === 'anime' || style === 'comic' || style === 'ukiyoe';
+  // 浮世絵は平塗り（2段）、アニメは3段
+  const grad = style === 'comic' || style === 'ukiyoe' ? toonGradient2() : toonGradient();
 
   const solid = (color: string, o: { metal?: number; rough?: number; emissive?: string; ei?: number; opacity?: number; map?: THREE.Texture } = {}) => {
     const common = {

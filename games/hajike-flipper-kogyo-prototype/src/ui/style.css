@@ -7,6 +7,10 @@
   --line: rgba(255, 255, 255, 0.16);
   --jp: 'Yu Gothic UI', 'Meiryo', 'Segoe UI', sans-serif;
   --disp: 'Segoe UI Black', 'Arial Black', 'Impact', sans-serif;
+  /* 筆文字（行書体があれば使い、無ければ Windows 標準の教科書体・明朝） */
+  --brush: 'HGS行書体', 'HG行書体', 'HGGyoshotai', 'HG正楷書体-PRO', 'UD デジタル 教科書体 NK-B', 'UD Digi Kyokasho NK-B', '游明朝 Demibold', 'Yu Mincho', serif;
+  /* 芝居の看板文字（太い筆）。勘亭流の代わりに、太い明朝・教科書体を縁取りで太らせて使う */
+  --kantei: 'HG正楷書体-PRO', 'UD デジタル 教科書体 NK-B', 'UD Digi Kyokasho NK-B', '游明朝 Demibold', 'Yu Mincho', serif;
 }
 
 * { box-sizing: border-box; }
@@ -246,3 +250,46 @@ canvas.dmd.small { width: 300px !important; height: auto; }
   .hud-panel .keys { display: none; }
   .sel-left { width: 46vw; }
 }
+
+
+/* ───────── 浮世絵の台：木札の得点・見得のカットイン ───────── */
+.fuda-box { padding: 8px 14px 12px; border-radius: 6px; background: linear-gradient(180deg, #3b2414, #23140a); border: 3px solid #0d0703; box-shadow: 0 0 0 3px #b8892f, 0 10px 26px rgba(0,0,0,0.7); }
+.fuda-title { text-align: center; font: 900 18px var(--brush); color: #f3e2b8; letter-spacing: 0.4em; margin-bottom: 6px; text-shadow: 0 2px 0 #000; }
+.fuda-row { display: flex; gap: 5px; }
+.fuda { position: relative; width: 34px; height: 64px; display: flex; align-items: center; justify-content: center;
+  background: repeating-linear-gradient(90deg, rgba(120,80,30,0.10) 0 2px, transparent 2px 5px), linear-gradient(180deg, #f1d9a6, #d9b878 60%, #c9a35e);
+  clip-path: polygon(18% 0, 82% 0, 100% 12%, 100% 100%, 0 100%, 0 12%); box-shadow: inset 0 -6px 8px rgba(80,40,0,0.35); transform-origin: 50% 0; }
+.fuda::before { content: ''; position: absolute; top: 5px; left: 50%; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: #2a1606; }
+.fuda span { font: 900 30px var(--brush); color: #140b05; margin-top: 8px; }
+.fuda.blank span { opacity: 0; }
+.fuda.blank { filter: brightness(0.72); }
+.fuda[data-unit]::after { content: attr(data-unit); position: absolute; right: -9px; bottom: -14px; font: 900 13px var(--brush); color: #f3e2b8; text-shadow: 0 1px 0 #000; }
+.fuda.flip { animation: fudaflip 0.32s ease-out; }
+@keyframes fudaflip { 0% { transform: rotateX(70deg); } 60% { transform: rotateX(-12deg); } 100% { transform: rotateX(0); } }
+
+.hud[data-style='ukiyoe'] .hud-panel { background: rgba(244, 232, 205, 0.93); color: #1b120a; border: 3px solid #1b120a; border-radius: 3px; box-shadow: 0 0 0 4px #b8892f, 6px 8px 0 rgba(0,0,0,0.45); backdrop-filter: none; }
+.hud[data-style='ukiyoe'] .hud-panel .row b, .hud[data-style='ukiyoe'] .hud-panel .stage-name, .hud[data-style='ukiyoe'] .hud-panel .mission .mt { color: #a3171b; }
+.hud[data-style='ukiyoe'] .hud-panel .stage-name { font-family: var(--brush); letter-spacing: 0.1em; }
+.hud[data-style='ukiyoe'] .hud-panel .stage-name small { color: #1b120a; }
+.hud[data-style='ukiyoe'] .hud-panel kbd { border-color: #1b120a; background: #fffaf0; color: #1b120a; }
+.hud[data-style='ukiyoe'] canvas.dmd { border-color: #b8892f; }
+.hud[data-style='ukiyoe'] .hud-sub { background: #f4e8cd; color: #1b120a; border: 2px solid #1b120a; text-shadow: none; font-family: var(--brush); }
+.hud[data-style='ukiyoe'] .banner .t { font-family: var(--brush); }
+
+.mie { position: absolute; inset: 0; overflow: hidden; opacity: 0; pointer-events: none; }
+.mie.on { animation: miefade 2.7s forwards; }
+.mie .maku { position: absolute; inset: 0; display: flex; transform: translateX(-105%); opacity: 0.94; }
+.mie .maku i { flex: 1; }
+.mie .maku i:nth-child(3n+1) { background: #151311; }
+.mie .maku i:nth-child(3n+2) { background: #b5541f; }
+.mie .maku i:nth-child(3n+3) { background: #2c6a3c; }
+.mie.on .maku { animation: makuin 2.7s cubic-bezier(.2,.9,.2,1) forwards; }
+.mie .face { position: absolute; left: 34%; top: 50%; width: min(52vh, 36vw); transform: translate(-50%, -50%) scale(0.2); opacity: 0; filter: drop-shadow(10px 12px 0 rgba(0,0,0,0.55)); }
+.mie.on .face { animation: mieface 2.7s cubic-bezier(.15,1.4,.3,1) forwards; }
+.mie .txt { position: absolute; left: 70%; top: 50%; transform: translate(-50%, -50%) scale(2.2); opacity: 0; writing-mode: vertical-rl; font-family: var(--brush); font-weight: 900; line-height: 1; color: #fffaf0; -webkit-text-stroke: 2px #111; text-shadow: 5px 5px 0 #8a1010, 0 0 18px rgba(0,0,0,0.6); letter-spacing: 0.1em; white-space: nowrap; }
+.mie.on .txt { animation: mietxt 2.7s ease-out forwards; }
+@keyframes miefade { 0% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes makuin { 0% { transform: translateX(-105%); } 12% { transform: translateX(0); } 88% { transform: translateX(0); opacity: 0.94; } 100% { transform: translateX(105%); opacity: 0.94; } }
+@keyframes mieface { 0%, 10% { transform: translate(-50%, -50%) scale(0.2) rotate(-8deg); opacity: 0; } 22% { transform: translate(-50%, -50%) scale(1.08) rotate(3deg); opacity: 1; }
+  26% { transform: translate(-48%, -50%) scale(1) rotate(0); } 28% { transform: translate(-52%, -50%) scale(1); } 30%, 86% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(1.05); opacity: 0; } }
+@keyframes mietxt { 0%, 24% { transform: translate(-50%, -50%) scale(2.2); opacity: 0; } 32% { transform: translate(-50%, -50%) scale(0.95); opacity: 1; } 36%, 86% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { opacity: 0; } }

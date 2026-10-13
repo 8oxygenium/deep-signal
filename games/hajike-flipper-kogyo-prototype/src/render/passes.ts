@@ -78,6 +78,44 @@ export class ComicPass extends ShaderPassBase {
   }
 }
 
+/** 浮世絵：木版画風（平塗り・墨の輪郭・ぼかし摺り・和紙の質感） */
+export class UkiyoePass extends ShaderPassBase {
+  constructor() {
+    super(
+      `uniform sampler2D tDiffuse; uniform vec2 resolution; uniform vec3 bokashi; uniform float bokashiAmt; varying vec2 vUv;
+      float luma(vec3 c){ return dot(c, vec3(0.299,0.587,0.114)); }
+      float h(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
+      float n(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
+        return mix(mix(h(i),h(i+vec2(1,0)),f.x), mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x), f.y); }
+      void main(){
+        vec2 px = 1.0 / resolution;
+        vec3 c = texture2D(tDiffuse, vUv).rgb;
+        float l = luma(c);
+        // 平塗り：明るさを段階にして、色味は保つ
+        float lq = floor(l * 5.0 + 0.5) / 5.0;
+        vec3 painted = c * (max(lq, 0.04) / max(l, 0.04));
+        c = mix(c, painted, 0.65);
+        // 墨の輪郭：明るさの差が大きい所に線を足す
+        float lx = luma(texture2D(tDiffuse, vUv + vec2(px.x, 0.0)).rgb) - luma(texture2D(tDiffuse, vUv - vec2(px.x, 0.0)).rgb);
+        float ly = luma(texture2D(tDiffuse, vUv + vec2(0.0, px.y)).rgb) - luma(texture2D(tDiffuse, vUv - vec2(0.0, px.y)).rgb);
+        float edge = smoothstep(0.16, 0.42, length(vec2(lx, ly)));
+        c = mix(c, vec3(0.09, 0.07, 0.06), edge * 0.75);
+        // ぼかし摺り：画面の上の帯を藍色でぼかす
+        float b = smoothstep(0.80, 1.0, vUv.y) * bokashiAmt;
+        c = mix(c, c * bokashi * 1.6, b);
+        // 和紙：細かい繊維のむらと、明るい所の生成り色
+        vec2 q = vUv * resolution;
+        float fib = n(q * vec2(0.35, 0.06)) * 0.5 + n(q * 0.9) * 0.3 + n(q * vec2(0.05, 0.6)) * 0.2;
+        c *= 0.9 + 0.1 * fib;
+        c = mix(c, c * vec3(1.0, 0.95, 0.84), 0.35);
+        c = mix(c, vec3(0.96, 0.91, 0.79), smoothstep(0.82, 1.0, l) * 0.35);
+        gl_FragColor = vec4(c, 1.0);
+      }`,
+      { bokashi: { value: new THREE.Color('#2b4f8f') }, bokashiAmt: { value: 0.55 } },
+    );
+  }
+}
+
 /** サイバー：グリッチ（RGBずれ・横ずれ・走査線） */
 export class GlitchPass extends ShaderPassBase {
   amount = 0;
