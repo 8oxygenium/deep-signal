@@ -376,8 +376,8 @@ export function settingsScreen(
 // ───────── ポーズ ─────────
 
 export function pauseScreen(sound: UiSound, on: { resume(): void; retry(): void; select(): void; settings(): void; quit(): void }): ScreenCtl {
-  const el = h(`<div class="screen pause"><div class="panel"><h2>ポーズ</h2><div class="menu">
-    <button>再開</button><button>リトライ</button><button>ステージ選択へ</button><button>設定</button><button>ゲーム終了</button>
+  const el = h(`<div class="screen pause"><div class="panel"><h2>幕間 <small>ポーズ</small></h2><div class="menu">
+    <button>再開</button><button>リトライ</button><button>演目選択へ</button><button>設定</button><button>ゲーム終了</button>
   </div></div></div>`);
   const items = [...el.querySelectorAll('button')] as HTMLElement[];
   const menu = new MenuList(items, sound, (i) => [on.resume, on.retry, on.select, on.settings, on.quit][i]());
@@ -399,7 +399,7 @@ export function pauseScreen(sound: UiSound, on: { resume(): void; retry(): void;
 
 export function gameOverScreen(stage: StageDef, score: number, time: number, rank: number, sound: UiSound, next: () => void): ScreenCtl {
   const el = h(`<div class="screen gameover"><div class="panel">
-    <div class="go">GAME OVER</div>
+    <div class="go">終演<small>GAME OVER</small></div>
     <div class="sc">${fmt(score)}</div>
     ${stage.survival ? `<div class="tm">生存時間 ${time.toFixed(1)} 秒</div>` : ''}
     ${rank >= 0 ? `<div class="hi">ハイスコア！ 第${rank + 1}位</div>` : '<div class="lo">ランク外…もう一回！</div>'}
@@ -519,9 +519,9 @@ export function rankingScreen(stage: StageDef, list: ScoreEntry[], highlight: nu
     return `<tr class="${i === highlight ? 'me' : ''}"><td class="r">${i + 1}</td><td class="n">${e ? esc(e.name) : '---'}</td><td class="s">${e ? fmt(e.score) : ''}</td>${stage.survival ? `<td class="t">${e?.time !== undefined ? `${e.time.toFixed(1)}秒` : ''}</td>` : ''}</tr>`;
   }).join('');
   const el = h(`<div class="screen ranking" style="--c:${stage.theme.colors.accent}"><div class="panel">
-    <h2>RANKING <small>${esc(stage.name)}｜${esc(stage.subtitle)}</small></h2>
+    <h2>番付 <small>RANKING ｜ ${esc(stage.name)} ${esc(stage.subtitle)}</small></h2>
     <table><thead><tr><th>位</th><th>名前</th><th>スコア</th>${stage.survival ? '<th>生存</th>' : ''}</tr></thead><tbody>${rows}</tbody></table>
-    <div class="hint">Enter でステージ選択へ</div>
+    <div class="hint">Enter で演目選択へ</div>
   </div></div>`);
   let t = 0;
   return {
