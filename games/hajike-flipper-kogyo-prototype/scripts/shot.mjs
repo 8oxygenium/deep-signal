@@ -15,6 +15,11 @@ const errors = [];
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(`[${m.type()}] ${m.text()}`); });
 page.on('pageerror', (e) => errors.push(`[pageerror] ${e.message}`));
 await page.setViewportSize?.({ width: 1280, height: 800 }).catch(() => {});
+// SHOT_SIZE=800x560 のように指定すると、ウィンドウの中身をその大きさにして撮る
+if (process.env.SHOT_SIZE) {
+  const [w, hh] = process.env.SHOT_SIZE.split('x').map(Number);
+  await page.setViewportSize({ width: w, height: hh });
+}
 await page.waitForTimeout(1200);
 if (script) {
   const r = await page.evaluate(script);

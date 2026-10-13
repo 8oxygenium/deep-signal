@@ -206,6 +206,8 @@ export interface StageDef {
   name: string;
   /** 日本語サブタイトル */
   subtitle: string;
+  /** 演目選択の「まねき看板」に書く文字（縦書き。改行で列を分ける）。省略時は subtitle */
+  maneki?: string;
   /** ステージ選択のひとこと */
   tagline: string;
   /** ステージ選択の説明（2〜3行） */

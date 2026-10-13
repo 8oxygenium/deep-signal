@@ -18,6 +18,7 @@ export const route50sStage: StageDef = {
   id: 'route50s',
   name: 'ROUTE 50s',
   subtitle: '昔のアメリカン',
+  maneki: '昔の\nアメリカン',
   tagline: '木目とクローム、ネオンとジュークボックスの台',
   description:
     '壁ぎわの追加フリッパーと5つのバンパー。ジュークボックスを叩くと曲が変わる。4つのミッションで DRAG RACE マルチボール！',

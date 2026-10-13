@@ -67,6 +67,8 @@ export class Renderer {
   topReserve = 0.13;
   /** ステージ選択のプレビュー表示 */
   preview = false;
+  /** プレビューで台を収める画面上の範囲（0..1 の割合）。選択画面のレイアウトに合わせて App が更新する */
+  previewRect = { x0: 0.4, y0: 0, x1: 1, y1: 1 };
   opts: RendererOptions;
 
   constructor(
@@ -379,12 +381,20 @@ export class Renderer {
       const az = Math.sin(this.time * 0.25) * 0.55;
       const el = THREE.MathUtils.degToRad(34);
       const dir = new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
-      // 左側のカード列を避け、右側の空いた所に台を収める
-      const leftW = Math.min(466, this.width * 0.4);
-      const frac = (this.width - leftW) / this.width;
-      this.fit(TABLE_CENTER.clone(), dir, this.corners(), 1 - frac * 0.92, 0.06, 0.06);
-      cam.setViewOffset(this.width, this.height, -leftW / 2, 0, this.width, this.height);
+      // 画面の指定した範囲（選択画面の空き）にちょうど台が収まるように、その範囲の縦横比で合わせてから、
+      // 画面全体のうちのその位置に映す（setViewOffset）
+      const r = this.previewRect;
+      const W = this.width, H = this.height;
+      const rw = Math.max(40, (r.x1 - r.x0) * W), rh = Math.max(40, (r.y1 - r.y0) * H);
+      cam.aspect = rw / rh;
+      cam.updateProjectionMatrix();
+      this.fit(TABLE_CENTER.clone(), dir, this.corners(), 0.04, 0.04, 0.04);
+      cam.setViewOffset(rw, rh, -r.x0 * W, -r.y0 * H, W, H);
       return;
+    }
+    if (Math.abs(cam.aspect - this.width / this.height) > 1e-6) {
+      cam.aspect = this.width / this.height;
+      cam.updateProjectionMatrix();
     }
     const mode = this.opts.camera;
     if (mode === 'top') {

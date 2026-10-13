@@ -448,6 +448,15 @@ balls ${g.balls.length}  lost ${g.stats.lost}  autoNudge ${g.stats.autoNudges}  
       }
     }
     this.input.pollGamepads();
+    // ステージ選択：プレビューの台を、画面の空き（.preview-slot）に収める
+    if (this.screen === 'select' && this.ctl) {
+      const slot = this.ctl.el.querySelector('.preview-slot');
+      if (slot) {
+        const r = slot.getBoundingClientRect();
+        const W = window.innerWidth || 1, H = window.innerHeight || 1;
+        if (r.width > 10 && r.height > 10) this.renderer.previewRect = { x0: r.left / W, y0: r.top / H, x1: r.right / W, y1: r.bottom / H };
+      }
+    }
     if (this.screen === 'play' && this.game) {
       this.game.update(dt);
       const pl = this.game.table.plunger;

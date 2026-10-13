@@ -5,6 +5,8 @@ import type { HighScores, ScoreEntry, Settings } from '../core/storage';
 import type { StageDef } from '../stages/types';
 import { fmt } from './dmd';
 import { esc } from './hud';
+import { kanjiNumber } from './kanji';
+import { lantern, nobori } from './kogyo';
 
 export interface ScreenCtl {
   el: HTMLElement;
@@ -65,19 +67,59 @@ class MenuList {
   }
 }
 
-// ───────── タイトル ─────────
+// ───────── タイトル（見世物小屋の呼び込み） ─────────
+
+/** 口上（呼び込み）。順番に1行ずつ、1文字ずつ押し出すように出す（CSS だけで繰り返す） */
+const KOUJOU = [
+  'さあさあ、寄ってらっしゃい見てらっしゃい！',
+  '世にも不思議な鉄の玉、弾けて跳ねての大立ち回り！',
+  '本日の演目は七つ。とくとご覧あれ！',
+  'お代は見てのお帰り…いえいえ、タダでございます！',
+];
+const KOUJOU_SLOT = 4.6;
+
+function koujouHtml(): string {
+  const period = KOUJOU.length * KOUJOU_SLOT;
+  return KOUJOU.map(
+    (line, i) =>
+      `<div class="kj-line">${[...line]
+        .map((c, k) => `<span style="animation-duration:${period}s;animation-delay:${(i * KOUJOU_SLOT + k * 0.03).toFixed(2)}s">${esc(c)}</span>`)
+        .join('')}</div>`,
+  ).join('');
+}
 
 export function titleScreen(version: string, sound: UiSound, on: { start(): void; settings(): void; guide(): void; quit(): void }): ScreenCtl {
-  const el = h(`<div class="screen title">
-    <div class="logo"><span class="l1">HANSODE</span><span class="l2">PINBALL</span></div>
-    <div class="tag">6つの台で遊ぶ 3Dピンボール</div>
-    <div class="menu">
-      <button>ステージをえらぶ</button>
-      <button>設定</button>
-      <button>固定キーの案内</button>
-      <button>終了</button>
+  const lanterns = [
+    lantern('大入', '#d8261c'),
+    lantern('興', '#f2e9d8', '#b3121a'),
+    lantern('弾', '#d8261c'),
+    lantern('祭', '#f2e9d8', '#b3121a'),
+    lantern('鉄', '#d8261c'),
+    lantern('球', '#f2e9d8', '#b3121a'),
+    lantern('満員', '#d8261c'),
+  ]
+    .map((l, i) => l.replace('class="lantern"', `class="lantern" data-i="${i}"`))
+    .join('');
+  const el = h(`<div class="screen title kogyo">
+    <div class="tt-shade"></div>
+    <div class="tt-rope">${lanterns}</div>
+    <div class="tt-side l">${nobori('千客万来', '#b3121a', '#fff8e8', '#f2c94c', 0)}${nobori('弾け！鉄球', '#f4ead2', '#1f2f6b', '#b3121a', 0.7)}</div>
+    <div class="tt-side r">${nobori('大入満員', '#1f2f6b', '#fff8e8', '#f2c94c', 0.35)}${nobori('七番勝負', '#f4ead2', '#b3121a', '#1f2f6b', 1.1)}</div>
+    <div class="tt-center">
+      <div class="tt-ribbon">見世物小屋　フリッパー一座　本日開演</div>
+      <div class="tt-sign">
+        <div class="logo"><span class="hj">弾け！</span><span class="fk">フリッパー興業</span></div>
+        <div class="en">Hajike! Flipper Kogyo</div>
+      </div>
+      <div class="koujou">${koujouHtml()}</div>
+      <div class="menu">
+        <button>演目をえらぶ</button>
+        <button>設定</button>
+        <button>固定キーの案内</button>
+        <button>終了</button>
+      </div>
+      <div class="press">Space / Enter / Aボタン で決定</div>
     </div>
-    <div class="press">Space / Enter / Aボタン で決定</div>
     <div class="ver">v${esc(version)}</div>
   </div>`);
   const items = [...el.querySelectorAll('button')] as HTMLElement[];
@@ -92,7 +134,7 @@ export function titleScreen(version: string, sound: UiSound, on: { start(): void
   };
 }
 
-// ───────── ステージ選択 ─────────
+// ───────── ステージ選択（本日の演目：まねき看板） ─────────
 
 export function stars(n: number): string {
   return '★'.repeat(n) + '☆'.repeat(5 - n);
@@ -105,29 +147,39 @@ export function selectScreen(
   sound: UiSound,
   on: { focus(i: number): void; pick(i: number): void; back(): void },
 ): ScreenCtl {
-  const cards = stages
+  const boards = stages
     .map((s, i) => {
       const best = scores[s.id]?.[0];
-      return `<div class="card ${s.ominous ? 'ominous' : ''}" style="--c:${s.theme.colors.accent};--c2:${s.theme.colors.accent2}">
-        <div class="num">${i + 1}</div>
-        <div class="nm">${esc(s.name)}</div>
-        <div class="jp">${esc(s.subtitle)}</div>
-        <div class="stars" title="難しさ">${stars(s.difficulty)}</div>
-        <div class="best">${best ? `BEST ${fmt(best.score)}${s.survival && best.time !== undefined ? ` / ${best.time.toFixed(1)}秒` : ''}` : 'BEST ---'}</div>
+      // 縦書き。列（改行）ごとの字数と列の数から、看板に収まる文字の大きさを決める
+      const cols = (s.maneki ?? s.subtitle).split('\n');
+      const longest = Math.max(3, ...cols.map((c) => [...c].length));
+      const size = `min(${(21.5 / longest).toFixed(2)}vh, ${(8.6 / cols.length).toFixed(2)}vw, 46px)`;
+      return `<div class="maneki ${s.ominous ? 'ominous' : ''}" style="--c:${s.theme.colors.accent}">
+        <div class="mk-lamp">${lantern(kanjiNumber(i + 1), s.ominous ? '#2a2a2a' : '#d8261c', s.ominous ? '#ffcc00' : '#1a0d08')}</div>
+        <div class="mk-roof"></div>
+        <div class="mk-board">
+          <div class="mk-no">${kanjiNumber(i + 1)}番</div>
+          <div class="mk-jp" style="font-size:${size}">${esc(s.maneki ?? s.subtitle)}</div>
+          <div class="mk-en">${esc(s.name)}</div>
+        </div>
+        <div class="mk-best">${best ? `${fmt(best.score)}${s.survival && best.time !== undefined ? `<br>${best.time.toFixed(1)}秒` : ''}` : '---'}</div>
       </div>`;
     })
     .join('');
-  const el = h(`<div class="screen select">
-    <div class="sel-left">
-      <h2>ステージ選択</h2>
-      <div class="cards">${cards}</div>
-      <div class="detail"></div>
-      <div class="hint">↑↓ 選ぶ　Enter 決定　Esc 戻る</div>
+  const el = h(`<div class="screen select kogyo">
+    <div class="sel-top">
+      <div class="sel-head"><span class="lt">本日の演目</span><span class="en">TODAY'S PROGRAM</span></div>
+      <div class="maneki-row">${boards}</div>
     </div>
+    <div class="sel-bottom">
+      <div class="detail"></div>
+      <div class="preview-slot"></div>
+    </div>
+    <div class="hint">←→ 選ぶ　Enter 開演　Esc 戻る</div>
     <div class="ominous-fx"></div>
   </div>`);
   const detail = el.querySelector('.detail') as HTMLElement;
-  const items = [...el.querySelectorAll('.card')] as HTMLElement[];
+  const items = [...el.querySelectorAll('.maneki')] as HTMLElement[];
   const showDetail = (i: number) => {
     const s = stages[i];
     const list = scores[s.id] ?? [];
@@ -136,11 +188,11 @@ export function selectScreen(
       .map((e, k) => `<li><span>${k + 1}</span><b>${esc(e.name)}</b><em>${fmt(e.score)}${s.survival && e.time !== undefined ? ` <small>${e.time.toFixed(1)}秒</small>` : ''}</em></li>`)
       .join('');
     detail.style.setProperty('--c', s.theme.colors.accent);
-    detail.innerHTML = `<div class="dn">${esc(s.name)}</div><div class="dj">${esc(s.subtitle)}</div>
+    detail.innerHTML = `<div class="dno">第${kanjiNumber(i + 1)}番</div><div class="dn">${esc(s.subtitle)}<small>${esc(s.name)}</small></div>
       <div class="dt">${esc(s.tagline)}</div><p>${esc(s.description)}</p>
       <div class="dd">難しさ <span class="stars">${stars(s.difficulty)}</span>　ボールセーブ ${s.ballSave}秒</div>
       <ol class="top3">${top || '<li class="none">まだ記録がありません</li>'}</ol>
-      <div class="go">Enter でスタート</div>`;
+      <div class="go">Enter で開演</div>`;
     el.classList.toggle('is-ominous', !!s.ominous);
     if (s.ominous) {
       sound('ominous');

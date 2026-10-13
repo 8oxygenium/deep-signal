@@ -13,6 +13,7 @@ export const impossibleStage: StageDef = {
   id: 'impossible',
   name: 'IMPOSSIBLE',
   subtitle: '無理な感じのステージ',
+  maneki: '無理な\n感じの\nステージ',
   tagline: '生きて帰れると思うな',
   description: '台が回り、床が傾き、フリッパーは縮み、左右まで入れ替わる。ボールセーブはたったの5秒。問われるのは点数より、生き延びた秒数。',
   difficulty: 5,
