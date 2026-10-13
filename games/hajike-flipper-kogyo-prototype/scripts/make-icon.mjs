@@ -25,6 +25,7 @@ function capsuleSdf(x, y, ax, ay, bx, by, ra, rb) {
 }
 
 // 1サンプルの色（256x256 座標系）を返す。[r,g,b,a] 0..1
+// 「弾け！フリッパー興業」：漆の地に金の縁、青海波、灯った提灯と銀の玉
 function shade(x, y) {
   let col = [0, 0, 0];
   let alpha = 0;
@@ -33,58 +34,81 @@ function shade(x, y) {
     alpha = alpha + a * (1 - alpha);
   };
 
-  // 背景：角丸の台
-  const bg = roundRectSdf(x, y, 128, 128, 124, 124, 46);
+  // 背景：角丸の漆塗り
+  const bg = roundRectSdf(x, y, 128, 128, 124, 124, 40);
   if (bg < 0) {
     const t = y / 256;
-    let c = mixc([0.05, 0.07, 0.2], [0.13, 0.04, 0.24], t);
-    // 斜めのグリッド
-    const g = (Math.abs(((x + y) % 32) - 16) < 0.8 || Math.abs(((x - y + 512) % 32) - 16) < 0.8) ? 0.06 : 0;
-    c = mixc(c, [0.3, 0.6, 1], g);
+    let c = mixc([0.2, 0.04, 0.03], [0.07, 0.015, 0.01], t);
+    // 青海波（下の方にうっすら金で）
+    const R = 22;
+    const row = Math.floor(y / (R * 0.5));
+    const ox = row % 2 ? R : 0;
+    const cx = Math.round((x - ox) / (R * 2)) * R * 2 + ox;
+    const cy = (row + 1) * R * 0.5;
+    const dd = Math.hypot(x - cx, y - cy);
+    if (dd < R && y > 150) {
+      const ring = Math.abs(((dd % 6) + 6) % 6 - 3);
+      if (ring < 0.9) c = mixc(c, [0.85, 0.62, 0.22], 0.22 * clamp((y - 150) / 60));
+    }
     over(c, 1);
-    // ネオンの縁
-    const edge = Math.abs(bg + 7);
-    if (edge < 3.2) over([0.35, 0.95, 1], clamp(1 - edge / 3.2) * 0.95);
+    // 金の縁
+    const edge = Math.abs(bg + 8);
+    if (edge < 2.6) over([0.95, 0.74, 0.3], clamp(1 - edge / 2.6) * 0.95);
   }
 
-  // フリッパー
-  const fl = capsuleSdf(x, y, 54, 206, 158, 172, 22, 11);
-  if (fl < 0) {
-    const inner = capsuleSdf(x, y, 54, 206, 158, 172, 15, 6);
-    over(inner < 0 ? [0.96, 0.32, 0.22] : [1, 0.97, 0.9], 1);
-    if (inner < 0 && inner > -3) over([1, 0.6, 0.45], 0.6);
-  }
-  const pivot = Math.hypot(x - 54, y - 206) - 7;
-  if (pivot < 0) over([0.95, 0.85, 0.3], 1);
+  // 提灯のまわりの灯り
+  const lx = 104, ly = 120;
+  const glow = Math.hypot((x - lx) / 1.05, y - ly);
+  if (bg < 0) over([1, 0.55, 0.15], clamp(1 - glow / 118) * 0.35);
 
-  // クロームのボール
-  const bx = 150, by = 104, br = 68;
+  // 提灯：胴（楕円）と上下の黒い枠
+  const ex = (x - lx) / 64, ey = (y - ly) / 74;
+  const e = ex * ex + ey * ey;
+  if (e < 1) {
+    const k = Math.sqrt(e);
+    let c = mixc([1, 0.86, 0.5], [0.86, 0.12, 0.08], clamp(k * 1.25));
+    c = mixc(c, [0.32, 0.03, 0.02], clamp((k - 0.75) * 3));
+    // 竹ひご（胴の丸みに合わせた横線）
+    const yy = (y - ly) / 74;
+    const rib = Math.abs(((yy * 7 + 7.5) % 1) - 0.5);
+    if (rib < 0.07) c = mixc(c, [0.35, 0.04, 0.02], 0.55);
+    // 紋：玉とフリッパーの影絵（墨で胴に描いたように）
+    if (Math.hypot(x - (lx + 9), y - (ly - 14)) < 14) c = mixc(c, [0.1, 0.03, 0.02], 0.92);
+    if (capsuleSdf(x, y, lx - 30, ly + 22, lx + 22, ly + 6, 10, 5.5) < 0) c = mixc(c, [0.1, 0.03, 0.02], 0.92);
+    if (Math.hypot(x - (lx - 30), y - (ly + 22)) < 4) c = [0.95, 0.74, 0.3];
+    over(c, clamp((1 - e) * 60));
+  }
+  for (const [y0, y1] of [[38, 54], [186, 202]]) {
+    const cap = roundRectSdf(x, y, lx, (y0 + y1) / 2, 34, (y1 - y0) / 2, 4);
+    if (cap < 0) over(mixc([0.12, 0.08, 0.07], [0.04, 0.02, 0.02], (y - y0) / (y1 - y0)), clamp(-cap * 2));
+  }
+  // 吊り紐と房
+  if (Math.abs(x - lx) < 2.2 && y > 18 && y < 40) over([0.1, 0.07, 0.06], 1);
+  for (const dx of [-8, 0, 8]) if (Math.abs(x - (lx + dx + (y - 202) * dx * 0.02)) < 2.2 && y > 202 && y < 226) over([0.9, 0.2, 0.15], 1);
+
+  // 銀の玉（金と朱の映り込み）
+  const bx = 180, by = 180, br = 50;
   const d = Math.hypot(x - bx, y - by);
   if (d < br) {
     const nx = (x - bx) / br, ny = (y - by) / br;
     const nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
-    // 反射ベクトルの y で空・地平線・床を塗り分ける
     const ry = ny * 2 * nz;
     let c;
-    if (ry < -0.12) c = mixc([0.85, 0.93, 1], [0.35, 0.55, 0.95], clamp((-ry - 0.12) / 0.9));
-    else if (ry < 0.05) c = [0.08, 0.1, 0.18];
-    else c = mixc([0.55, 0.4, 0.7], [0.18, 0.1, 0.25], clamp(ry));
+    if (ry < -0.12) c = mixc([1, 0.95, 0.78], [0.95, 0.66, 0.25], clamp((-ry - 0.12) / 0.9));
+    else if (ry < 0.05) c = [0.12, 0.05, 0.04];
+    else c = mixc([0.75, 0.2, 0.12], [0.2, 0.04, 0.03], clamp(ry));
     const rim = Math.pow(1 - nz, 3);
-    c = mixc(c, [0.3, 0.9, 1], rim * 0.6);
+    c = mixc(c, [1, 0.8, 0.4], rim * 0.55);
     const hl = Math.hypot(nx + 0.38, ny + 0.42);
     if (hl < 0.2) c = mixc(c, [1, 1, 1], clamp(1 - hl / 0.2) * 0.95);
     over(c, clamp(br - d));
   }
 
-  // きらめき
-  for (const [sx, sy, s, c] of [
-    [52, 58, 16, [1, 0.9, 0.4]],
-    [214, 196, 12, [0.4, 1, 1]],
-    [86, 132, 8, [1, 0.6, 0.9]],
-  ]) {
+  // 金のきらめき
+  for (const [sx, sy, s] of [[214, 62, 15], [46, 214, 11], [196, 112, 8]]) {
     const ax = Math.abs(x - sx), ay = Math.abs(y - sy);
     const v = Math.max(clamp(1 - (ax * ay) / (s * 1.4)) * clamp(1 - Math.max(ax, ay) / s), 0);
-    if (v > 0) over(c, v);
+    if (v > 0) over([1, 0.85, 0.4], v);
   }
 
   return [col[0], col[1], col[2], alpha];
