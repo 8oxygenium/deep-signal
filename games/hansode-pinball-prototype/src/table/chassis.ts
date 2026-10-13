@@ -59,7 +59,8 @@ export function chassis(o: ChassisOptions = {}): PartDef[] {
   // ── 発射レーン ──
   parts.push({ kind: 'wall', id: 'laneWall', pts: [[R, -0.6], [R, 27]], r: 0.12, style: 'metal', h: 1.2 });
   parts.push({ kind: 'post', at: [R, 27], r: 0.14, style: 'metal' });
-  parts.push({ kind: 'wall', id: 'laneBottom', pts: [[R, -0.4], [CH.laneOuter, -0.4]], style: 'invisible' });
+  // 上面は y=-0.4。重なった2球に押されても抜けないよう厚くしておく
+  parts.push({ kind: 'wall', id: 'laneBottom', pts: [[R, -0.9], [CH.laneOuter, -0.9]], r: 0.5, style: 'invisible' });
   parts.push({ kind: 'plunger', at: CH.plunger, minSpeed: o.plungerMin ?? 34, maxSpeed: o.plungerMax ?? 92 });
   // 発射レーン出口の一方通行ゲート（斜めなので、上から落ちてきたボールは左へ転がる）
   parts.push({ kind: 'gate', id: 'laneGate', a: [R + 0.05, 27.1], b: [CH.laneOuter - 0.05, 28.3], pass: [0, 1] });

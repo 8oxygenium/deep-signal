@@ -319,6 +319,8 @@ export function createRules(): StageRules {
   const prevDiv = { L: 0, R: 0 };
   let divSegs: Record<'L' | 'R', { segs: Seg[]; post: Circle | null }> | null = null;
   let tireShapes: Circle[] = [];
+  /** タイヤを落とす予約の世代（片付けたあとに古い予約が落ちてこないように） */
+  let tireGen = 0;
 
   const lanes = new LaneSet(['laneN', 'laneO', 'laneX'], ['laneN', 'laneO', 'laneX'], (g) => {
     g.bonusMult = Math.min(5, g.bonusMult + 1);
@@ -451,6 +453,7 @@ export function createRules(): StageRules {
 
   const tires = {
     show(g: Game) {
+      const gen = ++tireGen;
       const idx = TIRE_SPOTS.map((_, i) => i);
       // シャッフルして先頭の TIRE_COUNT 個
       for (let i = idx.length - 1; i > 0; i--) {
@@ -460,6 +463,7 @@ export function createRules(): StageRules {
       tireShapes.forEach((s, i) => {
         const spot = TIRE_SPOTS[idx[i]];
         g.after(i * 0.4, () => {
+          if (gen !== tireGen) return;
           s.cx = spot[0];
           s.cy = spot[1];
           s.enabled = true;
@@ -470,6 +474,7 @@ export function createRules(): StageRules {
       });
     },
     hide(g: Game) {
+      tireGen++;
       for (const s of tireShapes) {
         if (s.enabled) g.fx('burst', s.cx, s.cy, { color: '#555555' });
         s.enabled = false;
@@ -568,6 +573,9 @@ export function createRules(): StageRules {
 
     onBallStart(g: Game) {
       abortAll(ctxOf(g));
+      // 前のボールのタイヤは必ず片付ける
+      tireGen++;
+      for (const s of tireShapes) s.enabled = false;
       targets = bumperHits = spins = missionsThisBall = gimmicksThisBall = 0;
       clock = 0;
       nextAt = (6 + g.rng.next() * 3) / tuning.pace;

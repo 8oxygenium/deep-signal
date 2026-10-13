@@ -31,7 +31,7 @@ const KITS: Kit[] = [
 ];
 
 export const LOW_G = 0.45;
-const HACK_WINDOW = 32;
+const HACK_WINDOW = 40;
 const FIREWALL_OPEN = 36;
 
 const synth = (type: TableEventType, id: string, x = 0.75, y = 20): TableEvent => ({ type, id, ball: null, x, y, speed: 0 });
@@ -86,7 +86,7 @@ export function createRules(): StageRules {
   const missions = new Missions(
     [
       { id: 'breach', name: 'BREACH', desc: 'ハッキングレーンを光る順に通して、ファイアウォールを破れ', goal: 1, count: (e) => (e.type === 'trigger' && e.id === 'hack' ? 1 : 0), reward: 60_000 },
-      { id: 'tunnel', name: 'TUNNELING', desc: 'ワープチューブを通り抜けろ', goal: 3, count: (e) => (e.type === 'warp' ? 1 : 0), reward: 80_000 },
+      { id: 'tunnel', name: 'TUNNELING', desc: 'ワープチューブを通り抜けろ', goal: 2, count: (e) => (e.type === 'warp' ? 1 : 0), reward: 80_000 },
       { id: 'scan', name: 'PORT SCAN', desc: '右のドロップターゲット3枚を倒し切れ', goal: 2, count: (e) => (e.type === 'bank' ? 1 : 0), reward: 100_000 },
       { id: 'root', name: 'ROOT ACCESS', desc: 'ファイアウォールが消えたら、中央の ROOT チャンバーへ入れ', goal: 1, count: (e) => (e.type === 'magnet' && e.id === 'root' ? 1 : 0), reward: 150_000 },
     ],

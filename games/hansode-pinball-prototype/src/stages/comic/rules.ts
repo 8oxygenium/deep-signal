@@ -155,6 +155,8 @@ export function comicRules(): StageRules {
     jackpotValue = 250_000 + level * 100_000;
     superLit = false;
     const lv = level;
+    // 撃破の演出中（マルチボール開始まで）にボールが落ちても、ご褒美が消えないように守る
+    g.ballSave(3);
     g.after(1.6, () => {
       if (!ko || lv !== level) return;
       if (g.state === 'play' && !g.tilted && !g.multiballActive) {

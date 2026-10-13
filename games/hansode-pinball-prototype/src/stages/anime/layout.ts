@@ -98,7 +98,7 @@ export function animeParts(): PartDef[] {
     { kind: 'light', id: 'orbitR', at: [6.9, 14.6], shape: 'star', size: 0.5, color: '#4fc3ff' },
     { kind: 'light', id: 'henshin', at: [SCOOP_AT[0], SCOOP_AT[1] - 2.0], shape: 'star', size: 0.62, color: '#ff4fa3', label: 'HENSHIN' },
     { kind: 'light', id: 'extraBall', at: [-2.9, 17.0], shape: 'circle', size: 0.42, color: '#ff4040', label: 'EXTRA' },
-    { kind: 'light', id: 'jackpot', at: [3.6, 16.4], shape: 'star', size: 0.55, color: '#ffe14f', label: 'JACKPOT' },
+    { kind: 'light', id: 'jackpot', at: [3.0, 16.6], shape: 'star', size: 0.55, color: '#ffe14f', label: 'JACKPOT' },
     { kind: 'light', id: 'm1', at: [-1.5, 10.9], shape: 'diamond', size: 0.4, color: '#a46bff', label: 'ROAD' },
     { kind: 'light', id: 'm2', at: [0, 11.3], shape: 'diamond', size: 0.4, color: '#a46bff', label: 'STAR' },
     { kind: 'light', id: 'm3', at: [1.5, 10.9], shape: 'diamond', size: 0.4, color: '#a46bff', label: 'LOOP' },
