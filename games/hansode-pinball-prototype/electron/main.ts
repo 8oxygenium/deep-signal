@@ -11,7 +11,9 @@ if (process.env.HANSODE_USER_DATA) app.setPath('userData', process.env.HANSODE_U
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
 const isDev = !app.isPackaged;
-const isE2E = process.env.HANSODE_E2E === '1';
+const isE2E = process.env.HANSODE_E2E === '1' || process.env.HANSODE_E2E === 'raf';
+// 'raf'：テスト用フックは出すが、ゲームループは本番と同じ requestAnimationFrame で回す（fps 計測用）
+const e2eRaf = process.env.HANSODE_E2E === 'raf';
 const devServerUrl = process.env.VITE_DEV_SERVER_URL;
 const smokeArg = process.argv.find((a) => a.startsWith('--smoke-test'));
 const smokeSeconds = smokeArg ? Number(smokeArg.split('=')[1] ?? '8') || 8 : 0;
@@ -164,6 +166,7 @@ if (!gotLock) {
       e.returnValue = {
         isDev,
         e2e: isE2E,
+        raf: e2eRaf,
         smoke: smokeSeconds > 0,
         version: app.getVersion(),
         platform: process.platform,

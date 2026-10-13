@@ -69,11 +69,20 @@ export class Dmd {
   private pitch = 3;
   color = '#ff8a1e';
   private rgb: [number, number, number] = [255, 138, 30];
+  /** 1ドット=1画素の下書き（これを拡大して、ドットの形に抜いた枠を重ねる。fillRect 8800回より速い） */
+  private small = document.createElement('canvas');
+  private sg: CanvasRenderingContext2D;
+  private img: ImageData;
+  private mask = document.createElement('canvas');
 
   constructor() {
     this.canvas = document.createElement('canvas');
     this.canvas.className = 'dmd';
     this.g = this.canvas.getContext('2d')!;
+    this.small.width = DMD_W;
+    this.small.height = DMD_H;
+    this.sg = this.small.getContext('2d')!;
+    this.img = this.sg.createImageData(DMD_W, DMD_H);
     this.setPitch(3);
   }
 
@@ -81,6 +90,15 @@ export class Dmd {
     this.pitch = p;
     this.canvas.width = DMD_W * p;
     this.canvas.height = DMD_H * p;
+    this.mask.width = DMD_W * p;
+    this.mask.height = DMD_H * p;
+    const mg = this.mask.getContext('2d')!;
+    mg.fillStyle = '#050403';
+    mg.fillRect(0, 0, this.mask.width, this.mask.height);
+    const r0 = p * 0.42;
+    for (let y = 0; y < DMD_H; y++) {
+      for (let x = 0; x < DMD_W; x++) mg.clearRect(x * p + (p - r0 * 2) / 2, y * p + (p - r0 * 2) / 2, r0 * 2, r0 * 2);
+    }
   }
 
   setColor(c: string): void {
@@ -135,19 +153,22 @@ export class Dmd {
 
   present(): void {
     const g = this.g;
-    const p = this.pitch;
-    g.fillStyle = '#050403';
-    g.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    const d = this.img.data;
     const [r, gg, b] = this.rgb;
-    const off = `rgba(${r},${gg},${b},0.07)`;
-    const r0 = p * 0.42;
-    for (let y = 0; y < DMD_H; y++) {
-      for (let x = 0; x < DMD_W; x++) {
-        const v = this.buf[y * DMD_W + x];
-        g.fillStyle = v > 0.02 ? `rgba(${r},${gg},${b},${0.15 + v * 0.85})` : off;
-        g.fillRect(x * p + (p - r0 * 2) / 2, y * p + (p - r0 * 2) / 2, r0 * 2, r0 * 2);
-      }
+    for (let i = 0, o = 0; i < DMD_W * DMD_H; i++, o += 4) {
+      const v = this.buf[i];
+      d[o] = r;
+      d[o + 1] = gg;
+      d[o + 2] = b;
+      d[o + 3] = (v > 0.02 ? 0.15 + v * 0.85 : 0.07) * 255;
     }
+    this.sg.putImageData(this.img, 0, 0);
+    const w = this.canvas.width, h = this.canvas.height;
+    g.fillStyle = '#050403';
+    g.fillRect(0, 0, w, h);
+    g.imageSmoothingEnabled = false;
+    g.drawImage(this.small, 0, 0, w, h);
+    g.drawImage(this.mask, 0, 0);
   }
 }
 

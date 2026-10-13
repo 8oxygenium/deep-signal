@@ -3,6 +3,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 interface AppInfo {
   isDev: boolean;
   e2e: boolean;
+  raf: boolean;
   smoke: boolean;
   version: string;
   platform: string;

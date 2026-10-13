@@ -22,6 +22,8 @@ export class Particles {
   private next = 0;
   private geo = new THREE.BufferGeometry();
 
+  private mat: THREE.ShaderMaterial;
+
   constructor(pixelRatio: number) {
     const g = this.geo;
     g.setAttribute('position', new THREE.BufferAttribute(this.pos, 3));
@@ -30,7 +32,7 @@ export class Particles {
     g.setAttribute('alpha', new THREE.BufferAttribute(this.alpha, 1));
     g.setAttribute('kind', new THREE.BufferAttribute(this.kind, 1));
     g.setAttribute('rot', new THREE.BufferAttribute(this.rot, 1));
-    const mat = new THREE.ShaderMaterial({
+    const mat = (this.mat = new THREE.ShaderMaterial({
       uniforms: { scale: { value: 520 * pixelRatio } },
       vertexShader: `
         attribute float size; attribute float alpha; attribute float kind; attribute float rot; attribute vec3 color;
@@ -64,10 +66,14 @@ export class Particles {
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
-    });
+    }));
     this.points = new THREE.Points(g, mat);
     this.points.frustumCulled = false;
     this.points.userData.outlineParameters = { visible: false };
+  }
+
+  setPixelRatio(pixelRatio: number): void {
+    this.mat.uniforms.scale.value = 520 * pixelRatio;
   }
 
   setBlending(additive: boolean): void {

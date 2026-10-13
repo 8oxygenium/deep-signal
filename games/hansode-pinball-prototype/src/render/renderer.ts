@@ -17,6 +17,9 @@ export type CameraMode = 'fixed' | 'follow' | 'top';
 
 const TABLE_CENTER = new THREE.Vector3(0.75, 0, -19.8);
 
+/** 自動解像度の段階（1 = 設定どおり） */
+const SCALES = [1, 0.85, 0.72, 0.6];
+
 const COMIC_WORDS = ['BAM!', 'POW!', 'KRAK!', 'ZAP!', 'WHAM!', 'BOOM!', 'THWIP!', 'KA-POW!', 'BLAM!', 'SMASH!'];
 
 export interface RendererOptions {
@@ -55,6 +58,9 @@ export class Renderer {
   private height = 1;
   private debug = false;
   private ambientAcc = 0;
+  /** 自動解像度：重くてフレームが落ちるときだけ描画の細かさを段階的に下げる */
+  private scaleIdx = 0;
+  private perf = { warm: 0, t: 0, n: 0, slow: 0, good: 0, firstSlow: 0, dropsAt: 0, restore: 0, locked: false, noUp: false, probing: false };
   /** 画面上部の HUD の高さ（割合） */
   topReserve = 0.13;
   /** ステージ選択のプレビュー表示 */
@@ -67,7 +73,7 @@ export class Renderer {
   ) {
     this.opts = { ...opts };
     this.gl = new THREE.WebGLRenderer({ antialias: opts.quality !== 'low', powerPreference: 'high-performance' });
-    this.gl.setPixelRatio(Math.min(window.devicePixelRatio, opts.quality === 'high' ? 2 : opts.quality === 'mid' ? 1.5 : 1));
+    this.gl.setPixelRatio(this.basePixelRatio());
     this.gl.shadowMap.enabled = opts.quality !== 'low';
     this.gl.shadowMap.type = THREE.PCFShadowMap;
     this.gl.toneMapping = THREE.ACESFilmicToneMapping;
@@ -143,6 +149,7 @@ export class Renderer {
       }
     }
     this.followY = 12;
+    this.resetPerf(true);
     this.buildComposer();
     this.unsub = game.on((e) => this.onEvent(e));
   }
@@ -156,11 +163,93 @@ export class Renderer {
     const needRebuild = o.quality !== undefined && o.quality !== this.opts.quality;
     this.opts = { ...this.opts, ...o };
     if (needRebuild) {
-      this.gl.setPixelRatio(Math.min(window.devicePixelRatio, this.opts.quality === 'high' ? 2 : this.opts.quality === 'mid' ? 1.5 : 1));
       this.gl.shadowMap.enabled = this.opts.quality !== 'low';
       this.sun.castShadow = this.opts.quality !== 'low';
+      this.scaleIdx = 0;
+      this.resetPerf(true);
+      this.gl.setPixelRatio(this.basePixelRatio());
+      this.particles.setPixelRatio(this.gl.getPixelRatio());
       if (this.game) this.setGame(this.game);
       this.resize();
+    }
+  }
+
+  private basePixelRatio(): number {
+    const q = this.opts.quality;
+    return Math.min(window.devicePixelRatio || 1, q === 'high' ? 2 : q === 'mid' ? 1.5 : 1);
+  }
+
+  /** いまの描画の細かさ（1 = 設定どおり、0.6 まで下がる） */
+  get renderScale(): number {
+    return SCALES[this.scaleIdx];
+  }
+
+  private setScale(idx: number): void {
+    this.scaleIdx = Math.max(0, Math.min(SCALES.length - 1, idx));
+    const pr = this.basePixelRatio() * SCALES[this.scaleIdx];
+    this.gl.setPixelRatio(pr);
+    this.composer?.setPixelRatio(pr);
+    this.particles.setPixelRatio(pr);
+    this.resize();
+  }
+
+  private resetPerf(all: boolean): void {
+    const p = this.perf;
+    p.warm = p.t = p.n = p.slow = p.good = 0;
+    p.probing = false;
+    if (all) {
+      p.firstSlow = p.dropsAt = p.restore = 0;
+      p.locked = p.noUp = false;
+    }
+  }
+
+  /**
+   * フレームの遅れを2秒ごとに見て、遅れが多ければ解像度を1段下げる。
+   * 下げても良くならない（画面のリフレッシュレートが低い・CPUが重い）ときは元に戻してやめる。
+   * 長く余裕が続いたら1段戻してみて、だめならそのステージではもう上げない。
+   */
+  private autoScale(dt: number): void {
+    const p = this.perf;
+    if (dt <= 0) return;
+    p.warm += dt;
+    if (p.warm < 2.5) return; // 読み込み直後のつっかえは数えない
+    p.t += dt;
+    p.n++;
+    if (dt > 1 / 48) p.slow++;
+    if (p.t < 2) return;
+    const slow = p.slow / p.n;
+    p.t = p.n = p.slow = 0;
+    if (slow > 0.18) {
+      p.good = 0;
+      if (p.probing) {
+        p.probing = false;
+        p.noUp = true;
+        this.setScale(this.scaleIdx + 1);
+        return;
+      }
+      if (p.locked || this.scaleIdx >= SCALES.length - 1) return;
+      if (p.dropsAt === 0) {
+        p.firstSlow = slow;
+        p.restore = this.scaleIdx;
+      }
+      p.dropsAt++;
+      if (p.dropsAt >= 3 && slow > p.firstSlow * 0.8) {
+        // 2段下げても変わらない：解像度のせいではない
+        p.locked = true;
+        this.setScale(p.restore);
+        return;
+      }
+      this.setScale(this.scaleIdx + 1);
+    } else {
+      p.probing = false;
+      if (slow < 0.03) p.good++;
+      else p.good = 0;
+      if (slow < 0.05) p.dropsAt = 0;
+      if (p.good >= 10 && this.scaleIdx > 0 && !p.noUp && !p.locked) {
+        p.good = 0;
+        p.probing = true;
+        this.setScale(this.scaleIdx - 1);
+      }
     }
   }
 
@@ -170,6 +259,7 @@ export class Renderer {
     const q = this.opts.quality;
     this.composer?.dispose();
     const composer = new EffectComposer(this.gl);
+    composer.setPixelRatio(this.gl.getPixelRatio());
     if (style === 'anime' || style === 'comic') {
       composer.addPass(new OutlineRenderPass(this.scene, this.camera, this.gl, style === 'comic' ? 0.006 : 0.0035));
     } else {
@@ -224,14 +314,17 @@ export class Renderer {
   /** 箱が画面の空き部分にちょうど収まるようにカメラを置く */
   private fit(target: THREE.Vector3, dir: THREE.Vector3, pts: THREE.Vector3[], marginX: number, top: number, bottom = 0.02): void {
     const cam = this.camera;
+    // 台の角をワールド座標にしておく（台全体の行列の更新は1回だけ。毎回やると非常に重い）
+    const m = this.pivotMatrix();
+    const world = pts.map((p) => p.clone().applyMatrix4(m));
+    const v = new THREE.Vector3();
     const proj = (d: number) => {
       cam.position.copy(target).addScaledVector(dir, d);
       cam.lookAt(target);
       cam.updateMatrixWorld();
       let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-      const v = new THREE.Vector3();
-      for (const p of pts) {
-        v.copy(p).applyMatrix4(this.pivotMatrix()).project(cam);
+      for (const p of world) {
+        v.copy(p).project(cam);
         x0 = Math.min(x0, v.x);
         x1 = Math.max(x1, v.x);
         y0 = Math.min(y0, v.y);
@@ -451,6 +544,7 @@ export class Renderer {
     this.time += dt;
     const game = this.game;
     if (!game || !this.view || !this.composer) return;
+    this.autoScale(dt);
     this.view.update(game, this.time, dt);
     this.particles.update(dt);
     this.popups.update(dt);

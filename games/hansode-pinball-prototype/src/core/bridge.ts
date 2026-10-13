@@ -7,7 +7,7 @@ export interface A11yStatus {
 }
 
 export interface Bridge {
-  info: { isDev: boolean; e2e: boolean; smoke: boolean; version: string; platform: string; keyPoll: boolean };
+  info: { isDev: boolean; e2e: boolean; raf?: boolean; smoke: boolean; version: string; platform: string; keyPoll: boolean };
   load(name: string): Promise<unknown>;
   save(name: string, data: unknown): Promise<boolean>;
   quit(): void;

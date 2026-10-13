@@ -49,6 +49,7 @@ export class App {
   private unsubGame: (() => void) | null = null;
   private lastName = '';
   private debug = false;
+  private debugBox: HTMLDivElement | null = null;
   private suppressBack = 0;
   private mountedAt = 0;
   private pendingGameOver: number | null = null;
@@ -101,9 +102,10 @@ export class App {
       const dt = this.last ? Math.max(0, Math.min(0.1, (now - this.last) / 1000)) : 0;
       this.last = now;
       this.frame(dt);
-      if (!bridge.info.e2e) requestAnimationFrame(loop);
+      if (!useInterval) requestAnimationFrame(loop);
     };
-    if (bridge.info.e2e) window.setInterval(() => loop(performance.now()), 16);
+    const useInterval = bridge.info.e2e && !bridge.info.raf;
+    if (useInterval) window.setInterval(() => loop(performance.now()), 16);
     else requestAnimationFrame(loop);
   }
 
@@ -362,6 +364,13 @@ export class App {
       if (bridge.info.isDev) {
         this.debug = !this.debug;
         this.renderer.setDebug(this.debug);
+        this.debugBox?.remove();
+        this.debugBox = null;
+        if (this.debug) {
+          this.debugBox = document.createElement('div');
+          this.debugBox.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99;font:12px/1.4 monospace;color:#7f7;background:#000a;padding:4px 8px;pointer-events:none;white-space:pre';
+          document.body.appendChild(this.debugBox);
+        }
       }
       return;
     }
@@ -432,6 +441,11 @@ export class App {
       this.fps = this.fpsFrames / this.fpsAcc;
       this.fpsAcc = 0;
       this.fpsFrames = 0;
+      if (this.debugBox) {
+        const g = this.game;
+        this.debugBox.textContent = `${this.fps.toFixed(0)} fps  解像度×${this.renderer.renderScale}  ${this.settings.quality}` + (g ? `
+balls ${g.balls.length}  lost ${g.stats.lost}  autoNudge ${g.stats.autoNudges}  reset ${g.stats.autoResets}` : '');
+      }
     }
     this.input.pollGamepads();
     if (this.screen === 'play' && this.game) {
