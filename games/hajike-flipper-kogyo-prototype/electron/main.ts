@@ -89,7 +89,7 @@ function createWindow(): void {
     minWidth: 800,
     minHeight: 560,
     backgroundColor: '#05060a',
-    title: 'HANSODE PINBALL',
+    title: '弾け！フリッパー興業',
     show: false,
     autoHideMenuBar: true,
     icon: path.join(__dirname, '..', 'dist', 'icon.png'),

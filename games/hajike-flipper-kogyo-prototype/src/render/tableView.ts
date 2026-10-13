@@ -846,7 +846,7 @@ export class TableView {
       g.fillText(`${this.stage.name}`, 512, 64);
       g.font = '28px "Segoe UI", sans-serif';
       g.fillStyle = c2.accent;
-      g.fillText('HANSODE PINBALL', 512, 120);
+      g.fillText('弾け！フリッパー興業', 512, 120);
     });
     const label = new THREE.Mesh(new THREE.PlaneGeometry(CH.right - L - 0.4, 2.6), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.5 }));
     label.rotation.x = -Math.PI / 2;

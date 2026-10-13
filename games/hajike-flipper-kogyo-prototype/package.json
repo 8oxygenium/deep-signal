@@ -1,8 +1,8 @@
 {
-  "name": "hansode-pinball",
-  "productName": "HANSODE PINBALL",
+  "name": "hajike-flipper-kogyo",
+  "productName": "弾け！フリッパー興業",
   "version": "1.0.0",
-  "description": "HANSODE PINBALL - 6ステージの3Dピンボール",
+  "description": "弾け！フリッパー興業（Hajike! Flipper Kogyo）- 7演目の3Dピンボール",
   "author": "HANSODE / Takao Sugiyama",
   "license": "UNLICENSED",
   "private": true,

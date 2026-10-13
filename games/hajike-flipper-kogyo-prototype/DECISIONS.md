@@ -84,3 +84,10 @@
 - ドットマトリクスの描画を fillRect 8800回から「1ドット1画素の下書きを拡大＋ドット形に抜いた枠を重ねる」に変更（見た目は同じ）。
 - 自動解像度：2秒ごとにフレームの遅れ（1/48秒超）の割合を見て、18%を超えたら描画解像度を 1→0.85→0.72→0.6 と下げる。下げても良くならないとき（画面のリフレッシュレートが低い・CPU側が重い）は元に戻してやめる。長く余裕が続いたら1段戻してみる。画質の設定（影・ブルーム・アンチエイリアス・最大DPR）はそのまま。
 - `scripts/perf.mjs`：本番と同じ requestAnimationFrame のループ（`HANSODE_E2E=raf`）で、自動プレイ中の fps・遅れたフレームの割合・描画処理の時間を測る。F2（開発時のみ）で fps と解像度の段階を画面に出す。
+
+## フェーズ9：改名「弾け！フリッパー興業」（Hajike! Flipper Kogyo）
+- ソース `games/hajike-flipper-kogyo-prototype/`、ダウンロードページ `games/hajike-flipper-kogyo.html`、画面写真 `assets/img/hajike-flipper-kogyo-1..3.jpg`、インストーラー `Hajike-Flipper-Kogyo-Setup.exe`、リポジトリ `hajike-flipper-kogyo` に変更（未公開だったので旧URLからの転送は作らない）。
+- 表示名（インストーラー画面・アンインストール一覧・ショートカット・ウィンドウ名・ユーザーデータのフォルダ名）は日本語の「弾け！フリッパー興業」。**実行ファイル名だけ英字**（`Hajike-Flipper-Kogyo.exe`）にした。コマンドや他のツールから扱いやすく、壊れにくいため。
+- 日本語のユーザー名のPCも多いので、インストーラーの確認では**インストール先に日本語と空白を含むフォルダ**を使う（固定キー制御の koffi が日本語パスから読み込めることも確認できる）。
+- 発行元の「HANSODE」（著作権表記・作者・COMIC/CYBER の台の中のロゴ）と、内部だけで使う名前（`window.hansode`、環境変数 `HANSODE_E2E` / `HANSODE_USER_DATA`）はそのまま。外から見えず、変えると試験スクリプトや作業中のエージェントを壊すだけのため。
+- appId を `com.hansode.hajikeflipperkogyo` に変更（未配布なので旧版との共存・移行の問題はない）。

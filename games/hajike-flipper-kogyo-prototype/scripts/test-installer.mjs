@@ -9,8 +9,11 @@ import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
-const EXE = join(root, 'release', 'HANSODE-Pinball-Setup.exe');
-const APP = 'HANSODE PINBALL';
+const EXE = join(root, 'release', 'Hajike-Flipper-Kogyo-Setup.exe');
+/** 表示名（ショートカット・アンインストーラー・ウィンドウ名） */
+const APP = '弾け！フリッパー興業';
+/** 実行ファイル名（英字） */
+const EXE_NAME = 'Hajike-Flipper-Kogyo';
 const results = [];
 const check = (name, ok, detail = '') => {
   results.push({ name, ok });
@@ -48,13 +51,14 @@ const before = flags();
 console.log('起動前の設定:', JSON.stringify(before), 'レジストリ:', JSON.stringify(reg));
 check('起動前：今の設定が本来の設定（レジストリ）と一致', before.sticky === reg.sticky && before.filter === reg.filter);
 
-const dir = mkdtempSync(join(tmpdir(), 'hp-install-'));
-const installDir = join(dir, 'app');
+const dir = mkdtempSync(join(tmpdir(), 'hfk-install-'));
+// 日本語のユーザー名のPCも多いので、インストール先に日本語と空白を含めて確かめる
+const installDir = join(dir, 'テスト 興業');
 const ud = join(dir, 'userdata');
 
 // 1. サイレントインストール（/D は最後・引用符なし）
 let r = spawnSync(EXE, ['/S', `/D=${installDir}`], { stdio: 'inherit', timeout: 300000 });
-const installedExe = join(installDir, `${APP}.exe`);
+const installedExe = join(installDir, `${EXE_NAME}.exe`);
 check('インストール（サイレント）が終わる', r.status === 0, `exit=${r.status}`);
 check('インストール先にアプリが入る', existsSync(installedExe), installedExe);
 // デスクトップの場所は OneDrive や日本語名（デスクトップ）のことがあるので Windows に聞く

@@ -1,4 +1,4 @@
-// ダウンロードページ（games/hansode-pinball.html）の確認：PC幅とスマホ幅で表示崩れ（横はみ出し）が無いこと、
+// ダウンロードページ（games/hajike-flipper-kogyo.html）の確認：PC幅とスマホ幅で表示崩れ（横はみ出し）が無いこと、
 // ボタンのリンク先が正しいこと、画像が読み込めること、一覧ページからリンクされていること。
 import { _electron as electron } from 'playwright';
 import { readFileSync, mkdirSync } from 'node:fs';
@@ -7,8 +7,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const site = join(root, '..', '..');
-const pagePath = join(site, 'games', 'hansode-pinball.html');
-const EXPECT = 'https://github.com/8oxygenium/hansode-pinball/releases/latest/download/HANSODE-Pinball-Setup.exe';
+const pagePath = join(site, 'games', 'hajike-flipper-kogyo.html');
+const EXPECT = 'https://github.com/8oxygenium/hajike-flipper-kogyo/releases/latest/download/Hajike-Flipper-Kogyo-Setup.exe';
 const outDir = join(root, 'screenshots');
 mkdirSync(outDir, { recursive: true });
 const results = [];
@@ -43,7 +43,7 @@ for (const [w, h, name] of [
 }
 await app.close();
 const index = readFileSync(join(site, 'games', 'index.html'), 'utf8');
-check('games/index.html からリンクされている', index.includes('href="hansode-pinball.html"'));
+check('games/index.html からリンクされている', index.includes('href="hajike-flipper-kogyo.html"'));
 const n = results.filter(Boolean).length;
 console.log(`\n${n}/${results.length} passed`);
 process.exit(n === results.length ? 0 : 1);

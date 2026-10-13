@@ -29,7 +29,7 @@ const fallback: Bridge = {
   info: { isDev: true, e2e: false, smoke: false, version: 'dev', platform: 'browser', keyPoll: false },
   async load(name) {
     try {
-      const s = localStorage.getItem(`hansode-pinball:${name}`);
+      const s = localStorage.getItem(`hajike-flipper-kogyo:${name}`);
       return s ? JSON.parse(s) : null;
     } catch {
       return null;
@@ -37,7 +37,7 @@ const fallback: Bridge = {
   },
   async save(name, data) {
     try {
-      localStorage.setItem(`hansode-pinball:${name}`, JSON.stringify(data));
+      localStorage.setItem(`hajike-flipper-kogyo:${name}`, JSON.stringify(data));
       return true;
     } catch {
       return false;

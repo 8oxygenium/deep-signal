@@ -4,12 +4,12 @@ hapomu_codex.txt
 docs/worklog_2026-07-03_adsense_commit_nas.md
 docs/*adsense*commit*nas*.md
 
-# HANSODE PINBALL（Electronアプリ）: 依存・ビルド成果物・exeはサイトに公開しない
-games/hansode-pinball-prototype/node_modules/
-games/hansode-pinball-prototype/dist/
-games/hansode-pinball-prototype/dist-electron/
-games/hansode-pinball-prototype/release/
-games/hansode-pinball-prototype/screenshots/
-games/hansode-pinball-prototype/test-results/
+# 弾け！フリッパー興業（Electronアプリ）: 依存・ビルド成果物・exeはサイトに公開しない
+games/hajike-flipper-kogyo-prototype/node_modules/
+games/hajike-flipper-kogyo-prototype/dist/
+games/hajike-flipper-kogyo-prototype/dist-electron/
+games/hajike-flipper-kogyo-prototype/release/
+games/hajike-flipper-kogyo-prototype/screenshots/
+games/hajike-flipper-kogyo-prototype/test-results/
 *.exe
 *.blockmap

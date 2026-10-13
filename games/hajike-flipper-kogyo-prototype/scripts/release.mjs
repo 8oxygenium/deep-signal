@@ -1,6 +1,6 @@
 // npm run release：ビルド → インストーラー作成 →（gh がログイン済みなら）GitHub Releases へアップロード
 // exe はサイト（Cloudflare Pages）には置かず、GitHub の公開リポジトリの Releases に置く。
-// ダウンロードリンクは常に最新版：https://github.com/<OWNER>/<REPO>/releases/latest/download/HANSODE-Pinball-Setup.exe
+// ダウンロードリンクは常に最新版：https://github.com/<OWNER>/<REPO>/releases/latest/download/Hajike-Flipper-Kogyo-Setup.exe
 import { execSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -8,8 +8,8 @@ import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OWNER = process.env.RELEASE_OWNER ?? '8oxygenium';
-const REPO = process.env.RELEASE_REPO ?? 'hansode-pinball';
-const EXE = join(root, 'release', 'HANSODE-Pinball-Setup.exe');
+const REPO = process.env.RELEASE_REPO ?? 'hajike-flipper-kogyo';
+const EXE = join(root, 'release', 'Hajike-Flipper-Kogyo-Setup.exe');
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 const tag = `v${pkg.version}`;
 
@@ -54,15 +54,15 @@ if (auth.status !== 0) {
 console.log(`■ 3/3 GitHub Releases へアップロード（${OWNER}/${REPO} ${tag}）`);
 if (gh(['repo', 'view', `${OWNER}/${REPO}`]).status !== 0) {
   console.log('  公開リポジトリを作成します');
-  const r = gh(['repo', 'create', `${OWNER}/${REPO}`, '--public', '--add-readme', '--description', 'HANSODE PINBALL - 6ステージの3Dピンボール（Windows版インストーラーの配布用）'], { stdio: 'inherit' });
+  const r = gh(['repo', 'create', `${OWNER}/${REPO}`, '--public', '--add-readme', '--description', '弾け！フリッパー興業（Hajike! Flipper Kogyo）- 7演目の3Dピンボール（Windows版インストーラーの配布用）'], { stdio: 'inherit' });
   if (r.status !== 0) process.exit(r.status ?? 1);
 }
 const exists = gh(['release', 'view', tag, '-R', `${OWNER}/${REPO}`]).status === 0;
 const r = exists
   ? gh(['release', 'upload', tag, EXE, '--clobber', '-R', `${OWNER}/${REPO}`], { stdio: 'inherit' })
   : gh(
-      ['release', 'create', tag, EXE, '-R', `${OWNER}/${REPO}`, '--title', `HANSODE PINBALL ${tag}`, '--notes', `Windows 10/11 用インストーラー（${mb} MB）。初回に警告が出たら「詳細情報」→「実行」で起動できます。`, '--latest'],
+      ['release', 'create', tag, EXE, '-R', `${OWNER}/${REPO}`, '--title', `弾け！フリッパー興業 ${tag}`, '--notes', `Windows 10/11 用インストーラー（${mb} MB）。初回に警告が出たら「詳細情報」→「実行」で起動できます。`, '--latest'],
       { stdio: 'inherit' },
     );
 if (r.status !== 0) process.exit(r.status ?? 1);
-console.log(`\n完了：https://github.com/${OWNER}/${REPO}/releases/latest/download/HANSODE-Pinball-Setup.exe`);
+console.log(`\n完了：https://github.com/${OWNER}/${REPO}/releases/latest/download/Hajike-Flipper-Kogyo-Setup.exe`);

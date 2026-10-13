@@ -1,5 +1,7 @@
-appId: com.hansode.pinball
-productName: HANSODE PINBALL
+appId: com.hansode.hajikeflipperkogyo
+# 表示名は日本語。実行ファイル名だけは英字にする（コマンドやツールで扱いやすく、壊れにくい）
+productName: 弾け！フリッパー興業
+executableName: Hajike-Flipper-Kogyo
 electronLanguages: [ja, en-US]
 copyright: Copyright (C) HANSODE
 directories:
@@ -20,7 +22,7 @@ win:
     - target: nsis
       arch: [x64]
   icon: build/icon.ico
-  artifactName: HANSODE-Pinball-Setup.${ext}
+  artifactName: Hajike-Flipper-Kogyo-Setup.${ext}
   legalTrademarks: HANSODE
 nsis:
   oneClick: false
@@ -28,9 +30,9 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: always
   createStartMenuShortcut: true
-  shortcutName: HANSODE PINBALL
-  uninstallDisplayName: HANSODE PINBALL
-  artifactName: HANSODE-Pinball-Setup.${ext}
+  shortcutName: 弾け！フリッパー興業
+  uninstallDisplayName: 弾け！フリッパー興業
+  artifactName: Hajike-Flipper-Kogyo-Setup.${ext}
   installerIcon: build/icon.ico
   uninstallerIcon: build/icon.ico
   deleteAppDataOnUninstall: false

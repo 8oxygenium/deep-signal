@@ -38,11 +38,11 @@ const play = async (id, file) => {
   await page.evaluate(() => clearInterval(window.__autoTimer));
 };
 
-await play('modern', 'hansode-pinball-1.jpg');
+await play('modern', 'hajike-flipper-kogyo-1.jpg');
 await page.evaluate(() => window.__pinball.app.toSelect());
 await page.waitForTimeout(1800);
-await page.screenshot({ path: join(out, 'hansode-pinball-2.jpg'), type: 'jpeg', quality: 82 });
-await play(third, 'hansode-pinball-3.jpg');
+await page.screenshot({ path: join(out, 'hajike-flipper-kogyo-2.jpg'), type: 'jpeg', quality: 82 });
+await play(third, 'hajike-flipper-kogyo-3.jpg');
 await app.close();
 rmSync(ud, { recursive: true, force: true });
 console.log('saved to', out);
