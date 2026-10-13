@@ -46,6 +46,16 @@ const only = process.argv[2];
 console.log('stages:', stages.join(', '));
 
 await shot(page, '01_title');
+{
+  const t = await ev(page, () => ({ lanterns: document.querySelectorAll('.title.kogyo .tt-rope .lantern').length, nobori: document.querySelectorAll('.title.kogyo .nobori').length, koujou: document.querySelectorAll('.title .kj-line').length }));
+  check('タイトルは見世物小屋の呼び込み（提灯・幟・口上）', t.lanterns >= 5 && t.nobori >= 2 && t.koujou >= 3, JSON.stringify(t));
+  let lv = 0;
+  for (let k = 0; k < 10; k++) {
+    lv = Math.max(lv, await ev(page, () => window.__pinball.audioLevel));
+    await wait(page, 120);
+  }
+  check('タイトルで呼び込みの曲が鳴っている', lv > 0.002, `level=${lv.toFixed(4)}`);
+}
 await page.keyboard.press('ArrowDown');
 await page.keyboard.press('Enter');
 await wait(page, 400);
@@ -69,6 +79,11 @@ check('案内→タイトル', (await screen(page)) === 'title');
 // ステージ選択：全ステージのカードを撮る
 await ev(page, () => window.__pinball.app.toSelect());
 await wait(page, 600);
+{
+  const n = await ev(page, () => document.querySelectorAll('.select.kogyo .maneki').length);
+  check('演目選択はまねき看板（全ステージ分）', n === stages.length, `${n}/${stages.length}`);
+  check('UKIYO-E は IMPOSSIBLE の直前', stages.indexOf('ukiyoe') === stages.length - 2 && stages[stages.length - 1] === 'impossible', stages.join(','));
+}
 for (let i = 0; i < stages.length; i++) {
   await wait(page, 1000);
   await shot(page, `04_select_${i + 1}_${stages[i]}`);
