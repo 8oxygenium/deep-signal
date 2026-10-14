@@ -34,6 +34,17 @@ const play = async (id, file) => {
     }, 16);
   });
   await page.waitForTimeout(6500);
+  // 大きな帯（BALL SAVED など）・カットイン・見得が出ている間は撮らない
+  for (let i = 0; i < 12; i++) {
+    const busy = await page.evaluate(() =>
+      ['.hud .hud-banner', '.hud .cutin', '.hud .mie', '.hud .gimmick'].some((q) => {
+        const e = document.querySelector(q);
+        return !!e && Number(getComputedStyle(e).opacity) > 0.05;
+      }),
+    );
+    if (!busy) break;
+    await page.waitForTimeout(700);
+  }
   await page.screenshot({ path: join(out, file), type: 'jpeg', quality: 82 });
   await page.evaluate(() => clearInterval(window.__autoTimer));
 };
@@ -45,7 +56,7 @@ await page.screenshot({ path: join(out, 'hajike-flipper-kogyo-1.jpg'), type: 'jp
 await play(second, 'hajike-flipper-kogyo-2.jpg');
 // 3枚目：本日の演目（まねき看板）
 await page.evaluate(() => {
-  window.__pinball.app.selectIndex = 0;
+  window.__pinball.app.selectIndex = 1;
   window.__pinball.app.toSelect();
 });
 await page.waitForTimeout(1800);

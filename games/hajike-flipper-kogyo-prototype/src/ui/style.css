@@ -326,7 +326,6 @@ canvas.dmd.small { width: 300px !important; height: auto; }
 .hud[data-style='ukiyoe'] .hud-panel kbd { border-color: #1b120a; background: #fffaf0; color: #1b120a; }
 .hud[data-style='ukiyoe'] canvas.dmd { border-color: #b8892f; }
 .hud[data-style='ukiyoe'] .hud-sub { background: #f4e8cd; color: #1b120a; border: 2px solid #1b120a; text-shadow: none; font-family: var(--brush); }
-.hud[data-style='ukiyoe'] .banner .t { font-family: var(--brush); }
 
 .mie { position: absolute; inset: 0; overflow: hidden; opacity: 0; pointer-events: none; }
 .mie.on { animation: miefade 2.7s forwards; }
