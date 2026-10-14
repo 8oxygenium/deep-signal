@@ -48,9 +48,11 @@ function paintCard(g: G, W: number, H: number, seed: number): { s: number; x0: n
     g.fillStyle = '#f7f3e4';
     g.strokeStyle = INK;
     g.lineWidth = Math.max(2, s * 0.045);
-    const k = (x: number) => Math.pow(Math.max(0, Math.min(1, x / endX)), 1.4);
+    // 裾は波の手前半分だけ（長く伸ばすとロープの航跡のように見えるため）
+    const startX = Math.max(0.1 * s, endX * 0.5);
+    const k = (x: number) => Math.pow(Math.max(0, Math.min(1, (x - startX) / (endX - startX))), 1.4);
     const xs: number[] = [];
-    for (let x = 0.1 * s; x < endX; x += s * (0.38 + r() * 0.36)) xs.push(x);
+    for (let x = startX; x < endX; x += s * (0.38 + r() * 0.36)) xs.push(x);
     xs.push(endX);
     g.beginPath();
     g.moveTo(xs[0], yb);
