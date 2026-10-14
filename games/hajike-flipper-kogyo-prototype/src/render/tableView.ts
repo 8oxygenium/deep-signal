@@ -27,6 +27,9 @@ export class TableView {
   private flipperMeshes: { mesh: THREE.Object3D; id: string }[] = [];
   private lightMeshes: { mesh: THREE.Mesh; light: LightRT; mat: THREE.MeshStandardMaterial }[] = [];
   private staticGeo = new Map<THREE.Material, THREE.BufferGeometry[]>();
+  /** 部品ID → その部品の標準の3D（静的にまとめた物は含まない） */
+  private partObjects = new Map<string, THREE.Object3D[]>();
+  private disposers: (() => void)[] = [];
   private debugLines: THREE.LineSegments | null = null;
   private debugFlippers: THREE.LineSegments | null = null;
   readonly decoObjects = new Map<string, THREE.Object3D>();
@@ -53,7 +56,13 @@ export class TableView {
     floor.receiveShadow = true;
     this.group.add(floor);
 
-    for (const p of layout.parts) this.buildPart(p);
+    for (const p of layout.parts) {
+      // 部品ごとに作った3Dを覚えておく（ステージの decorate から標準の見た目を隠せるように）
+      const before = this.group.children.length;
+      this.buildPart(p);
+      const id = 'id' in p ? p.id : undefined;
+      if (id) this.partObjects.set(id, [...(this.partObjects.get(id) ?? []), ...this.group.children.slice(before)]);
+    }
     this.buildCabinet();
     this.flushStatic();
     stage.theme.decorate?.({
@@ -66,6 +75,15 @@ export class TableView {
       glow: (c) => this.mats.glow(c),
       metal: () => this.mats.metal,
       canvasTexture: (w, h, draw) => canvasTexture(w, h, draw),
+      hide: (partId) => {
+        const list = this.partObjects.get(partId) ?? [];
+        for (const o of list) {
+          o.visible = false;
+          o.userData.hiddenByStage = true;
+        }
+        return list.length;
+      },
+      onDispose: (fn) => this.disposers.push(fn),
     });
   }
 
@@ -1009,6 +1027,13 @@ export class TableView {
   }
 
   dispose(): void {
+    for (const fn of this.disposers.splice(0)) {
+      try {
+        fn();
+      } catch {
+        /* 後片付けの失敗は無視 */
+      }
+    }
     this.group.traverse((o) => {
       const m = o as THREE.Mesh;
       if (m.geometry) m.geometry.dispose();

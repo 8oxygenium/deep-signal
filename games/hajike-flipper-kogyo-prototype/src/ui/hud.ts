@@ -231,7 +231,7 @@ export class Hud {
         break;
       case 'fx':
         if (e.name === 'cutin') this.showCutin(e.text ?? '', e.color);
-        else if (e.name === 'mie') this.showMie(e.text ?? '', e.color);
+        else if (e.name === 'mie') this.showMie(e.text ?? '', e.color, (e.value ?? 0) > 0);
         break;
       case 'gimmick':
         this.showGimmick(e.text, e.sub, e.phase);
@@ -268,11 +268,12 @@ export class Hud {
   }
 
   /** 歌舞伎の「見得」：定式幕が走り、隈取の顔と縦書きの大技名がドンと決まる（音の「ツケ」はステージ側で鳴らす） */
-  showMie(text: string, color = '#c8161d'): void {
+  showMie(text: string, color = '#c8161d', lite = false): void {
     const n = Math.max(3, [...text].length);
     const size = `min(${(54 / n).toFixed(2)}vh, 9vw, 104px)`;
     this.mie.innerHTML = `<div class="maku"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="face">${kumadori(color)}</div><div class="txt" style="font-size:${size}">${esc(text)}</div>`;
     this.mie.classList.remove('on');
+    this.mie.classList.toggle('lite', lite);
     void this.mie.offsetWidth;
     this.mie.classList.add('on');
   }

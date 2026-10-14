@@ -373,3 +373,9 @@ canvas.dmd.small { width: 300px !important; height: auto; }
 .ranking tr.me td { background: rgba(179, 18, 26, 0.4); color: #fff3c4; }
 .guide .status.ok { background: rgba(40, 120, 70, 0.35); }
 .guide .status.ng { background: rgba(179, 18, 26, 0.35); border-color: #e3231a; }
+
+/* 見得の軽い版（value: 1）：短く・幕を透かして、プレイ中でも台が見える */
+.mie.lite.on, .mie.lite.on .maku, .mie.lite.on .face, .mie.lite.on .txt { animation-duration: 1.5s; }
+.mie.lite .maku { opacity: 0.3; }
+.mie.lite .face { left: 18%; width: min(30vh, 22vw); }
+.mie.lite .txt { left: 84%; font-size: min(7vh, 5vw) !important; }

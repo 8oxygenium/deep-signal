@@ -92,6 +92,10 @@ export interface DecorateApi {
   metal(): THREE_NS.Material;
   /** キャンバスに描いてテクスチャを作る */
   canvasTexture(w: number, h: number, draw: (g: CanvasRenderingContext2D) => void): THREE_NS.CanvasTexture;
+  /** 部品の標準の見た目を隠す（自前の3Dに置き換えるとき。当たり判定はそのまま）。隠した物の数を返す */
+  hide(partId: string): number;
+  /** 台を作り直す・別の台に切り替えるときの後片付け（game.on の購読解除など） */
+  onDispose(fn: () => void): void;
 }
 
 export interface ThemeDef {

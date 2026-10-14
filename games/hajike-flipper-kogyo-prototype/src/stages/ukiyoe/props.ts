@@ -15,21 +15,11 @@ const mine = (o: T.Object3D): void => {
 
 // ───────── 標準の見た目を隠す（提灯・立て札・太鼓に置き換えるため）─────────
 
-function hideDefaults(kit: Kit, game: Game): void {
-  const group = kit.api.group;
-  const bumpers = LANTERNS.map((l) => game.table.get<BumperRT>(l.id));
-  for (const c of group.children) {
-    if (c.userData.ukiyoe || c.type !== 'Group') continue;
-    for (const b of bumpers) {
-      if (Math.abs(c.position.x - b.x) < 0.02 && Math.abs(c.position.z + b.y) < 0.02 && c.children.length === 4) c.visible = false;
-    }
-    // 鳥居の戸（標準の金属の戸は暖簾に置き換える）
-    if (Math.abs(c.position.x - NOREN.mid[0]) < 0.02 && Math.abs(c.position.z + NOREN.mid[1]) < 0.02 && c.children.length === 2) c.visible = false;
-    for (const god of GODS) {
-      const first = c.children[0] as T.Mesh | undefined;
-      if (Math.abs(c.position.x - god.at[0]) < 0.02 && Math.abs(c.position.z + god.at[1]) < 0.02 && first?.geometry?.type === 'BoxGeometry') c.visible = false;
-    }
-  }
+/** 標準の見た目を隠して自前の3Dに置き換える：提灯（バンパー）・暖簾（鳥居の戸）・七福神の立て札（スタンドアップ） */
+function hideDefaults(kit: Kit): void {
+  for (const l of LANTERNS) kit.api.hide(l.id);
+  kit.api.hide('toriiGate');
+  for (const god of GODS) kit.api.hide(god.id);
 }
 
 // ───────── 提灯 ─────────
@@ -387,7 +377,7 @@ export function buildProps(kit: Kit, game: Game): { toriiPulse(): void; shrineSh
   kit.api.onFrame((t, dt) => {
     if (!hidden) {
       hidden = true;
-      hideDefaults(kit, game);
+      hideDefaults(kit);
     }
     // 提灯
     for (const l of lanterns) {

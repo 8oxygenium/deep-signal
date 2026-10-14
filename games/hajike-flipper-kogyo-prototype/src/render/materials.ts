@@ -190,6 +190,13 @@ export function makeMaterials(theme: ThemeDef, quality: Quality): Mats {
   }
 
   const ball = new THREE.MeshStandardMaterial({ color: '#ffffff', metalness: 1, roughness: 0.06 });
+  if (style === 'ukiyoe') {
+    // 淡い和紙の床で玉が埋もれないよう、少し暗い鋼色＋太い墨の輪郭
+    ball.color.set('#b8b8c2');
+    ball.roughness = 0.14;
+    ball.envMapIntensity = 0.75;
+    ball.userData.outlineParameters = { thickness: 0.014, color: [0.03, 0.02, 0.02], alpha: 1 };
+  }
 
   return {
     floor: new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: style === 'route50s' ? 0.45 : 0.62, metalness: 0.0 }),
