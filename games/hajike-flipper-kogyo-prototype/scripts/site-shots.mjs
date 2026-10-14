@@ -1,5 +1,5 @@
 // ダウンロードページ用のスクリーンショット（実際のアプリ画面）を撮って assets/img/ に JPEG で保存する
-// 使い方: npm run build && node scripts/site-shots.mjs [3枚目のステージID]
+// 使い方: npm run build && node scripts/site-shots.mjs [2枚目に遊ぶステージID]
 import { _electron as electron } from 'playwright';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const out = join(root, '..', '..', 'assets', 'img');
-const third = process.argv[2] ?? 'cyber';
+const second = process.argv[2] ?? 'ukiyoe';
 const ud = mkdtempSync(join(tmpdir(), 'hp-site-'));
 const app = await electron.launch({ args: ['.'], cwd: root, env: { ...process.env, HANSODE_E2E: '1', HANSODE_USER_DATA: ud } });
 const page = await app.firstWindow();
@@ -38,11 +38,18 @@ const play = async (id, file) => {
   await page.evaluate(() => clearInterval(window.__autoTimer));
 };
 
-await play('modern', 'hajike-flipper-kogyo-1.jpg');
-await page.evaluate(() => window.__pinball.app.toSelect());
+// 1枚目：見世物小屋の呼び込み（タイトル）。口上が出そろうまで待つ
+await page.waitForTimeout(2600);
+await page.screenshot({ path: join(out, 'hajike-flipper-kogyo-1.jpg'), type: 'jpeg', quality: 82 });
+// 2枚目：遊んでいるところ（既定は浮世絵の台）
+await play(second, 'hajike-flipper-kogyo-2.jpg');
+// 3枚目：本日の演目（まねき看板）
+await page.evaluate(() => {
+  window.__pinball.app.selectIndex = 0;
+  window.__pinball.app.toSelect();
+});
 await page.waitForTimeout(1800);
-await page.screenshot({ path: join(out, 'hajike-flipper-kogyo-2.jpg'), type: 'jpeg', quality: 82 });
-await play(third, 'hajike-flipper-kogyo-3.jpg');
+await page.screenshot({ path: join(out, 'hajike-flipper-kogyo-3.jpg'), type: 'jpeg', quality: 82 });
 await app.close();
 rmSync(ud, { recursive: true, force: true });
 console.log('saved to', out);
