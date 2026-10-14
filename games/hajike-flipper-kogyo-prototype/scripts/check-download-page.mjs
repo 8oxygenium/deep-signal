@@ -8,7 +8,9 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const site = join(root, '..', '..');
 const pagePath = join(site, 'games', 'hajike-flipper-kogyo.html');
-const EXPECT = 'https://github.com/8oxygenium/hajike-flipper-kogyo/releases/latest/download/Hajike-Flipper-Kogyo-Setup.exe';
+// 主なボタンは itch.io のページ。GitHub Releases は「別のダウンロード先」として小さく残す
+const EXPECT = 'https://hansode.itch.io/hajike-flipper-kogyo';
+const EXPECT_ALT = 'https://github.com/8oxygenium/hajike-flipper-kogyo/releases/latest/download/Hajike-Flipper-Kogyo-Setup.exe';
 const outDir = join(root, 'screenshots');
 mkdirSync(outDir, { recursive: true });
 const results = [];
@@ -28,6 +30,11 @@ for (const [w, h, name] of [
   await page.waitForTimeout(600);
   const info = await page.evaluate(() => ({
     href: document.getElementById('download')?.getAttribute('href'),
+    alt: document.getElementById('download-alt')?.getAttribute('href'),
+    altSize: (() => {
+      const a = document.getElementById('download-alt');
+      return a ? parseFloat(getComputedStyle(a).fontSize) : 0;
+    })(),
     overflow: document.documentElement.scrollWidth - window.innerWidth,
     imgs: [...document.images].map((i) => [i.getAttribute('src'), i.complete && i.naturalWidth > 0]),
     btn: (() => {
@@ -35,7 +42,8 @@ for (const [w, h, name] of [
       return { w: r.width, h: r.height, inView: r.left >= 0 && r.right <= window.innerWidth };
     })(),
   }));
-  check(`${name}: ダウンロードボタンのリンク先`, info.href === EXPECT, info.href);
+  check(`${name}: ダウンロードボタンのリンク先（itch.io）`, info.href === EXPECT, info.href);
+  check(`${name}: 別のダウンロード先（GitHub Releases）が小さく残っている`, info.alt === EXPECT_ALT && info.altSize > 0 && info.altSize < 14, `${info.alt} ${info.altSize}px`);
   check(`${name}: 横にはみ出さない`, info.overflow <= 0, `${info.overflow}px`);
   check(`${name}: ボタンが画面内で押しやすい大きさ`, info.btn.inView && info.btn.h >= 44, JSON.stringify(info.btn));
   check(`${name}: 画像がすべて読み込める`, info.imgs.every(([, ok]) => ok), JSON.stringify(info.imgs.filter(([, ok]) => !ok)));

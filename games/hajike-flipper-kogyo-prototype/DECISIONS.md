@@ -112,3 +112,8 @@
 - 画面テストは全7ステージで 52/52（コンソールエラー0件・各約62fps）、物理と耐久のテストは 40/40、ダウンロードページの確認 9/9。
 - ダウンロードページの画面写真は「呼び込みのタイトル」「浮世絵の台」「本日の演目」の3枚に撮り直した（大きな帯やカットインが出ている間は撮らない）。
 - GitHub CLI がログイン済みになっていたため、`npm run release` で公開リポジトリ `8oxygenium/hajike-flipper-kogyo` を作り、Release v1.0.0 に exe をアップロードした（指示書11章のとおり）。`releases/latest/download/Hajike-Flipper-Kogyo-Setup.exe` から同じサイズのファイルが落ちることを確認。
+
+## 公開後：itch.io を主な配布先に
+- itch.io に公開した（`https://hansode.itch.io/hajike-flipper-kogyo`）。ダウンロードページの大きなボタンは itch.io のページへ、GitHub Releases の直リンクは「別のダウンロード先」として小さく残す。
+- itch.io の更新は butler（公式のアップロードツール）で行う。butler はフォルダ単位で送るので、インストーラーだけを入れた `release\itch` を作って `hansode/hajike-flipper-kogyo:windows` に送る。手順は「リリース手順.md」。
+- ページの確認（check-download-page.mjs）は、ボタンが itch.io を指すこと、GitHub Releases のリンクが小さく残っていることも見る（11/11）。
