@@ -18,14 +18,14 @@ export function buildGround(kit: Kit): void {
   const U = (v: number) => v * k;
 
   const tex = kit.api.canvasTexture(N, N, (g) => {
-    g.fillStyle = '#16306a';
+    g.fillStyle = '#2a5da6';
     g.fillRect(0, 0, N, N);
     // 海：青海波
-    seigaiha(g, 0, 0, N, N, U(1.55), { line: 'rgba(150,188,228,0.85)', fill: '#1f4287', lw: Math.max(2, U(0.09)), rings: 4 });
+    seigaiha(g, 0, 0, N, N, U(1.55), { line: 'rgba(214,232,250,0.85)', fill: '#3a74bb', lw: Math.max(2, U(0.09)), rings: 4 });
     // 波の濃淡（遠くほど暗く、ぼかし摺り）
     const vg = g.createRadialGradient(X(CX), Y(CY), U(18), X(CX), Y(CY), U(70));
     vg.addColorStop(0, 'rgba(10,22,60,0)');
-    vg.addColorStop(1, 'rgba(10,22,60,0.62)');
+    vg.addColorStop(1, 'rgba(16,36,90,0.5)');
     g.fillStyle = vg;
     g.fillRect(0, 0, N, N);
 

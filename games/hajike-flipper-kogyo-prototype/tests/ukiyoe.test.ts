@@ -63,7 +63,7 @@ describe('UKIYO-E', () => {
     run(g, 3.0);
     expect(ev.some((e) => e.t === 'fx' && e.name === 'wave')).toBe(true);
     expect(g.multiballActive).toBe(false);
-    run(g, 2.0);
+    run(g, 2.6);
     expect(g.multiballActive).toBe(true);
     expect(ev.some((e) => e.t === 'multiball')).toBe(true);
     run(g, 2.0);
@@ -72,6 +72,28 @@ describe('UKIYO-E', () => {
     const before = ev.filter((e) => e.t === 'jackpot').length;
     hit(g, 'ramp', 'koi');
     expect(ev.filter((e) => e.t === 'jackpot').length).toBe(before + 1);
+  });
+
+  it('大波の最中に TILT になったら、波もマルチボールも起きず、次のボールで狙い直せる', () => {
+    const g = new Game(ukiyoeStage, { seed: 5 });
+    const ev: GameEvent[] = [];
+    g.on((e) => ev.push(e));
+    launch(g);
+    for (let i = 0; i < 3; i++) hit(g, 'trigger', 'torii');
+    for (let i = 0; i < 2; i++) hit(g, 'ramp', 'koi');
+    for (let i = 0; i < 2; i++) hit(g, 'ramp', 'ryu');
+    for (let i = 0; i < 5; i++) hit(g, 'standup', 'ebisu');
+    hit(g, 'scoop', 'shrine');
+    for (let i = 0; i < 16 && !g.tilted; i++) {
+      g.nudge(i % 2 ? 'left' : 'right');
+      run(g, 0.2);
+    }
+    expect(g.tilted).toBe(true);
+    run(g, 7);
+    expect(ev.some((e) => e.t === 'fx' && e.name === 'wave')).toBe(false);
+    expect(ev.some((e) => e.t === 'multiball')).toBe(false);
+    expect(g.multiballActive).toBe(false);
+    expect(g.lightState('shrine')).toBe('fast');
   });
 
   it('松竹梅をそろえるとボーナス倍率が上がる', () => {

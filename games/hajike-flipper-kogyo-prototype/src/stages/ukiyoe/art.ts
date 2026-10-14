@@ -258,101 +258,225 @@ export function fuji(g: G, cx: number, base: number, hw: number, h: number, o: {
   g.stroke();
 }
 
+/** 大波の波頭（背から先端までの稜線）をローカル座標で返す。u: 0（頂の手前）〜 1（先端） */
+export function waveCrestPoint(u: number): [number, number] {
+  // 稜線は 2 本のベジェ：頂（3.0,3.5）→ 頂点（5.0,5.6）→ 先端（7.1,3.5）
+  const bz = (p: number[], t: number): [number, number] => {
+    const v = 1 - t;
+    return [
+      v * v * v * p[0] + 3 * v * v * t * p[2] + 3 * v * t * t * p[4] + t * t * t * p[6],
+      v * v * v * p[1] + 3 * v * v * t * p[3] + 3 * v * t * t * p[5] + t * t * t * p[7],
+    ];
+  };
+  const a = [2.9, 3.5, 3.4, 4.2, 4.0, 5.45, 5.0, 5.6];
+  const b = [5.0, 5.6, 6.0, 5.7, 7.0, 4.8, 7.1, 3.5];
+  return u < 0.45 ? bz(a, u / 0.45) : bz(b, (u - 0.45) / 0.55);
+}
+
+/** 大波の絵の幅（ローカル単位）。絵はおよそ x: -0.6 〜 7.8、y: 0 〜 6.8 */
+export const WAVE_WIDTH = 8.0;
+
 /**
- * 北斎風の大波。(x, y) は波の根元の左下、s は「波の幅 1 あたりのピクセル」（波の幅はおよそ 8）。
- * flip で左右反転（波が左へ巻く）。
+ * 北斎風の大波。(x, y) は波のふもとの左端、s は「波の単位 1 あたりのピクセル」。
+ * 背（藍）・うずまく内側（明るい青）・白い泡の頂と、鳥の爪のような泡の指、しぶきの粒。flip で左右反転（波が左へ巻く）。
  */
 export function greatWave(g: G, x: number, y: number, s: number, o: { deep?: string; mid?: string; foam?: string; line?: string; lw?: number; flip?: boolean; seed?: number } = {}): void {
-  const deep = o.deep ?? '#1d3a75';
-  const mid = o.mid ?? '#4a82bd';
+  const deep = o.deep ?? '#17317a';
   const foam = o.foam ?? '#f7f3e4';
   const line = o.line ?? INK;
-  const lw = o.lw ?? Math.max(2, s * 0.09);
+  const lw = o.lw ?? Math.max(2, s * 0.07);
   const r = rng(o.seed ?? 5);
   const sx = o.flip ? -1 : 1;
   const P = (lx: number, ly: number): [number, number] => [x + sx * lx * s, y - ly * s];
   const mv = (lx: number, ly: number) => g.moveTo(...P(lx, ly));
+  const ln = (lx: number, ly: number) => g.lineTo(...P(lx, ly));
   const bz = (a: number, b: number, c: number, d: number, e: number, f: number) => g.bezierCurveTo(...P(a, b), ...P(c, d), ...P(e, f));
+  const bodyPath = () => {
+    g.beginPath();
+    mv(-0.6, 0);
+    bz(0.7, 0.25, 1.9, 1.4, 2.9, 3.5); // 背のゆるい斜面
+    bz(3.4, 4.2, 4.0, 5.45, 5.0, 5.6); // 頂へ
+    bz(6.0, 5.7, 7.0, 4.8, 7.1, 3.5); // 巻いて先端へ
+    bz(6.9, 3.0, 6.1, 3.0, 5.5, 3.4); // 巻きの下側
+    bz(5.0, 3.7, 4.3, 3.4, 4.2, 2.6); // 正面の壁
+    bz(4.0, 1.6, 4.5, 0.7, 4.9, 0);
+    g.closePath();
+  };
   g.save();
   g.lineJoin = 'round';
   g.lineCap = 'round';
-  // 波の本体（暗い藍）
-  g.beginPath();
-  mv(-0.5, 0);
-  bz(0.3, 0.5, 1.3, 2.3, 2.7, 4.0);
-  bz(3.5, 5.3, 5.3, 5.6, 6.3, 3.9);
-  bz(6.0, 3.2, 5.2, 2.6, 4.3, 3.0);
-  bz(3.3, 3.5, 3.4, 1.4, 4.4, 0);
-  g.closePath();
-  g.fillStyle = deep;
-  g.fill();
-  // 巻き込みの内側（明るい藍）
-  g.beginPath();
-  mv(6.0, 3.3);
-  bz(5.3, 2.7, 4.5, 2.9, 4.0, 3.2);
-  bz(3.6, 3.0, 3.7, 1.6, 4.3, 0.0);
-  bz(4.8, 0.9, 5.4, 2.0, 6.0, 3.3);
-  g.closePath();
-  g.fillStyle = mid;
-  g.fill();
-  // 背の筋（波の流れ）
-  g.strokeStyle = 'rgba(190,220,245,0.55)';
-  g.lineWidth = lw * 0.55;
-  for (let k = 0; k < 5; k++) {
+
+  // 内側（巻きの下のうつろ）：明るい青から泡の白へ
+  {
     g.beginPath();
-    mv(0.3 + k * 0.12, 0.2 + k * 0.45);
-    bz(0.9 + k * 0.2, 0.9 + k * 0.55, 1.7 + k * 0.2, 2.4 + k * 0.4, 2.5 + k * 0.1, 3.5 + k * 0.28);
+    mv(7.1, 3.5);
+    bz(6.9, 3.0, 6.1, 3.0, 5.5, 3.4);
+    bz(5.0, 3.7, 4.3, 3.4, 4.2, 2.6);
+    bz(4.0, 1.6, 4.5, 0.7, 4.9, 0);
+    ln(6.7, 0);
+    bz(7.3, 1.1, 7.4, 2.5, 7.1, 3.5);
+    g.closePath();
+    const [gx, gy] = P(5.8, 3.5);
+    const [hx, hy] = P(5.8, 0);
+    const gr = g.createLinearGradient(gx, gy, hx, hy);
+    gr.addColorStop(0, '#2f63ad');
+    gr.addColorStop(0.55, '#6ea5d6');
+    gr.addColorStop(1, '#cfe5f2');
+    g.fillStyle = gr;
+    g.fill();
+    // 内側の筋
+    g.strokeStyle = 'rgba(255,255,255,0.55)';
+    g.lineWidth = lw * 0.4;
+    for (let k = 0; k < 4; k++) {
+      g.beginPath();
+      mv(6.7 - k * 0.45, 3.15 - k * 0.1);
+      bz(6.3 - k * 0.4, 2.2 - k * 0.2, 6.0 - k * 0.5, 1.2, 5.6 - k * 0.2, 0.2);
+      g.stroke();
+    }
+  }
+
+  // 体（背は藍、ふもとほど明るい：ぼかし摺り）
+  bodyPath();
+  {
+    const [gx, gy] = P(2.5, 5.6);
+    const [hx, hy] = P(3.0, 0);
+    const gr = g.createLinearGradient(gx, gy, hx, hy);
+    gr.addColorStop(0, deep);
+    gr.addColorStop(0.6, '#1f4aa0');
+    gr.addColorStop(1, '#3d7cc2');
+    g.fillStyle = gr;
+    g.fill();
+  }
+  // 背の筋（斜面に沿って流れる細い線）
+  g.save();
+  bodyPath();
+  g.clip();
+  g.strokeStyle = 'rgba(200,226,248,0.5)';
+  for (let k = 0; k < 9; k++) {
+    g.lineWidth = lw * (k % 3 === 0 ? 0.5 : 0.28);
+    g.beginPath();
+    const d = 0.28 * k + 0.1;
+    mv(-0.6 + d * 1.2, 0 - 0.1);
+    bz(0.7 + d * 1.1, 0.25 - d * 0.1, 1.9 + d * 0.95, 1.4 - d * 0.18, 2.9 + d * 0.62, 3.5 - d * 0.5);
+    bz(3.4 + d * 0.5, 4.2 - d * 0.5, 4.0 + d * 0.3, 5.45 - d * 0.62, 5.0 + d * 0.15, 5.6 - d * 0.7);
     g.stroke();
   }
-  // 白い泡のふち（頂から先端まで）
-  g.beginPath();
-  mv(2.4, 3.8);
-  bz(3.3, 5.3, 5.4, 5.8, 6.4, 3.9);
-  bz(6.5, 3.5, 6.3, 3.3, 6.0, 3.3);
-  bz(5.7, 3.9, 5.0, 4.6, 3.9, 4.4);
-  bz(3.4, 4.3, 2.9, 4.1, 2.4, 3.8);
-  g.closePath();
-  g.fillStyle = foam;
-  g.fill();
-  // 泡の爪（しぶきの指）
-  const claws = 9;
-  for (let i = 0; i < claws; i++) {
-    const t = i / (claws - 1);
-    // 頂から先端への曲線上の点
-    const bx = 2.7 + t * 3.6, by = 4.1 + Math.sin(t * Math.PI) * 1.35 - t * 0.55;
-    const len = 0.55 + r() * 0.45;
-    const ang = -0.9 - t * 0.9 + (r() - 0.5) * 0.4;
+  // 渦の筋（巻きの手前の面に沿って）
+  g.strokeStyle = 'rgba(160,200,235,0.45)';
+  for (let k = 0; k < 4; k++) {
+    g.lineWidth = lw * 0.3;
     g.beginPath();
-    mv(bx - 0.18, by);
-    g.quadraticCurveTo(...P(bx + Math.cos(ang) * len * 0.5 + 0.1, by - Math.sin(ang) * len * 0.5), ...P(bx + Math.cos(ang) * len, by - Math.sin(ang) * len));
-    g.quadraticCurveTo(...P(bx + 0.1, by + 0.1), ...P(bx + 0.18, by));
+    mv(4.3 + k * 0.28, 2.6 + k * 0.1);
+    bz(4.4 + k * 0.3, 3.7 + k * 0.1, 5.4 + k * 0.2, 4.4 + k * 0.12, 6.4 - k * 0.2, 4.2 - k * 0.1);
+    g.stroke();
+  }
+  g.restore();
+
+  // 頂の泡：稜線に沿った白い帯（頂のあたりが厚く、両端で細くなる）
+  {
+    const n = 40;
+    const up: [number, number][] = [];
+    const lo: [number, number][] = [];
+    const sm = (a: number, b: number, v: number) => {
+      const t = Math.max(0, Math.min(1, (v - a) / (b - a)));
+      return t * t * (3 - 2 * t);
+    };
+    for (let i = 0; i <= n; i++) {
+      const u = 0.12 + (0.88 * i) / n;
+      const [qx, qy] = waveCrestPoint(u);
+      const [ax, ay] = waveCrestPoint(Math.max(0, u - 0.02));
+      const [bx, by] = waveCrestPoint(Math.min(1, u + 0.02));
+      let tx = bx - ax, ty = by - ay;
+      const l = Math.hypot(tx, ty) || 1;
+      tx /= l;
+      ty /= l;
+      // 稜線の内側（下側）へ
+      const nx = ty, ny = -tx;
+      const w = (0.6 * Math.pow(1 - u, 0.8) + 0.12 + 0.05 * Math.sin(i * 1.9)) * sm(0.12, 0.3, u) * (1 - sm(0.93, 1.0, u));
+      up.push([qx, qy]);
+      lo.push([qx + nx * w, qy + ny * w]);
+    }
+    g.beginPath();
+    up.forEach(([a, b], i) => (i === 0 ? mv(a, b) : ln(a, b)));
+    for (let i = lo.length - 1; i >= 0; i--) ln(lo[i][0], lo[i][1]);
     g.closePath();
     g.fillStyle = foam;
     g.fill();
-    g.lineWidth = lw * 0.6;
+  }
+
+  // 泡の指（鳥の爪）：根もとから前へ伸び、先で下へ曲がって垂れる。(qx,qy)=根もと、(tx,ty)=稜線の向き、(nx,ny)=外向き
+  const claw = (qx: number, qy: number, tx: number, ty: number, nx: number, ny: number, len: number, bw: number) => {
+    // 外へ立ち上がってから、先で進行方向へ・下へ曲がる鉤爪
+    const tipx = qx + nx * len * 0.6 + tx * len * 0.95;
+    const tipy = qy + ny * len * 0.6 + ty * len * 0.95 - 0.22 * len;
+    const b0: [number, number] = [qx - tx * bw, qy - ty * bw];
+    const b1: [number, number] = [qx + tx * bw * 0.8, qy + ty * bw * 0.8];
+    g.beginPath();
+    mv(b0[0], b0[1]);
+    g.quadraticCurveTo(...P(b0[0] + nx * len * 0.95 + tx * len * 0.1, b0[1] + ny * len * 0.95 + ty * len * 0.1), ...P(tipx, tipy));
+    g.quadraticCurveTo(...P(b1[0] + nx * len * 0.22 + tx * len * 0.55, b1[1] + ny * len * 0.22 + ty * len * 0.55 - 0.05 * len), ...P(b1[0], b1[1]));
+    g.closePath();
+    g.fillStyle = foam;
+    g.fill();
+    g.lineWidth = lw * 0.55;
     g.strokeStyle = line;
     g.stroke();
-  }
-  // しぶきの粒
-  g.fillStyle = foam;
-  for (let i = 0; i < 16; i++) {
-    const bx = 3.0 + r() * 4.4, by = 4.6 + r() * 1.8;
+    // 先のしずく
+    const ex = tipx - qx, ey = tipy - qy;
+    const el = Math.hypot(ex, ey) || 1;
     g.beginPath();
-    g.arc(...P(bx, by), s * (0.04 + r() * 0.09), 0, Math.PI * 2);
+    g.arc(...P(tipx + (ex / el) * 0.16, tipy + (ey / el) * 0.16), s * (0.035 + r() * 0.035), 0, Math.PI * 2);
+    g.fillStyle = foam;
     g.fill();
-    g.lineWidth = lw * 0.35;
+    g.lineWidth = lw * 0.3;
     g.stroke();
+  };
+  const claws = 11;
+  for (let i = 0; i < claws; i++) {
+    const u = 0.3 + (0.66 * i) / (claws - 1) + (r() - 0.5) * 0.025;
+    const [qx, qy] = waveCrestPoint(u);
+    const [ax, ay] = waveCrestPoint(Math.max(0, u - 0.02));
+    const [bx, by] = waveCrestPoint(Math.min(1, u + 0.02));
+    let tx = bx - ax, ty = by - ay;
+    const l = Math.hypot(tx, ty) || 1;
+    tx /= l;
+    ty /= l;
+    const len = (0.75 + 0.55 * Math.sin(Math.PI * Math.min(1, (u - 0.2) * 1.3))) * (0.85 + r() * 0.4);
+    claw(qx, qy, tx, ty, -ty, tx, len, 0.17 + 0.1 * r());
   }
-  // 輪郭（墨）
+  // 巻きの先端から下へ垂れる泡（内側のうつろの縁）
+  for (let i = 0; i < 5; i++) {
+    const t = 0.1 + i * 0.19;
+    // 先端 (7.1,3.5) から (6.9,0.4) へ下る縁
+    const qx = 7.1 - 0.35 * t - 0.2 * Math.sin(t * Math.PI), qy = 3.5 - 3.1 * t;
+    claw(qx, qy, 0.0, -1.0, 1.0, 0.0, 0.5 + 0.3 * r(), 0.2);
+  }
+
+  // 輪郭（墨）：背・稜線・巻きの先端と下側・正面の壁（ふもとは描かない）
   g.strokeStyle = line;
   g.lineWidth = lw;
   g.beginPath();
-  mv(-0.5, 0);
-  bz(0.3, 0.5, 1.3, 2.3, 2.7, 4.0);
-  bz(3.5, 5.3, 5.3, 5.6, 6.3, 3.9);
-  bz(6.0, 3.2, 5.2, 2.6, 4.3, 3.0);
-  bz(3.3, 3.5, 3.4, 1.4, 4.4, 0);
+  mv(-0.6, 0);
+  bz(0.7, 0.25, 1.9, 1.4, 2.9, 3.5);
+  bz(3.4, 4.2, 4.0, 5.45, 5.0, 5.6);
+  bz(6.0, 5.7, 7.0, 4.8, 7.1, 3.5);
+  bz(6.9, 3.0, 6.1, 3.0, 5.5, 3.4);
+  bz(5.0, 3.7, 4.3, 3.4, 4.2, 2.6);
+  bz(4.0, 1.6, 4.5, 0.7, 4.9, 0);
   g.stroke();
+
+  // しぶきの粒（空中の白い玉）
+  g.fillStyle = foam;
+  g.strokeStyle = line;
+  g.lineWidth = lw * 0.3;
+  for (let i = 0; i < 22; i++) {
+    const [qx, qy] = waveCrestPoint(0.2 + r() * 0.8);
+    const bx = qx + 0.15 + r() * 1.3, by = qy + 0.1 + r() * 1.1 - r() * 0.5;
+    g.beginPath();
+    g.arc(...P(bx, by), s * (0.03 + r() * 0.07), 0, Math.PI * 2);
+    g.fill();
+    g.stroke();
+  }
   g.restore();
 }
 

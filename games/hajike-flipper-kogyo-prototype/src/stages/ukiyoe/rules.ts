@@ -33,6 +33,8 @@ export function ukiyoeRules(): StageRules {
   let extraLit = false;
   let extraGiven = false;
   let waveBusy = false;
+  /** ボールが替わるたびに増える（遅れて動く演出が、次のボールで誤って動かないように） */
+  let flowId = 0;
   let jackpotValue = 300_000;
   let godsRounds = 0;
   let waveRounds = 0;
@@ -194,7 +196,9 @@ export function ukiyoeRules(): StageRules {
     g.sfx('tsuke');
     g.shake(0.5);
     collected.clear();
+    const id = flowId;
     g.after(2.5, () => {
+      if (id !== flowId || g.tilted || g.state !== 'play') return;
       g.jackpot(value, e.x, e.y);
       g.fx('confetti', e.x, e.y);
       g.fx('petals', e.x, e.y, { value: 60 });
@@ -212,19 +216,27 @@ export function ukiyoeRules(): StageRules {
     waveReady = false;
     waveBusy = true;
     waveRounds++;
+    const id = flowId;
     jackpotValue = 300_000 + 100_000 * (waveRounds - 1);
-    sc.holdFor(5.9);
+    sc.holdFor(6.3);
     g.fx('mie', 0, 0, { text: '神奈川沖浪裏', color: '#1f3f7a' });
     g.sfx('tsuke');
     g.shake(0.5);
-    // 見得が明けたところへ大波が台を横切る
+    // 見得が明けたところへ大波が台を横切る（TILT・ゲームオーバーなどで流れが止まっていたら何もしない）
     g.after(2.4, () => {
+      if (id !== flowId || g.tilted || g.state !== 'play') return;
       g.fx('wave', e.x, e.y);
       g.sfx('wave');
       g.shake(0.7);
     });
     // 波が引いたとき、ボールが増える（1球はプランジャーから、1球は波の上から）
-    g.after(4.5, () => {
+    g.after(5.2, () => {
+      if (id !== flowId || g.tilted || g.state !== 'play') {
+        // マルチボールにならなかったので、次のボールでもう一度狙える
+        waveReady = true;
+        syncLights(g);
+        return;
+      }
       g.startMultiball(1, 18);
       g.addBallAt(SHRINE[0] + (g.rng.next() - 0.5) * 3, 36.4, (g.rng.next() - 0.5) * 6, -6);
       mbSong = true;
@@ -234,7 +246,7 @@ export function ukiyoeRules(): StageRules {
       brush(g, 'jp', 0.75, 30, 'ザブーン！', INDIGO, 2.0, 0.5);
       syncLights(g);
     });
-    g.after(6.0, () => {
+    g.after(6.4, () => {
       waveBusy = false;
     });
   }
@@ -268,6 +280,8 @@ export function ukiyoeRules(): StageRules {
     },
 
     onBallStart(g) {
+      flowId++;
+      waveBusy = false;
       godHits = toriis = koiRamps = ryuRamps = loops = spins = missionsThisBall = 0;
       lanes.reset(g);
       syncBonusLights(g);
