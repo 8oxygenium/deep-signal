@@ -153,7 +153,8 @@ export function selectScreen(
       // 縦書き。列（改行）ごとの字数と列の数から、看板に収まる文字の大きさを決める
       const cols = (s.maneki ?? s.subtitle).split('\n');
       const longest = Math.max(3, ...cols.map((c) => [...c].length));
-      const size = `min(${(21.5 / longest).toFixed(2)}vh, ${(8.6 / cols.length).toFixed(2)}vw, 46px)`;
+      // 上限の px も列数で割る（看板の幅は最大150px。3列でも収まるように）
+      const size = `min(${(21.5 / longest).toFixed(2)}vh, ${(8.6 / cols.length).toFixed(2)}vw, ${(Math.min(46, 112 / cols.length)).toFixed(1)}px)`;
       return `<div class="maneki ${s.ominous ? 'ominous' : ''}" style="--c:${s.theme.colors.accent}">
         <div class="mk-lamp">${lantern(kanjiNumber(i + 1), s.ominous ? '#2a2a2a' : '#d8261c', s.ominous ? '#ffcc00' : '#1a0d08')}</div>
         <div class="mk-roof"></div>

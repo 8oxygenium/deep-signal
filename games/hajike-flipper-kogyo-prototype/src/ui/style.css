@@ -121,7 +121,7 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; margin: 0 2px; 
 .select .detail .top3 li span { width: 1.2em; opacity: 0.6; }
 .select .detail .top3 li em { margin-left: auto; font-style: normal; }
 .select .detail .top3 li.none { opacity: 0.6; font-family: var(--jp); }
-.select .detail .go { margin-top: 0.8vh; font: 900 clamp(14px, 2.2vh, 20px) var(--brush); color: #a3171b; animation: blink 1.2s infinite; }
+.select .detail .go { margin-top: 0.8vh; font: 900 clamp(14px, 2.1vh, 19px) var(--jp); letter-spacing: 0.12em; color: #a3171b; animation: blink 1.2s infinite; }
 .select .preview-slot { flex: 1; min-width: 0; }
 .select.kogyo .hint { position: absolute; left: 0; right: 0; bottom: 1.2vh; margin: 0; color: #f3e2b8; }
 .select .ominous-fx { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
