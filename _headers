@@ -33,3 +33,6 @@
 
 /*.txt
   X-Robots-Tag: noindex, noarchive
+
+/games/hajike-flipper-kogyo-prototype/*
+  X-Robots-Tag: noindex, noarchive
