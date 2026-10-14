@@ -1,7 +1,7 @@
 // インストーラー確認：exe でインストール → 起動 → 終了 → アンインストールが通ること、
 // 起動中は固定キー等のショートカットが無効になり、終了後に元の設定へ戻っていることを確かめる。
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -87,8 +87,10 @@ const after = flags();
 check('終了後に固定キーの設定が元に戻る（本来の設定と一致）', after.sticky === reg.sticky && after.filter === reg.filter, `${JSON.stringify(before)} → ${JSON.stringify(after)}`);
 
 // 3. アンインストール
-const uninst = join(installDir, `Uninstall ${APP}.exe`);
-check('アンインストーラーがある', existsSync(uninst));
+// アンインストーラーの名前は実行ファイル名に合わせて付く（Uninstall Hajike-Flipper-Kogyo.exe）。念のため探す
+const uninstName = existsSync(installDir) ? readdirSync(installDir).find((f) => /^Uninstall .*\.exe$/i.test(f)) : undefined;
+const uninst = join(installDir, uninstName ?? `Uninstall ${EXE_NAME}.exe`);
+check('アンインストーラーがある', existsSync(uninst), uninstName ?? '(見つからない)');
 if (existsSync(uninst)) {
   r = spawnSync(uninst, ['/S'], { stdio: 'inherit', timeout: 300000 });
   for (let i = 0; i < 60 && (existsSync(installedExe) || existsSync(startLnk) || existsSync(desktopLnk)); i++) await sleep(1000);
