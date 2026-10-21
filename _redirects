@@ -1,0 +1,3 @@
+# 弾け！フリッパー興業 はWindowsアプリ（exe）で配布する。ソース置き場はWebでは見せずダウンロードページへ案内する。
+/games/hajike-flipper-kogyo-prototype/*  /games/hajike-flipper-kogyo.html  302
+/games/hajike-flipper-kogyo-prototype    /games/hajike-flipper-kogyo.html  302

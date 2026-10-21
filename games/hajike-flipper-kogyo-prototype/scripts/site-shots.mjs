@@ -1,0 +1,66 @@
+// ダウンロードページ用のスクリーンショット（実際のアプリ画面）を撮って assets/img/ に JPEG で保存する
+// 使い方: npm run build && node scripts/site-shots.mjs [2枚目に遊ぶステージID]
+import { _electron as electron } from 'playwright';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const out = join(root, '..', '..', 'assets', 'img');
+const second = process.argv[2] ?? 'ukiyoe';
+const ud = mkdtempSync(join(tmpdir(), 'hp-site-'));
+const app = await electron.launch({ args: ['.'], cwd: root, env: { ...process.env, HANSODE_E2E: '1', HANSODE_USER_DATA: ud } });
+const page = await app.firstWindow();
+await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1280, 800));
+await page.waitForFunction(() => window.__pinball && window.__pinball.screen === 'title', null, { timeout: 20000 });
+
+const play = async (id, file) => {
+  await page.evaluate((sid) => window.__pinball.app.startStage(window.__pinball.stageDefs.find((s) => s.id === sid)), id);
+  await page.waitForTimeout(600);
+  // 発射して、しばらく自動でフリッパーを動かしてから撮る
+  await page.evaluate(() => {
+    const g = window.__pinball.game;
+    g.setLaunch(true);
+    setTimeout(() => g.setLaunch(false), 700);
+    window.__autoTimer = setInterval(() => {
+      const gg = window.__pinball.game;
+      if (!gg) return;
+      gg.autoPlay(1 / 60, 0.8);
+      if (gg.ballInLane && !gg.table.plunger.pulling) {
+        gg.setLaunch(true);
+        setTimeout(() => gg.setLaunch(false), 600);
+      }
+    }, 16);
+  });
+  await page.waitForTimeout(6500);
+  // 大きな帯（BALL SAVED など）・カットイン・見得が出ている間は撮らない
+  for (let i = 0; i < 12; i++) {
+    const busy = await page.evaluate(() =>
+      ['.hud .hud-banner', '.hud .cutin', '.hud .mie', '.hud .gimmick'].some((q) => {
+        const e = document.querySelector(q);
+        return !!e && Number(getComputedStyle(e).opacity) > 0.05;
+      }),
+    );
+    if (!busy) break;
+    await page.waitForTimeout(700);
+  }
+  await page.screenshot({ path: join(out, file), type: 'jpeg', quality: 82 });
+  await page.evaluate(() => clearInterval(window.__autoTimer));
+};
+
+// 1枚目：見世物小屋の呼び込み（タイトル）。口上が出そろうまで待つ
+await page.waitForTimeout(2600);
+await page.screenshot({ path: join(out, 'hajike-flipper-kogyo-1.jpg'), type: 'jpeg', quality: 82 });
+// 2枚目：遊んでいるところ（既定は浮世絵の台）
+await play(second, 'hajike-flipper-kogyo-2.jpg');
+// 3枚目：本日の演目（まねき看板）
+await page.evaluate(() => {
+  window.__pinball.app.selectIndex = 1;
+  window.__pinball.app.toSelect();
+});
+await page.waitForTimeout(1800);
+await page.screenshot({ path: join(out, 'hajike-flipper-kogyo-3.jpg'), type: 'jpeg', quality: 82 });
+await app.close();
+rmSync(ud, { recursive: true, force: true });
+console.log('saved to', out);
